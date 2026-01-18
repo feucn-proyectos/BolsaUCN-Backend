@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs
+namespace backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs
 {
     public class VerifyResetPasswordCodeDTO
     {

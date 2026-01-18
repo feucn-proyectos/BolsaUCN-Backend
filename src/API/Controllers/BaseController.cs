@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

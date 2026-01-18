@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interfaz para el servicio de gestión de publicaciones de compra/venta

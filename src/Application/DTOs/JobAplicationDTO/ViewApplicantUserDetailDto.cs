@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.JobAplicationDTO
+namespace backend.src.Application.DTOs.JobAplicationDTO
 {
     public class ViewApplicantUserDetailDto
     {

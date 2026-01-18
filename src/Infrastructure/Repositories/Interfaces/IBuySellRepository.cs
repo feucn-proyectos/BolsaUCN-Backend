@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     /// <summary>
     /// Interfaz para el repositorio de publicaciones de compra/venta

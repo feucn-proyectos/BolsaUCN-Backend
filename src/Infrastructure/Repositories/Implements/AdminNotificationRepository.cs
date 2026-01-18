@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Infrastructure.Data;
+using backend.src.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements;
+namespace backend.src.Infrastructure.Repositories.Implements;
 
 public class AdminNotificationRepository : IAdminNotificationRepository
 {

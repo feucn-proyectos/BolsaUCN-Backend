@@ -1,16 +1,16 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Mappers;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Constants;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Domain.Models.Options;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Mappers;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Serilog;
 
 // Este codigo funciona en base a sueños y esperanzas, y mucho Claude Sonnet 4.5
 // lo lamento para la pobre alma que tenga que mantener esto en el futuro.
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Implementación del servicio de reseñas.

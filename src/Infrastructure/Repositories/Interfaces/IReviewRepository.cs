@@ -1,7 +1,7 @@
 using System;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     /// <summary>
     /// Interfaz que define las operaciones de acceso a datos para las reseñas.

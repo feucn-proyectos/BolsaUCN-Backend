@@ -1,12 +1,12 @@
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
 using Bogus;
-using bolsafeucn_back.src.Domain.Constants;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Infrastructure.Data
+namespace backend.src.Application.Infrastructure.Data
 {
     public class DataSeeder
     {

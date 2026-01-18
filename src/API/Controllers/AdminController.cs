@@ -1,12 +1,12 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Constants;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     public class AdminController : BaseController
     {
@@ -17,6 +17,7 @@ namespace bolsafeucn_back.src.API.Controllers
             _adminService = adminService;
         }
 
+        #region User Management
         /// <summary>
         /// Alterna el estado de bloqueo de un usuario.
         /// </summary>
@@ -27,7 +28,8 @@ namespace bolsafeucn_back.src.API.Controllers
         {
             var adminId = GetUserIdFromToken();
             Log.Information(
-                $"Intentando alternar el estado de bloqueo del usuario con ID {userId}"
+                "Intentando alternar el estado de bloqueo del usuario con ID {UserId}",
+                userId
             );
             var result = await _adminService.ToggleUserBlockedStatusAsync(adminId, userId);
             return Ok(
@@ -62,7 +64,7 @@ namespace bolsafeucn_back.src.API.Controllers
         public async Task<IActionResult> GetUserProfileById(int userId)
         {
             var adminId = GetUserIdFromToken();
-            Log.Information($"Obteniendo perfil de usuario con ID {userId}");
+            Log.Information("Obteniendo perfil de usuario con ID {UserId}", userId);
             var userProfile = await _adminService.GetUserProfileByIdAsync(adminId, userId);
             return Ok(
                 new GenericResponse<UserProfileForAdminDTO>(
@@ -82,9 +84,10 @@ namespace bolsafeucn_back.src.API.Controllers
         public async Task<IActionResult> BlockAdminById(int userId)
         {
             var superAdminId = GetUserIdFromToken();
-            Log.Information($"Intentando eliminar admin con ID: {userId}");
+            Log.Information("Intentando eliminar admin con ID {UserId}", userId);
             var result = await _adminService.ToggleUserBlockedStatusAsync(superAdminId, userId);
             return Ok(new GenericResponse<bool>("Admin eliminado exitosamente.", result));
         }
+        #endregion
     }
 }

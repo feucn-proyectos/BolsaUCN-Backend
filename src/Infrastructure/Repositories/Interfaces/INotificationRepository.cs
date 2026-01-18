@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     /// <summary>
     /// Repository interface for storing and retrieving notifications.

@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Domain.Models.Options;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public interface IUserRepository
     {

@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     /// <summary>
     /// Estado de la postulación (Pendiente, Aceptada, Rechazada).

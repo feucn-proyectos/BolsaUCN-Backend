@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.Validators
+namespace backend.src.Application.Validators
 {
     public class FutureDateAttribute : ValidationAttribute
     {

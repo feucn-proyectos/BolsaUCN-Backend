@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Infrastructure.Data
+namespace backend.src.Infrastructure.Data
 {
     /// <summary>
     /// Contexto de base de datos principal de la aplicación

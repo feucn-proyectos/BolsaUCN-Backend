@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO
+namespace backend.src.Application.DTOs.ReviewDTO
 {
     public class ReviewForStudentDTO
     {

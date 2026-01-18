@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
     /// <summary>
     /// DTO resumido para listar publicaciones de compra/venta

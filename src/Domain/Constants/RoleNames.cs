@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Domain.Constants
+namespace backend.src.Domain.Constants
 {
     /// <summary>
     /// Nombres de roles utilizados en la aplicación

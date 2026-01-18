@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interfaz para el servicio de generación de PDFs

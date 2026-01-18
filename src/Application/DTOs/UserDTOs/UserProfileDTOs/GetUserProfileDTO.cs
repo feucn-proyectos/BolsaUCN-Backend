@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     public class GetUserProfileDTO
     {

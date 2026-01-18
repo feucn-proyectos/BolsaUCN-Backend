@@ -1,12 +1,12 @@
-using bolsafeucn_back.src.Application.Infrastructure.Data;
-using bolsafeucn_back.src.Application.Mappers;
-using bolsafeucn_back.src.Application.Services.Implements;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Extensions;
-using bolsafeucn_back.src.Infrastructure.Repositories.Implements;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.Infrastructure.Data;
+using backend.src.Application.Mappers;
+using backend.src.Application.Services.Implements;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Extensions;
+using backend.src.Infrastructure.Repositories.Implements;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Mapster;
@@ -215,7 +215,7 @@ try
     #endregion
     #region Middleware
     // Middleware global de errores (antes de todo)
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
+    app.UseMiddleware<backend.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
     #endregion
 
     // Seed DB + Mapster (al inicio)
@@ -236,7 +236,7 @@ try
 
     // Muy importante: primero autenticación, luego autorización
     app.UseAuthentication();
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
+    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
     app.UseAuthorization();
 
     // Configuración para servir archivos estáticos desde la carpeta "uploads"

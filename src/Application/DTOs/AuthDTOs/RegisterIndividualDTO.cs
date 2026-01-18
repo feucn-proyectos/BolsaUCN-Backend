@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Application.Validators;
+using backend.src.Application.Validators;
 
-namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
+namespace backend.src.Application.DTOs.AuthDTOs
 {
     /// <summary>
     /// DTO para el registro de un usuario individual.

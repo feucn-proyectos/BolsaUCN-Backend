@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Services.Interfaces;
 using Resend;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Default implementation of <see cref="IEmailService"/>.

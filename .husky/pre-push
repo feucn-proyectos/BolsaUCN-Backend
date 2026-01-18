@@ -5,7 +5,7 @@
 cd "$(dirname "$0")/.."
 
 echo "Construyendo la aplicación..."
-cd bolsafeucn_back
+cd backend
 
 # Primero restauramos las dependencias silenciosamente
 dotnet restore --verbosity quiet > /dev/null 2>&1

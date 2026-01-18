@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface IPublicationService
     {
@@ -28,6 +28,11 @@ namespace bolsafeucn_back.src.Application.Services.Interfaces
             int publicationId,
             int userId,
             UserAppealDto dto
+        );
+
+        Task<Publication?> GetPublicationByIdAsync(
+            int publicationId,
+            PublicationQueryOptions options
         );
     }
 }

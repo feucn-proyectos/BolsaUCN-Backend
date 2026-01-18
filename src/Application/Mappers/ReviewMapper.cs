@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Domain.Models;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     /// <summary>
     /// Mapper para transformar entre entidades de dominio Review y sus DTOs correspondientes.

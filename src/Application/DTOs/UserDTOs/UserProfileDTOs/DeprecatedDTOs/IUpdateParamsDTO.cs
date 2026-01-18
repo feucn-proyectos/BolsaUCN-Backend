@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     public interface IUpdateParamsDTO
     {

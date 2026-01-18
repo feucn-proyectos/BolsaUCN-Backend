@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.Validators;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.Validators;
+using backend.src.Domain.Models;
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     public class UpdateStudentParamsDTO : IUpdateParamsDTO
     {

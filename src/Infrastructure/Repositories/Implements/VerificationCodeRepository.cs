@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public class VerificationCodeRepository : IVerificationCodeRepository
     {

@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.Events;
+using backend.src.Application.Events;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Service responsible for handling notifications: persistence and dispatch.

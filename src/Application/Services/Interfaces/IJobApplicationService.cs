@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO;
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.JobAplicationDTO;
+using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interfaz para el servicio de gestión de postulaciones a ofertas laborales

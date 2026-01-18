@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     /// <summary>
     /// Representa una reseña bidireccional entre un oferente y un estudiante.

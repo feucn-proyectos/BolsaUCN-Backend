@@ -1,6 +1,7 @@
-namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs;
+namespace backend.src.Application.DTOs.OfferDTOs;
 
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
+
 /// <summary>
 /// DTO representing a compact summary of an offer used in listings.
 /// </summary>

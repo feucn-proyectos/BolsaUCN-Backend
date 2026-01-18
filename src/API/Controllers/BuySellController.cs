@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/publications")]
@@ -16,6 +16,11 @@ namespace bolsafeucn_back.src.API.Controllers
             _publicationService = publicationService;
         }
 
+        /// <summary>
+        /// Crea una nueva publicación de compra/venta
+        /// </summary>
+        /// <param name="buySellDto">Datos de la publicación de compra/venta a crear</param>
+        /// <returns>Resultado de la creación de la publicación de compra/venta con el ID generado</returns>
         public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO buySellDto)
         {
             int parsedUserId = GetUserIdFromToken();

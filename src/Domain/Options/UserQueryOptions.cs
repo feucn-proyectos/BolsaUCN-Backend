@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Domain.Models.Options
+namespace backend.src.Domain.Models.Options
 {
     /// <summary>
     /// Opciones para consultas de usuarios
