@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Infrastructure.Exceptions
+namespace backend.src.Infrastructure.Exceptions
 {
     [Serializable]
     public class EmailNotVerifiedException : Exception

@@ -1,14 +1,14 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     public class UserController : BaseController
     {

@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
+namespace backend.src.Application.DTOs.OfferDTOs
 {
     /// <summary>
     /// DTO containing minimal information about offers pending admin validation.

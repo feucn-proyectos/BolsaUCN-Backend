@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     public class Whitelist : ModelBase
     {

@@ -1,11 +1,11 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 using Mapster;
 
 /// <summary>
 /// Configuración de mapeos entre entidades Offer y sus DTOs usando Mapster
 /// </summary>
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     public class BuySellMapper
     {

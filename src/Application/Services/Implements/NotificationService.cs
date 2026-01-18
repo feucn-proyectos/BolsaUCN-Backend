@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Events;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Events;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Infrastructure.Repositories.Interfaces;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Service responsible for creating and persisting notifications and delegating

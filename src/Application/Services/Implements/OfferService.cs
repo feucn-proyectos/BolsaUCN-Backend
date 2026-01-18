@@ -1,13 +1,13 @@
-using bolsafeucn_back.src.Application.DTOs.OfferDTOs;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.OfferDTOs;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements;
+namespace backend.src.Application.Services.Implements;
 
 public class OfferService : IOfferService
 {

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO
+namespace backend.src.Application.DTOs.ReviewDTO
 {
     public class ReviewForOfferorDTO
     {

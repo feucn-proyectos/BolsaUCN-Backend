@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO
+namespace backend.src.Application.DTOs.ReviewDTO
 {
     /// <summary>
     /// DTO para representar una reseña completa entre oferente y estudiante.

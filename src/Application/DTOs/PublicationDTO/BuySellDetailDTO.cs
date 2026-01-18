@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
     /// <summary>
     /// DTO detallado para ver una publicación de compra/venta específica

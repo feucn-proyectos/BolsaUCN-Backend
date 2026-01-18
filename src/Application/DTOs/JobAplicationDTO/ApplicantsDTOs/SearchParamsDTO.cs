@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs
+namespace backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs
 {
     public class SearchParamsDTO
     {

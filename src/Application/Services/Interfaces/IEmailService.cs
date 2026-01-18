@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interface for the email sending service used by the application.

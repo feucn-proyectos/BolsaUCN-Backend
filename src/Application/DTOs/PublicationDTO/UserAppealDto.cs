@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
     /// <summary>
     /// DTO para que un usuario apele el rechazo de su publicación

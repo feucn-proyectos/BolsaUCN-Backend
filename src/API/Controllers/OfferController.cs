@@ -1,12 +1,12 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/publications")]
@@ -28,7 +28,7 @@ namespace bolsafeucn_back.src.API.Controllers
         /// Crea una nueva oferta laboral
         /// </summary>
         /// <param name="offerDto">Datos de la oferta a crear</param>
-        /// <returns>Respuesta genérica con el resultado de la creación</returns>
+        /// <returns>Resultado de la creación de la oferta con el ID generado</returns>
         [HttpPost("offers")]
         [Authorize]
         public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDTO offerDto)
@@ -41,8 +41,8 @@ namespace bolsafeucn_back.src.API.Controllers
         /// <summary>
         /// Acepta una postulación a una oferta laboral
         /// </summary>
-        /// <param name="applicationId"></param>
-        /// <returns></returns>
+        /// <param name="applicationId">ID de la postulación a aceptar</param>
+        /// <returns>Resultado de la aceptación de la postulación</returns>
         [HttpPatch("offerent/applications/{applicationId}/accept")]
         [Authorize]
         public async Task<IActionResult> AcceptApplication(int applicationId)
@@ -59,8 +59,8 @@ namespace bolsafeucn_back.src.API.Controllers
         /// <summary>
         /// Rechaza una postulación a una oferta laboral
         /// </summary>
-        /// <param name="applicationId"></param>
-        /// <returns></returns>
+        /// <param name="applicationId">ID de la postulación a rechazar</param>
+        /// <returns>Resultado del rechazo de la postulación</returns>
         [HttpPatch("offerent/applications/{applicationId}/reject")]
         [Authorize]
         public async Task<IActionResult> RejectApplication(int applicationId)

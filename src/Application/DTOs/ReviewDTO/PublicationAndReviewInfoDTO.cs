@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO;
 
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO
+namespace backend.src.Application.DTOs.ReviewDTO
 {
     public class PublicationAndReviewInfoDTO
     {

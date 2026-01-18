@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     /// <summary>
     /// DTO para actualizar el perfil de un usuario.

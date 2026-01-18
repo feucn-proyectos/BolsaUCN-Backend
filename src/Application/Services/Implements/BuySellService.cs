@@ -1,12 +1,12 @@
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Bogus.Bson;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Microsoft.Extensions.Logging;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Servicio para la gestión de publicaciones de compra/venta

@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.OfferDTOs;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.OfferDTOs;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces;
+namespace backend.src.Application.Services.Interfaces;
 
 /// <summary>
 /// Service interface that exposes operations related to offers.

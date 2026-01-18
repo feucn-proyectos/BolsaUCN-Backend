@@ -1,13 +1,13 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Domain.Models.Options;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
+namespace backend.src.Infrastructure.Repositories.Implements
 {
     public class UserRepository : IUserRepository
     {

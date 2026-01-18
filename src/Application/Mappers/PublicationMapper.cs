@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     /// <summary>
     /// Mapper para convertir entidades de Publication a DTOs.
@@ -20,12 +20,12 @@ namespace bolsafeucn_back.src.Application.Mappers
             {
                 IdPublication = publication.Id,
                 Title = publication.Title,
-                types = publication.Type,
+                Types = publication.Type,
                 Description = publication.Description,
-                PublicationDate = publication.PublicationDate,
+                PublicationDate = publication.CreatedAt,
                 Images = publication.Images,
-                IsActive = publication.IsActive,
-                statusValidation = publication.statusValidation,
+                IsActive = publication.IsValidated,
+                StatusValidation = publication.StatusValidation,
             };
         }
     }

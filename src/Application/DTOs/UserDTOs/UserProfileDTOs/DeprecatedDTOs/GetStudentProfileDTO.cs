@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     public class GetStudentProfileDTO : IGetUserProfileDTO
     {

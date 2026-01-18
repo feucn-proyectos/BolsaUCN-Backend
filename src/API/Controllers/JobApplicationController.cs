@@ -1,12 +1,12 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.JobAplicationDTO;
+using backend.src.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     /// <summary>
     /// Controlador para gestionar postulaciones a ofertas laborales

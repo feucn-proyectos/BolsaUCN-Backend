@@ -71,7 +71,7 @@ El archivo `appsettings.Development.json` ya está configurado para usar Docker.
 Para otros entornos, copia `appsettings.Example.json` y configura según sea necesario:
 
 ```bash
-cd bolsafeucn_back
+cd backend
 cp appsettings.Example.json appsettings.Production.json
 # Edita appsettings.Production.json con tus credenciales
 ```
@@ -91,7 +91,7 @@ Configuracion para la subida de archivos.
 ### 4️⃣ Restaurar dependencias
 
 ```bash
-cd bolsafeucn_back
+cd backend
 dotnet restore
 ```
 
@@ -217,7 +217,7 @@ docker volume ls
 
 ```
 backend-PIS/
-├── bolsafeucn_back/
+├── backend/
 │   ├── src/
 │   │   ├── API/
 │   │   │   ├── Controllers/
@@ -253,12 +253,12 @@ El modelo de base de datos (en formato Visual Paradigm .vpp) se encuentra en:
 ## 📝 Endpoints de la API
 
 Consulta la documentación completa de endpoints en:  
-`/bolsafeucn_back/API_ENDPOINTS.md`
+`/backend/API_ENDPOINTS.md`
 
 ## Uso de Resend
 
 Consulta la documentacion completa para el uso correcto de Resend con el plan gratuito en:
-`/bolsafeucn_back/RESEND_README.md`
+`/backend/RESEND_README.md`
 
 ## 🧠 Autores
 

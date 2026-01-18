@@ -1,17 +1,17 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO;
-using bolsafeucn_back.src.Application.DTOs.OfferDTOs;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.JobAplicationDTO;
+using backend.src.Application.DTOs.OfferDTOs;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     /// <summary>
     /// Controlador unificado para gestión de publicaciones (Ofertas laborales y Compra/Venta)
@@ -53,7 +53,8 @@ namespace bolsafeucn_back.src.API.Controllers
         /// Crea una nueva oferta laboral o de voluntariado
         /// Cualquier usuario autenticado puede crear ofertas
         /// </summary>
-        [HttpPost("offers")]
+        //! REPLACED
+        [HttpPost("offers-old")]
         [Authorize]
         public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDTO dto)
         {
@@ -108,7 +109,8 @@ namespace bolsafeucn_back.src.API.Controllers
         /// Crea una nueva publicación de compra/venta
         /// Cualquier usuario autenticado puede crear publicaciones de compra/venta
         /// </summary>
-        [HttpPost("buysells")]
+        //! REPLACED
+        [HttpPost("buysells-old")]
         [Authorize]
         public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO dto)
         {
@@ -834,7 +836,7 @@ namespace bolsafeucn_back.src.API.Controllers
         /// POSTULACIÓN DIRECTA: No requiere body. Se valida CV obligatorio del perfil
         /// SEGURIDAD: Solo estudiantes pueden postular. El studentId se obtiene del token JWT
         /// </summary>
-        [HttpPost("offers/{id}/apply")]
+        [HttpPost("offers/{id}/apply1")]
         [Authorize(Roles = "Applicant")]
         public async Task<ActionResult<JobApplicationResponseDto>> ApplyToOffer(int id)
         {
@@ -905,7 +907,7 @@ namespace bolsafeucn_back.src.API.Controllers
         /// Obtiene todas las postulaciones del estudiante autenticado
         /// SEGURIDAD: Solo estudiantes pueden ver sus postulaciones. El studentId se obtiene del token JWT
         /// </summary>
-        [HttpGet("offers/my-applications")]
+        [HttpGet("offers/my-applications1")]
         [Authorize(Roles = "Applicant")]
         public async Task<ActionResult<IEnumerable<JobApplicationResponseDto>>> GetMyApplications()
         {

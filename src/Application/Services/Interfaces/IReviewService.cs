@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Domain.Models.Options;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interfaz que define la lógica de negocio para la gestión de reseñas.

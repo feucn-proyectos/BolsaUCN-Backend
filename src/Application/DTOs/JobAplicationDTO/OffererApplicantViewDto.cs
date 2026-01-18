@@ -2,7 +2,7 @@
 // (Reemplaza el contenido por este)
 using System;
 
-namespace bolsafeucn_back.src.Application.DTOs.JobAplicationDTO
+namespace backend.src.Application.DTOs.JobAplicationDTO
 {
     public class OffererApplicantViewDto
     {

@@ -1,11 +1,11 @@
 using System.Security.Claims;
 using System.Text.Json;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Middlewares
+namespace backend.src.API.Middlewares
 {
     public class BlacklistMiddleware(RequestDelegate next)
     {

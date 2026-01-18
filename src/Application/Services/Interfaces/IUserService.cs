@@ -1,12 +1,12 @@
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs;
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Domain.Models.Options;
+using backend.src.Application.DTOs.AuthDTOs;
+using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface IUserService
     {

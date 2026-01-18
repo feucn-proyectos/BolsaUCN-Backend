@@ -1,6 +1,6 @@
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     public class MapperExtensions
     {

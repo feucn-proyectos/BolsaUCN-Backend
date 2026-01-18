@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.OfferDTOs;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.OfferDTOs;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Domain.Models;
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers;
+namespace backend.src.Application.Mappers;
 
 /// <summary>
 /// Configures mappings between the domain <see cref="Domain.Models.Offer"/> entity and its DTO types using Mapster.
@@ -26,8 +26,8 @@ public class OfferMapper
             .NewConfig()
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.EndDate, src => src.EndDate)
-            .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline)
+            .Map(dest => dest.EndDate, src => src.EndDate.ToUniversalTime())
+            .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline.ToUniversalTime())
             .Map(dest => dest.Remuneration, src => src.Remuneration)
             .Map(dest => dest.OfferType, src => src.OfferType)
             .Map(dest => dest.Location, src => src.Location)

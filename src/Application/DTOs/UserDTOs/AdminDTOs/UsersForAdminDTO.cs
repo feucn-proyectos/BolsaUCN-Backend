@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs
+namespace backend.src.Application.DTOs.UserDTOs.AdminDTOs
 {
     public class UsersForAdminDTO
     {

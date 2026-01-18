@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.Events;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.Events;
+using backend.src.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

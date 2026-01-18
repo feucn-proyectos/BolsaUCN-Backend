@@ -1,12 +1,13 @@
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Domain.Options;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Servicio para la gestión de publicaciones (Ofertas y Compra/Venta)
@@ -80,7 +81,6 @@ namespace bolsafeucn_back.src.Application.Services.Implements
 
             // Mapeo adicional y asignaciones
             newOffer.UserId = currentUser.Id;
-            newOffer.User = currentUser;
             newOffer.Type = Types.Oferta;
 
             newOffer.StatusValidation = isAdmin
@@ -126,7 +126,6 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             BuySell newBuySell = buySellDTO.Adapt<BuySell>();
             // Mapeo adicional y asignaciones
             newBuySell.UserId = currentUser.Id;
-            newBuySell.User = currentUser;
             newBuySell.Type = Types.CompraVenta;
 
             newBuySell.StatusValidation = isAdmin
@@ -312,6 +311,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             return new GenericResponse<string>(
                 $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {MAX_APPEALS}. Un administrador revisará tu caso."
             );
+        }
+
+        public async Task<Publication?> GetPublicationByIdAsync(
+            int publicationId,
+            PublicationQueryOptions options
+        )
+        {
+            throw new NotImplementedException();
         }
     }
 }

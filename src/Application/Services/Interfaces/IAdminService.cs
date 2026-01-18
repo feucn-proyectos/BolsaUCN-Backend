@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface IAdminService
     {

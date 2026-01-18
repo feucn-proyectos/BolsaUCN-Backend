@@ -1,14 +1,14 @@
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO;
-using bolsafeucn_back.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
-using bolsafeucn_back.src.Application.Events;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Constants;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.JobAplicationDTO;
+using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
+using backend.src.Application.Events;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     public class JobApplicationService : IJobApplicationService
     {

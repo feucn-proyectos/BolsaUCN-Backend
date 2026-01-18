@@ -1,10 +1,10 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/review")]

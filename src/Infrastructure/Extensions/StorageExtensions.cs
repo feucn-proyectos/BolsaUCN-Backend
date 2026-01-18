@@ -1,7 +1,7 @@
-using bolsafeucn_back.src.Application.Services.Implements;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.Services.Implements;
+using backend.src.Application.Services.Interfaces;
 
-namespace bolsafeucn_back.src.Infrastructure.Extensions
+namespace backend.src.Infrastructure.Extensions
 {
     public static class StorageExtensions
     {
