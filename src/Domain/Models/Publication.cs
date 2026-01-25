@@ -3,7 +3,7 @@ namespace backend.src.Domain.Models
     /// <summary>
     /// Enum that defines types of publications in the system.
     /// </summary>
-    public enum Types
+    public enum PublicationType
     {
         Oferta, // Oferta de trabajo o voluntariado
         CompraVenta, // Anuncio de compra/venta
@@ -59,17 +59,18 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Coleccion de imágenes asociadas a la publicación.
         /// </summary>
-        public ICollection<Image> Images { get; set; } = new List<Image>();
+        public ICollection<Image> Images { get; set; } = [];
 
         /// <summary>
         /// Tipo de publicación (Oferta, CompraVenta).
         /// </summary>
-        public required Types Type { get; set; }
+        public required PublicationType Type { get; set; }
 
         /// <summary>
-        /// Indica si la publicación está activa y visible para los usuarios.
+        /// Indica si la publicacion esta disponible para interacción por los usuarios.
+        /// true = Abierta y validada, false = Cerrada
         /// </summary>
-        public bool IsValidated { get; set; }
+        public bool IsOpen { get; set; }
 
         /// <summary>
         /// Estado de validación administrativa de la publicación.

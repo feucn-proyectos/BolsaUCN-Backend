@@ -10,7 +10,6 @@ using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Exceptions;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Serilog;
 
 namespace backend.src.Application.Services.Implements
@@ -45,63 +44,6 @@ namespace backend.src.Application.Services.Implements
             _tokenService = tokenService;
             _fileService = fileService;
             _documentService = documentService;
-        }
-
-        public async Task<User> GetUserByIdAsync(int userId, UserQueryOptions? options = null)
-        {
-            options ??= new UserQueryOptions();
-
-            var user = await _userRepository.GetByIdAsync(userId, options);
-            if (user == null)
-            {
-                Log.Error("Usuario con ID: {UserId} no encontrado.", userId);
-                throw new KeyNotFoundException("Usuario no encontrado.");
-            }
-            return user;
-        }
-
-        public async Task<bool> HasRoleAsync(User user, string role)
-        {
-            Log.Information(
-                "Verificando si el usuario ID: {UserId} tiene el rol: {Role}",
-                user.Id,
-                role
-            );
-            var userRole = await _userRepository.GetRoleAsync(user);
-            return userRole == role;
-        }
-
-        public async Task<int> GetNumberOfUsersByTypeAsync(UserType userType)
-        {
-            Log.Information(
-                "Obteniendo número de usuarios del tipo: {UserType}",
-                userType.ToString()
-            );
-            return await _userRepository.GetCountByTypeAsync(userType);
-        }
-
-        public async Task<bool> UpdateUserAsync(User user)
-        {
-            Log.Information("Actualizando usuario con ID: {UserId}", user.Id);
-            var result = await _userRepository.UpdateAsync(user);
-            if (result)
-            {
-                Log.Information("Usuario con ID: {UserId} actualizado exitosamente.", user.Id);
-            }
-            else
-            {
-                Log.Error("Error al actualizar el usuario con ID: {UserId}.", user.Id);
-            }
-            return result;
-        }
-
-        public async Task<(IEnumerable<User>, int TotalCount)> GetFilteredForAdminAsync(
-            int adminId,
-            SearchParamsDTO searchParams
-        )
-        {
-            Log.Information("Obteniendo usuarios filtrados para admin con ID: {AdminId}", adminId);
-            return await _userRepository.GetFilteredForAdminAsync(adminId, searchParams);
         }
 
         /// <summary>
@@ -382,14 +324,14 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> RegisterAdminAsync(int adminId, RegisterAdminDTO registerAdminDTO)
         {
             Log.Information("Verificando permisos del admin con ID: {AdminId}", adminId);
-            var requestingAdmin = await GetUserByIdAsync(adminId);
+            var requestingAdmin = await _userRepository.GetUserByIdAsync(adminId);
             if (requestingAdmin == null)
             {
                 Log.Error("No se encontro usuario con ID: {AdminId}", adminId);
                 throw new UnauthorizedAccessException("No se encontro usuario.");
             }
-            var requestingAdminRoleResult = await HasRoleAsync(
-                requestingAdmin,
+            var requestingAdminRoleResult = await _userRepository.CheckRoleAsync(
+                requestingAdmin.Id,
                 RoleNames.SuperAdmin
             );
             if (!requestingAdminRoleResult)
@@ -400,7 +342,9 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new UnauthorizedAccessException("El usuario no es superadmin.");
             }
-            var existingAdminsCount = await GetNumberOfUsersByTypeAsync(UserType.Administrador);
+            var existingAdminsCount = await _userRepository.GetCountByTypeAsync(
+                UserType.Administrador
+            );
             var maxAdminsAllowed = _configuration.GetValue<int>("AdminSettings:MaxAdminsAllowed");
             if (existingAdminsCount >= maxAdminsAllowed)
             {
@@ -770,14 +714,14 @@ namespace backend.src.Application.Services.Implements
                     "Tu cuenta ha sido bloqueada. Por favor, contacta al soporte para más información."
                 );
             }
-            var role = await _userRepository.GetRoleAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             Log.Information(
-                "Login exitoso para usuario: {Email}, UserId: {UserId}, Role: {Role}",
+                "Login exitoso para usuario: {Email}, UserId: {UserId}, Roles: {Roles}",
                 user.Email,
                 user.Id,
-                role
+                roles
             );
-            var newToken = _tokenService.CreateToken(user, role, loginDTO.RememberMe);
+            var newToken = _tokenService.CreateToken(user, roles, loginDTO.RememberMe);
             var whitelist = new Whitelist
             {
                 UserId = user.Id,
@@ -1005,7 +949,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<GetUserProfileDTO> GetUserProfileByIdAsync(int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions
                 {
@@ -1014,6 +958,11 @@ namespace backend.src.Application.Services.Implements
                     TrackChanges = false,
                 }
             );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
             Log.Information("Buscando detalles relevantes");
             return user.Adapt<GetUserProfileDTO>();
@@ -1083,7 +1032,7 @@ namespace backend.src.Application.Services.Implements
                 }
             }
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions
                 {
@@ -1092,6 +1041,11 @@ namespace backend.src.Application.Services.Implements
                     TrackChanges = true,
                 }
             );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
             updateParamsDTO.Adapt(user);
 
@@ -1107,7 +1061,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            await UpdateUserAsync(user);
+            await _userRepository.UpdateAsync(user);
 
             return "Datos del usuario actualizados correctamente";
         }
@@ -1121,10 +1075,16 @@ namespace backend.src.Application.Services.Implements
         public async Task<GetPhotoDTO> GetUserProfilePhotoByIdAsync(int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { IncludePhoto = true }
             );
+
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
             return user.Adapt<GetPhotoDTO>();
         }
@@ -1143,14 +1103,20 @@ namespace backend.src.Application.Services.Implements
         )
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { IncludePhoto = true, TrackChanges = true }
             );
 
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
             await _fileService.UploadUserImageAsync(updatePhotoDTO.Photo, user);
 
-            await UpdateUserAsync(user);
+            await _userRepository.UpdateAsync(user);
 
             return "Foto de perfil del usuario actualizada correctamente";
         }
@@ -1170,10 +1136,15 @@ namespace backend.src.Application.Services.Implements
         )
         {
             Log.Information("Buscando usuario con la Id: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
             var isPasswordValid = await _userRepository.CheckPasswordAsync(
                 user,
@@ -1212,10 +1183,15 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> UploadCVByIdAsync(UploadCVDTO uploadCVDTO, int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User user = await GetUserByIdAsync(
+            User? user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { IncludeCV = true, TrackChanges = true }
             );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
             if (user.CV != null && user.UserType == UserType.Estudiante)
             {
                 Log.Information(
@@ -1252,7 +1228,15 @@ namespace backend.src.Application.Services.Implements
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
 
-            User user = await GetUserByIdAsync(userId, new UserQueryOptions { IncludeCV = true });
+            User? user = await _userRepository.GetUserByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true }
+            );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
             if (user.CV == null || user.UserType != UserType.Estudiante)
             {

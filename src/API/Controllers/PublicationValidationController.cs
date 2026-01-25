@@ -1,12 +1,15 @@
 using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
+using SearchParamsDTO = backend.src.Application.DTOs.PublicationDTO.ValidationDTOs.SearchParamsDTO;
 
 namespace backend.src.API.Controllers
 {
-    [Route("api/admin")]
+    [Route("api/publications/")]
     public class ValidationController : BaseController
     {
         private readonly IValidationService _validationService;
@@ -31,27 +34,55 @@ namespace backend.src.API.Controllers
         *? PATCH RejectBuySell
         *? PATCH PublishOffer
         *? PATCH RejectOffer
-        *TODO Refactor Frontend to use this single endpoint for publication validation
-        *TODO Change return type from generic object to something more specific
+        *DONE Refactor Frontend to use this single endpoint for publication validation as it currently constructs the URL dynamically and passes the action and type by query parameters
+        *? see validationService.tsx for reference
+        *DONE Change return type from generic object to something more specific
         */
-        [HttpPatch(
-            "publications/{type:regex(^(offer|buySell)$)}/{publicationId:int}/{action:regex(^(publish|reject)$)}"
-        )]
+        [HttpPatch("{publicationId}/validate")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> ValidatePublication(
             int publicationId,
-            string type,
-            string action
+            [FromBody] ValidationActionDTO validationDto
         )
         {
             int parsedUserId = GetUserIdFromToken();
+            Log.Information(
+                "Action: {Action} on Publication ID: {PublicationId} by Admin User ID: {AdminUserId}",
+                validationDto.Action,
+                publicationId,
+                parsedUserId
+            );
             var validationResult = await _validationService.ValidatePublication(
                 parsedUserId,
                 publicationId,
-                type,
-                action
+                validationDto.Action
             );
-            return Ok(new GenericResponse<object>("Operación realizada con éxito", publicationId));
+            return Ok(
+                new GenericResponse<ValidationResponseDTO>(
+                    "Operación realizada con éxito",
+                    validationResult
+                )
+            );
+        }
+        #endregion
+        #region Get Publications
+        [HttpGet("pending")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetPendingPublicationsForValidation(
+            [FromQuery] SearchParamsDTO searchParamsDTO
+        )
+        {
+            int adminId = GetUserIdFromToken();
+            var publications = await _validationService.GetPublicationsForValidationAsync(
+                adminId,
+                searchParamsDTO
+            );
+            return Ok(
+                new GenericResponse<PublicationsForValidationDTO>(
+                    "Publicaciones pendientes obtenidas con éxito",
+                    publications
+                )
+            );
         }
         #endregion
     }

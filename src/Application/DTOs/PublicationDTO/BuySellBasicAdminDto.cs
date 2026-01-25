@@ -30,7 +30,7 @@ namespace backend.src.Application.DTOs.PublicationDTO
         /// <summary>
         /// Tipo de publicación (Compra o Venta)
         /// </summary>
-        public required Types Type { get; set; }
+        public required PublicationType Type { get; set; }
 
         /// <summary>
         /// Indica si la publicación está activa o no

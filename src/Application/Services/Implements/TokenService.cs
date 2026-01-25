@@ -28,7 +28,7 @@ namespace backend.src.Application.Services.Implements
         /// <param name="roleName">Nombre del rol</param>
         /// <param name="rememberMe">Indica si se debe recordar al usuario</param>
         /// <returns>Token JWT</returns>
-        public string CreateToken(User user, string roleName, bool rememberMe)
+        public string CreateToken(User user, IList<string> roleNames, bool rememberMe)
         {
             try
             {
@@ -36,7 +36,7 @@ namespace backend.src.Application.Services.Implements
                     "Creando token JWT para usuario ID: {UserId}, Email: {Email}, Role: {Role}, RememberMe: {RememberMe}",
                     user.Id,
                     user.Email,
-                    roleName,
+                    roleNames,
                     user.UserType.ToString(),
                     rememberMe
                 );
@@ -44,11 +44,15 @@ namespace backend.src.Application.Services.Implements
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, roleName),
                     new Claim("userName", user.UserName!.ToString()),
                     new Claim("userType", user.UserType.ToString()),
                     new Claim(ClaimTypes.Email, user.Email!),
                 };
+
+                foreach (var roleName in roleNames)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, roleName));
+                }
 
                 var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_jwtSecret));
 

@@ -14,7 +14,7 @@ namespace backend.src.Application.Services.Implements
     {
         private readonly IJobApplicationRepository _jobApplicationRepository;
         private readonly IOfferService _offerService;
-        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
         private readonly IConfiguration _configuration;
@@ -23,7 +23,7 @@ namespace backend.src.Application.Services.Implements
         public JobApplicationService(
             IJobApplicationRepository jobApplicationRepository,
             IOfferService offerService,
-            IUserService userService,
+            IUserRepository userRepository,
             INotificationService notificationService,
             IReviewService reviewService,
             IConfiguration configuration
@@ -31,7 +31,7 @@ namespace backend.src.Application.Services.Implements
         {
             _jobApplicationRepository = jobApplicationRepository;
             _offerService = offerService;
-            _userService = userService;
+            _userRepository = userRepository;
             _notificationService = notificationService;
             _reviewService = reviewService;
             _configuration = configuration;
@@ -46,7 +46,7 @@ namespace backend.src.Application.Services.Implements
         )
         {
             // Verifica que el usuario exista
-            User user = await _userService.GetUserByIdAsync(applicantId);
+            User user = await _userRepository.GetUserByIdAsync(applicantId);
             // Verificar que la oferta existe y está activa
             Offer? offer = await _offerService.GetByOfferIdAsync(offerId); //! IMPLEMENT GETBYOFFERASYNC IN THE SERVICE IF REQUIRED BY MORE METHODS
             if (offer == null)
@@ -54,7 +54,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Oferta ID: {OfferId} no encontrada al intentar postular", offerId);
                 throw new KeyNotFoundException("La oferta no existe");
             }
-            else if (!offer.IsValidated)
+            else if (!offer.IsOpen)
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta inactiva {OfferId}",
@@ -154,7 +154,7 @@ namespace backend.src.Application.Services.Implements
             SearchParamsDTO searchParams
         )
         {
-            User applicant = await _userService.GetUserByIdAsync(applicantId);
+            User applicant = await _userRepository.GetUserByIdAsync(applicantId);
             var (applications, totalCount) =
                 await _jobApplicationRepository.GetByApplicantIdFilteredAsync(
                     applicantId,
@@ -211,7 +211,7 @@ namespace backend.src.Application.Services.Implements
             if (offer == null)
                 return null;
 
-            var user = await _userService.GetUserByIdAsync(offer.UserId);
+            var user = await _userRepository.GetUserByIdAsync(offer.UserId);
 
             var authorName =
                 user?.UserType == UserType.Empresa ? (user.FirstName ?? "Empresa desconocida")
@@ -325,7 +325,7 @@ namespace backend.src.Application.Services.Implements
             await _jobApplicationRepository.UpdateAsync(application);
 
             // Obtener información del oferente para el email
-            var offererUser = await _userService.GetUserByIdAsync(OwnnerUserId);
+            var offererUser = await _userRepository.GetUserByIdAsync(OwnnerUserId);
             var companyName =
                 offererUser?.UserType == UserType.Empresa
                     ? (offererUser.FirstName ?? "Empresa desconocida")
@@ -353,7 +353,7 @@ namespace backend.src.Application.Services.Implements
             bool isCvRequired = true
         )
         {
-            var student = await _userService.GetUserByIdAsync(studentId);
+            var student = await _userRepository.GetUserByIdAsync(studentId);
 
             if (student == null || student.UserType != UserType.Estudiante)
                 return false;

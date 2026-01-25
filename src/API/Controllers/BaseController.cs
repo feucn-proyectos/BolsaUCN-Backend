@@ -31,7 +31,7 @@ namespace backend.src.API.Controllers
             return (parsedUserId, parsedUserType);
         }
 
-        protected (int, string[]) GetIdAndRolesFromToken()
+        protected (int, string[]) GetUserIdAndRolesFromToken()
         {
             Log.Information("Verificando token de autenticacion");
             if (User.Identity?.IsAuthenticated != true)

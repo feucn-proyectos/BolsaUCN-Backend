@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 
@@ -31,9 +32,12 @@ namespace backend.src.Application.Services.Interfaces
             UserAppealDto dto
         );
 
-        Task<Publication?> GetPublicationByIdAsync(
+        #region New Methods
+        Task<Publication> GetPublicationByIdAsync(
             int publicationId,
             PublicationQueryOptions options
         );
+        Task UpdatePublicationStatusAsync(Publication publication, StatusValidation newStatus);
+        #endregion
     }
 }

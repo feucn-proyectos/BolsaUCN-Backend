@@ -11,18 +11,18 @@ namespace backend.src.Application.Services.Implements
 {
     public class AdminService : IAdminService
     {
-        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
         private readonly ITokenService _tokenService;
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
         public AdminService(
-            IUserService userService,
+            IUserRepository userRepository,
             ITokenService tokenService,
             IConfiguration configuration
         )
         {
-            _userService = userService;
+            _userRepository = userRepository;
             _tokenService = tokenService;
             _configuration = configuration;
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
@@ -34,10 +34,6 @@ namespace backend.src.Application.Services.Implements
         /// <param name="adminId">ID del administrador que realiza la acción.</param>
         /// <param name="userId">ID del usuario cuyo estado de bloqueo se desea alternar.</param>
         /// <returns>El nuevo estado de bloqueo del usuario.</returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        /// <exception cref="KeyNotFoundException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="Exception"></exception>
         public async Task<bool> ToggleUserBlockedStatusAsync(int adminId, int userId)
         {
             //Chequeo de autobloqueo
@@ -55,9 +51,14 @@ namespace backend.src.Application.Services.Implements
             );
 
             // Verificar que el solicitante es un administrador
-            var requestingAdmin = await _userService.GetUserByIdAsync(adminId);
-            var requestingRoleResult = await _userService.HasRoleAsync(
-                requestingAdmin,
+            var requestingAdmin = await _userRepository.GetUserByIdAsync(adminId);
+            if (requestingAdmin == null)
+            {
+                Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            var requestingRoleResult = await _userRepository.CheckRoleAsync(
+                requestingAdmin.Id,
                 RoleNames.Admin
             );
             if (!requestingRoleResult)
@@ -77,12 +78,20 @@ namespace backend.src.Application.Services.Implements
             );
 
             // Obtener el usuario objetivo
-            var user = await _userService.GetUserByIdAsync(
+            var user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
+            if (user == null)
+            {
+                Log.Warning("No se encontró al usuario con ID {UserId}.", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
 
-            var userRoleResult = await _userService.HasRoleAsync(user, RoleNames.SuperAdmin);
+            var userRoleResult = await _userRepository.CheckRoleAsync(
+                user.Id,
+                RoleNames.SuperAdmin
+            );
             if (userRoleResult) // Prevenir bloqueo de superadministradores
             {
                 Log.Warning(
@@ -93,11 +102,11 @@ namespace backend.src.Application.Services.Implements
                     "No se puede bloquear o desbloquear a un superadministrador."
                 );
             }
-            userRoleResult = await _userService.HasRoleAsync(user, RoleNames.Admin);
+            userRoleResult = await _userRepository.CheckRoleAsync(user.Id, RoleNames.Admin);
             if (userRoleResult) // Prevenir bloqueo de administradores si es que es el ultimo
             {
-                requestingRoleResult = await _userService.HasRoleAsync(
-                    requestingAdmin,
+                requestingRoleResult = await _userRepository.CheckRoleAsync(
+                    requestingAdmin.Id,
                     RoleNames.SuperAdmin
                 );
                 if (!requestingRoleResult)
@@ -111,9 +120,7 @@ namespace backend.src.Application.Services.Implements
                     );
                 }
 
-                int numberOfAdmins = await _userService.GetNumberOfUsersByTypeAsync(
-                    UserType.Administrador
-                );
+                int numberOfAdmins = await _userRepository.GetCountByRoleAsync(RoleNames.Admin);
                 if (numberOfAdmins <= 1)
                 {
                     Log.Warning("Intento de bloquear al último administrador.");
@@ -125,7 +132,7 @@ namespace backend.src.Application.Services.Implements
 
             user.IsBlocked = !user.IsBlocked; // Alternar el estado de bloqueo
 
-            var toggleResult = await _userService.UpdateUserAsync(user);
+            var toggleResult = await _userRepository.UpdateAsync(user);
             if (toggleResult)
             {
                 Log.Information(
@@ -159,22 +166,19 @@ namespace backend.src.Application.Services.Implements
         /// </summary>
         /// <param name="adminId">ID del administrador que realiza la solicitud</param>
         /// <returns>DTO con la lista de usuarios</returns>
-        /// <exception cref="KeyNotFoundException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="NotImplementedException"></exception>
         public async Task<UsersForAdminDTO> GetAllUsersAsync(
             int adminId,
             SearchParamsDTO searchParams
         )
         {
             // Verificar que el solicitante es un administrador
-            var admin = await _userService.GetUserByIdAsync(adminId);
+            var admin = await _userRepository.GetUserByIdAsync(adminId);
             if (admin == null)
             {
                 Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
-            if (admin.UserType != UserType.Administrador)
+            if (admin.UserType != UserType.Administrador) // Como el usuario ya etsa cargado, es mas rapido que preguntar por el role al repo
             {
                 Log.Warning(
                     "El usuario con ID {AdminId} no tiene permisos de administrador.",
@@ -185,7 +189,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar y ajustar parámetros de paginación
-            var (allUsers, totalCount) = await _userService.GetFilteredForAdminAsync(
+            var (allUsers, totalCount) = await _userRepository.GetUsersFilteredForAdminAsync(
                 adminId,
                 searchParams
             );
@@ -228,10 +232,9 @@ namespace backend.src.Application.Services.Implements
         {
             //TODO Revisar si hay que hacer algo especial con el administrador.
 
-            var user = await _userService.GetUserByIdAsync(userId);
-            if (user == null)
-                throw new KeyNotFoundException();
-
+            var user =
+                await _userRepository.GetUserByIdAsync(userId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
             return user.Adapt<UserProfileForAdminDTO>();
         }
     }

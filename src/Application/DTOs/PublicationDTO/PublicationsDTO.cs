@@ -25,7 +25,7 @@ namespace backend.src.Application.DTOs.PublicationDTO
         /// <summary>
         /// Tipo de publicación (Oferta o CompraVenta)
         /// </summary>
-        public Types Types { get; set; }
+        public PublicationType Types { get; set; }
 
         /// <summary>
         /// Descripción de la publicación

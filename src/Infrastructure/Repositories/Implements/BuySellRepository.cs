@@ -32,7 +32,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.IsValidated)
+                .Where(bs => bs.IsOpen)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
@@ -115,7 +115,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 if (buySell == null)
                     return false;
 
-                buySell.IsValidated = false;
+                buySell.IsOpen = false;
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -129,7 +129,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context
                 .BuySells.Where(bs =>
-                    bs.IsValidated && bs.Category.ToLower().Contains(category.ToLower())
+                    bs.IsOpen && bs.Category.ToLower().Contains(category.ToLower())
                 )
                 .Include(bs => bs.User)
                 .Include(bs => bs.Images)
@@ -143,9 +143,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         )
         {
             return await _context
-                .BuySells.Where(bs =>
-                    bs.IsValidated && bs.Price >= minPrice && bs.Price <= maxPrice
-                )
+                .BuySells.Where(bs => bs.IsOpen && bs.Price >= minPrice && bs.Price <= maxPrice)
                 .Include(bs => bs.User)
                 .Include(bs => bs.Images)
                 .OrderBy(bs => bs.Price)

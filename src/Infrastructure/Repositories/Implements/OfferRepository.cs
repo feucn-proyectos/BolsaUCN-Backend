@@ -28,7 +28,7 @@ public class OfferRepository : IOfferRepository
         _logger.LogInformation("Consultando ofertas activas en la base de datos");
         var offers = await _context
             .Offers.Include(o => o.User)
-            .Where(o => o.IsValidated && o.EndDate > DateTime.UtcNow)
+            .Where(o => o.IsOpen && o.EndDate > DateTime.UtcNow)
             .AsNoTracking()
             .ToListAsync();
         _logger.LogInformation(
@@ -64,7 +64,7 @@ public class OfferRepository : IOfferRepository
         _logger.LogInformation("Consultando ofertas publicadas en la base de datos");
         var offers = await _context
             .Offers.Include(o => o.User)
-            .Where(o => o.StatusValidation == StatusValidation.Publicado && o.IsValidated == true)
+            .Where(o => o.StatusValidation == StatusValidation.Publicado && o.IsOpen == true)
             .AsNoTracking()
             .ToListAsync();
         _logger.LogInformation(

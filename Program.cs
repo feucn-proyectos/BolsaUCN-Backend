@@ -154,6 +154,7 @@ try
     // 6) DI (repos/services/mappers)
     // =========================
     builder.Services.AddScoped<UserMapper>();
+    builder.Services.AddScoped<PublicationMapper>();
     builder.Services.AddScoped<OfferMapper>();
     builder.Services.AddScoped<BuySellMapper>();
     builder.Services.AddScoped<ApplicationMapper>();
@@ -183,6 +184,7 @@ try
     builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<IValidationService, ValidationService>();
     builder.Services.AddDocumentStorageProvider(builder.Configuration);
 
     builder.Services.AddMapster();

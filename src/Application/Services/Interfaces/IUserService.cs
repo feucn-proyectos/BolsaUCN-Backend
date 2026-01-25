@@ -10,62 +10,6 @@ namespace backend.src.Application.Services.Interfaces
 {
     public interface IUserService
     {
-        #region Métodos auxiliares
-
-        /// <summary>
-        /// Obtiene un usuario por su ID con opciones de consulta.
-        /// </summary>
-        /// <param name="userId">ID del usuario</param>
-        /// <param name="options">
-        /// Opciones de consulta para incluir relaciones y controlar el seguimiento de cambios.
-        /// Si es <c>null</c>, se utilizan las opciones predeterminadas.
-        /// <list type="bullet">
-        /// <item><description><see cref="UserQueryOptions.TrackChanges"/>: Indica si se debe realizar un seguimiento de los cambios en la entidad.</description></item>
-        /// <item><description><see cref="UserQueryOptions.IncludePhoto"/>: Indica si se debe incluir la foto del usuario.</description></item>
-        /// <item><description><see cref="UserQueryOptions.IncludeCV"/>: Indica si se debe incluir el CV del usuario.</description></item>
-        /// <item><description><see cref="UserQueryOptions.IncludeApplications"/>: Indica si se deben incluir las aplicaciones del usuario.</description></item>
-        /// <item><description><see cref="UserQueryOptions.IncludePublications"/>: Indica si se deben incluir las publicaciones del usuario.</description></item>
-        /// </list>
-        /// </param>
-        /// <returns>El usuario encontrado o lanza una excepción si no existe</returns>
-        /// <exception cref="KeyNotFoundException">Si el usuario no existe</exception>
-        Task<User> GetUserByIdAsync(int userId, UserQueryOptions? options = null);
-
-        /// <summary>
-        /// Verifica si un usuario tiene un rol específico.
-        /// </summary>
-        /// <param name="user">El usuario a verificar</param>
-        /// <param name="role">El nombre del rol a verificar</param>
-        /// <returns>True si el usuario tiene el rol, de lo contrario False</returns>
-        Task<bool> HasRoleAsync(User user, string role);
-
-        /// <summary>
-        /// Obtiene el número de usuarios por tipo.
-        /// </summary>
-        /// <param name="userType">El tipo de usuario</param>
-        /// <returns>El número de usuarios del tipo especificado</returns>
-        Task<int> GetNumberOfUsersByTypeAsync(UserType userType);
-
-        /// <summary>
-        /// Actualiza un usuario en el sistema.
-        /// </summary>
-        /// <param name="user">El usuario a actualizar</param>
-        /// <returns>True si la actualización fue exitosa, de lo contrario False</returns>
-        Task<bool> UpdateUserAsync(User user);
-
-        /// <summary>
-        /// Obtiene usuarios filtrados para un administrador.
-        /// </summary>
-        /// <param name="adminId">ID del administrador</param>
-        /// <param name="searchParams">Parámetros de búsqueda para filtrar usuarios</param>
-        /// <returns>Una tupla que contiene la lista de usuarios y el conteo total</returns>
-        Task<(IEnumerable<User>, int TotalCount)> GetFilteredForAdminAsync(
-            int adminId,
-            SearchParamsDTO searchParams
-        );
-
-        #endregion
-
         #region Registro de usuarios
 
         /// <summary>

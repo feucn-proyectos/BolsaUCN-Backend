@@ -567,8 +567,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = s.Title,
                     Description = s.Desc,
                     CreatedAt = now.AddDays(-i % 3), // algunas “recientes”
-                    Type = Types.Oferta,
-                    IsValidated = true,
+                    Type = PublicationType.Oferta,
+                    IsOpen = true,
                     StatusValidation = StatusValidation.Publicado,
 
                     EndDate = s.End,
@@ -595,8 +595,8 @@ namespace backend.src.Application.Infrastructure.Data
                 Description =
                     "Se busca estudiante para práctica de 3 meses en desarrollo backend con .NET y Azure. El postulante debe estar en último año. Esta oferta está pendiente de aprobación por la DGE.",
                 CreatedAt = now.AddDays(-1),
-                Type = Types.Oferta,
-                IsValidated = true,
+                Type = PublicationType.Oferta,
+                IsOpen = true,
                 StatusValidation = StatusValidation.EnProceso, // <- Estado solicitado
 
                 EndDate = now.AddMonths(3),
@@ -678,8 +678,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = faker.Name.JobTitle(),
                     Description = faker.Lorem.Paragraph(3),
                     CreatedAt = publicationDate,
-                    Type = Types.Oferta,
-                    IsValidated = isActive,
+                    Type = PublicationType.Oferta,
+                    IsOpen = isActive,
                     StatusValidation = status,
 
                     EndDate = endDate,
@@ -771,8 +771,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = it.Title,
                     Description = it.Desc,
                     CreatedAt = now.AddDays(-(i % 3)),
-                    Type = Types.CompraVenta,
-                    IsValidated = true,
+                    Type = PublicationType.CompraVenta,
+                    IsOpen = true,
                     StatusValidation = StatusValidation.Publicado,
 
                     Price = it.Price,
@@ -797,8 +797,8 @@ namespace backend.src.Application.Infrastructure.Data
                 Description =
                     "Vendo todos mis apuntes de primer año de ing. civil. Están en PDF. El admin debe revisar que no sea material con copyright.",
                 CreatedAt = now.AddDays(-1),
-                Type = Types.CompraVenta,
-                IsValidated = true,
+                Type = PublicationType.CompraVenta,
+                IsOpen = true,
                 StatusValidation = StatusValidation.EnProceso, // <- Estado solicitado
 
                 Price = 15000m,
@@ -871,8 +871,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Description =
                         faker.Commerce.ProductDescription() + ". " + faker.Lorem.Sentence(5),
                     CreatedAt = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
-                    Type = Types.CompraVenta,
-                    IsValidated = isActive,
+                    Type = PublicationType.CompraVenta,
+                    IsOpen = isActive,
                     StatusValidation = status,
 
                     Price = faker.Random.Decimal(5000, 100000),
@@ -904,9 +904,9 @@ namespace backend.src.Application.Infrastructure.Data
                 .Offers.Include(o => o.User)
                 .Where(o =>
                     o.StatusValidation == StatusValidation.Publicado
-                    && o.IsValidated == true
+                    && o.IsOpen == true
                     && o.ApplicationDeadline > DateTime.UtcNow
-                    && o.Type == Types.Oferta
+                    && o.Type == PublicationType.Oferta
                 )
                 .ToListAsync();
 

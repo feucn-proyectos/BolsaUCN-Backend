@@ -164,7 +164,7 @@ namespace backend.src.Infrastructure.Data
         }
 
         /// <summary>
-        /// Detecta publicaciones que están siendo cerradas (IsValidated: true -> false).
+        /// Detecta publicaciones que están siendo cerradas (IsOpen: true -> false).
         /// </summary>
         /// <returns>Lista de publicaciones cerradas</returns>
         private List<Publication> DetectClosedPublications()
@@ -175,9 +175,9 @@ namespace backend.src.Infrastructure.Data
                     .Entries<Publication>()
                     .Where(e =>
                         e.State == EntityState.Modified
-                        && e.Property(p => p.IsValidated).IsModified
-                        && e.Property(p => p.IsValidated).CurrentValue == false
-                        && e.Property(p => p.IsValidated).OriginalValue == true
+                        && e.Property(p => p.IsOpen).IsModified
+                        && e.Property(p => p.IsOpen).CurrentValue == false
+                        && e.Property(p => p.IsOpen).OriginalValue == true
                     )
                     .Select(e => e.Entity),
             ];

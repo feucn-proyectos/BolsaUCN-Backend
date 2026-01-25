@@ -1,6 +1,8 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
@@ -18,7 +20,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IBuySellRepository _buySellRepository;
         private const int MAX_APPEALS = 3;
         private readonly IPublicationRepository _publicationRepository;
-        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
 
         public PublicationService(
@@ -26,14 +28,14 @@ namespace backend.src.Application.Services.Implements
             IBuySellRepository buySellRepository,
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
-            IUserService userService
+            IUserRepository userRepository
         )
         {
             _offerRepository = offerRepository;
             _buySellRepository = buySellRepository;
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
-            _userService = userService;
+            _userRepository = userRepository;
         }
 
         /// <summary>
@@ -42,7 +44,9 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> CreateOfferAsync(CreateOfferDTO offerDTO, int userId)
         {
             // Obtener y validar el usuario actual
-            User currentUser = await _userService.GetUserByIdAsync(userId);
+            User currentUser =
+                await _userRepository.GetUserByIdAsync(userId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
             // Validaciones de fechas
             if (offerDTO.EndDate <= DateTime.UtcNow)
             {
@@ -81,13 +85,13 @@ namespace backend.src.Application.Services.Implements
 
             // Mapeo adicional y asignaciones
             newOffer.UserId = currentUser.Id;
-            newOffer.Type = Types.Oferta;
+            newOffer.Type = PublicationType.Oferta;
 
             newOffer.StatusValidation = isAdmin
                 ? StatusValidation.Publicado
                 : StatusValidation.EnProceso;
 
-            newOffer.IsValidated = isAdmin;
+            newOffer.IsOpen = isAdmin;
 
             var createOfferResult = await _offerRepository.CreateOfferAsync(newOffer);
 
@@ -107,8 +111,15 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> CreateBuySellAsync(CreateBuySellDTO buySellDTO, int currentUserId)
         {
             // Obtener y validar el usuario actual
-            var currentUser = await _userService.GetUserByIdAsync(currentUserId);
-            var isAdmin = currentUser.UserType == UserType.Administrador;
+            var currentUser =
+                await _userRepository.GetUserByIdAsync(currentUserId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
+            var isAdmin =
+                currentUser.UserType == UserType.Administrador
+                    ? true
+                    : throw new UnauthorizedAccessException(
+                        "Solo los administradores pueden crear publicaciones de compra/venta directamente publicadas."
+                    );
             // Validar que el usuario no tenga más de 3 reseñas pendientes
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
             if (pendingReviewsCount >= 3)
@@ -126,12 +137,12 @@ namespace backend.src.Application.Services.Implements
             BuySell newBuySell = buySellDTO.Adapt<BuySell>();
             // Mapeo adicional y asignaciones
             newBuySell.UserId = currentUser.Id;
-            newBuySell.Type = Types.CompraVenta;
+            newBuySell.Type = PublicationType.CompraVenta;
 
             newBuySell.StatusValidation = isAdmin
                 ? StatusValidation.Publicado
                 : StatusValidation.EnProceso;
-            newBuySell.IsValidated = isAdmin;
+            newBuySell.IsOpen = isAdmin;
 
             var createdBuySellResult = await _buySellRepository.CreateBuySellAsync(newBuySell);
 
@@ -164,7 +175,7 @@ namespace backend.src.Application.Services.Implements
                 UserId = p.UserId,
                 Images = p.Images,
                 Types = p.Type,
-                IsActive = p.IsValidated,
+                IsActive = p.IsOpen,
             });
 
             return publicationsDto;
@@ -188,7 +199,7 @@ namespace backend.src.Application.Services.Implements
                 UserId = p.UserId,
                 Images = p.Images,
                 Types = p.Type,
-                IsActive = p.IsValidated,
+                IsActive = p.IsOpen,
             });
 
             return publicationsDto;
@@ -216,7 +227,7 @@ namespace backend.src.Application.Services.Implements
                 UserId = p.UserId,
                 Images = p.Images,
                 Types = p.Type,
-                IsActive = p.IsValidated,
+                IsActive = p.IsOpen,
             });
 
             return publicationsDto;
@@ -236,7 +247,7 @@ namespace backend.src.Application.Services.Implements
 
             // 3. Update logic
             publication.StatusValidation = StatusValidation.Publicado;
-            publication.IsValidated = true;
+            publication.IsOpen = true;
 
             await _publicationRepository.UpdateAsync(publication);
 
@@ -258,7 +269,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("La publicación no existe.");
 
             publication.StatusValidation = StatusValidation.Rechazado;
-            publication.IsValidated = false;
+            publication.IsOpen = false;
             publication.AdminRejectionReason = dto.Reason;
 
             await _publicationRepository.UpdateAsync(publication);
@@ -313,12 +324,47 @@ namespace backend.src.Application.Services.Implements
             );
         }
 
-        public async Task<Publication?> GetPublicationByIdAsync(
+        public async Task<Publication> GetPublicationByIdAsync(
             int publicationId,
             PublicationQueryOptions options
         )
         {
-            throw new NotImplementedException();
+            Publication? publication = await _publicationRepository.GetPublicationByIdAsync(
+                publicationId,
+                options
+            );
+            if (publication == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("La publicación no existe.");
+            }
+            return publication;
+        }
+
+        public async Task UpdatePublicationStatusAsync(
+            Publication publication,
+            StatusValidation newStatus
+        )
+        {
+            var oldStatus = publication.StatusValidation;
+            publication.StatusValidation = newStatus;
+            await _publicationRepository.UpdateAsync(publication);
+            if (publication.StatusValidation == oldStatus)
+            {
+                Log.Warning(
+                    "El estado de la publicación con ID {PublicationId} no cambió. Estado actual: {Status}",
+                    publication.Id,
+                    publication.StatusValidation
+                );
+            }
+            else
+            {
+                Log.Information(
+                    "Estado de la publicación con ID {PublicationId} actualizado a {Status}",
+                    publication.Id,
+                    publication.StatusValidation
+                );
+            }
         }
     }
 }

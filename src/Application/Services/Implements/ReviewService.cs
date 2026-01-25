@@ -20,7 +20,7 @@ namespace backend.src.Application.Services.Implements
     public class ReviewService : IReviewService
     {
         private readonly IReviewRepository _repository;
-        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
         private readonly IAdminNotificationRepository _adminNotificationRepository;
         private readonly IEmailService _emailService;
 
@@ -31,13 +31,13 @@ namespace backend.src.Application.Services.Implements
         /// <param name="userRepository">El repositorio de usuarios para validación.</param>
         public ReviewService(
             IReviewRepository repository,
-            IUserService userService,
+            IUserRepository userRepository,
             IAdminNotificationRepository adminNotificationRepository,
             IEmailService emailService
         )
         {
             _repository = repository;
-            _userService = userService;
+            _userRepository = userRepository;
             _adminNotificationRepository = adminNotificationRepository;
             _emailService = emailService;
         }
@@ -70,7 +70,7 @@ namespace backend.src.Application.Services.Implements
                     $"No se encontraron reseñas para el oferente con ID {offerorId}."
                 );
 
-            var user = await _userService.GetUserByIdAsync(offerorId);
+            var user = await _userRepository.GetUserByIdAsync(offerorId);
 
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
@@ -360,10 +360,10 @@ namespace backend.src.Application.Services.Implements
         {
             // Validar que existan el estudiante y el oferente
             var student =
-                await _userService.GetUserByIdAsync(dto.StudentId)
+                await _userRepository.GetUserByIdAsync(dto.StudentId)
                 ?? throw new ArgumentException($"El estudiante con ID {dto.StudentId} no existe.");
             var offeror =
-                await _userService.GetUserByIdAsync(dto.OfferorId)
+                await _userRepository.GetUserByIdAsync(dto.OfferorId)
                 ?? throw new ArgumentException($"El oferente con ID {dto.OfferorId} no existe.");
             // Validar que no exista ya una review para esta publicación
             var existingReview = await _repository.GetByPublicationIdAsync(dto.PublicationId);
@@ -424,7 +424,7 @@ namespace backend.src.Application.Services.Implements
             int userId
         )
         {
-            var user = await _userService.GetUserByIdAsync(userId);
+            var user = await _userRepository.GetUserByIdAsync(userId);
             IEnumerable<Review> reviews;
             if (user.UserType == UserType.Estudiante)
             {
@@ -475,7 +475,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task UpdateUserRatingAsync(int userId)
         {
-            var user = await _userService.GetUserByIdAsync(
+            var user = await _userRepository.GetUserByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
@@ -497,7 +497,7 @@ namespace backend.src.Application.Services.Implements
             }
             // Actualizar el rating del usuario (usar 0.0 si no hay calificaciones)
             user.Rating = averageRating ?? 0.0;
-            await _userService.UpdateUserAsync(user);
+            await _userRepository.UpdateAsync(user);
             Log.Information(
                 "Se actualizo el rating del usuario: {UserId} a: {Rating}",
                 userId,
@@ -507,7 +507,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<double?> GetUserAverageRatingAsync(int userId)
         {
-            var user = await _userService.GetUserByIdAsync(userId);
+            var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
             {
                 throw new KeyNotFoundException($"No se encontró el usuario con ID {userId}.");
@@ -541,7 +541,7 @@ namespace backend.src.Application.Services.Implements
             // Corrobora que el usuario tenga el rol por el cual se esta filtrando
             if (role != null)
             {
-                var hasRoleResult = await _userService.HasRoleAsync(user, role);
+                var hasRoleResult = await _userRepository.CheckRoleAsync(user.Id, role);
                 if (!hasRoleResult)
                 {
                     Log.Error("El usuario con ID {UserId} no tiene el rol {Role}", user.Id, role);

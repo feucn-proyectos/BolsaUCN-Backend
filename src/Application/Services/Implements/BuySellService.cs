@@ -86,7 +86,7 @@ namespace backend.src.Application.Services.Implements
                     Location = buySell.Location,
                     ContactInfo = buySell.AdditionalContactInfo,
                     PublicationDate = buySell.CreatedAt,
-                    IsActive = buySell.IsValidated,
+                    IsActive = buySell.IsOpen,
                     ImageUrls = buySell.Images.Select(img => img.Url).ToList(),
                     UserId = buySell.UserId,
                     UserName = buySell.User.UserName ?? "Usuario",
@@ -153,7 +153,7 @@ namespace backend.src.Application.Services.Implements
                     NameOwner = bs.User.UserName ?? "Usuario",
                     PublicationDate = bs.CreatedAt,
                     Type = bs.Type,
-                    IsActive = bs.IsValidated,
+                    IsActive = bs.IsOpen,
                 })
                 .ToList();
             _logger.LogInformation(
@@ -209,7 +209,7 @@ namespace backend.src.Application.Services.Implements
                     $"La compra/venta con ID {id} ya fue {buySell.StatusValidation}. No se puede publicar."
                 );
             }
-            buySell.IsValidated = true;
+            buySell.IsOpen = true;
             buySell.StatusValidation = StatusValidation.Publicado;
             await _buySellRepository.UpdateAsync(buySell);
 
@@ -237,7 +237,7 @@ namespace backend.src.Application.Services.Implements
                     $"La compra/venta con ID {id} ya fue {buySell.StatusValidation}. No se puede rechazar."
                 );
             }
-            buySell.IsValidated = false;
+            buySell.IsOpen = false;
             buySell.StatusValidation = StatusValidation.Rechazado;
             await _buySellRepository.UpdateAsync(buySell);
 
@@ -267,7 +267,7 @@ namespace backend.src.Application.Services.Implements
                     $"La compra/venta con ID {buySellId} está {buySell.StatusValidation}. No se puede cerrar."
                 );
             }
-            buySell.IsValidated = false;
+            buySell.IsOpen = false;
             buySell.StatusValidation = StatusValidation.Cerrado;
             await _buySellRepository.UpdateAsync(buySell);
 
@@ -298,7 +298,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            if (!buySell.IsValidated)
+            if (!buySell.IsOpen)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con id {buySellId} ya ha sido cerrada."
@@ -312,7 +312,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            buySell.IsValidated = false;
+            buySell.IsOpen = false;
             buySell.StatusValidation = StatusValidation.Cerrado;
             await _buySellRepository.UpdateAsync(buySell);
 

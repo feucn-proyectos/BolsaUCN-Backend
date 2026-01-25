@@ -40,7 +40,7 @@ namespace backend.src.Application.DTOs.OfferDTOs
         /// <summary>
         /// Publication type (Offer, BuySell).
         /// </summary>
-        public Types Type { get; set; }
+        public PublicationType Type { get; set; }
 
         /// <summary>
         /// Whether the offer is currently active.

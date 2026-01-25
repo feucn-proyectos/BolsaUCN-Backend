@@ -124,7 +124,7 @@ public class OfferService : IOfferService
         if (offer == null)
             throw new KeyNotFoundException("Offer not found.");
 
-        offer.IsValidated = true; // o Published / Active, según tu modelo
+        offer.IsOpen = true; // o Published / Active, según tu modelo
         _context.Offers.Update(offer);
         await _context.SaveChangesAsync();
     }
@@ -135,7 +135,7 @@ public class OfferService : IOfferService
         if (offer == null)
             throw new KeyNotFoundException("Offer not found.");
 
-        offer.IsValidated = false;
+        offer.IsOpen = false;
         _context.Offers.Update(offer);
         await _context.SaveChangesAsync();
     }
@@ -176,7 +176,7 @@ public class OfferService : IOfferService
                     CompanyName = ownerName,
                     PublicationDate = o.CreatedAt,
                     OfferType = o.OfferType,
-                    Activa = o.IsValidated,
+                    Activa = o.IsOpen,
                     Remuneration = o.Remuneration,
                 };
             })
@@ -210,7 +210,7 @@ public class OfferService : IOfferService
             EndDate = offer.EndDate,
             DeadlineDate = offer.ApplicationDeadline,
             Type = offer.Type,
-            Active = offer.IsValidated,
+            Active = offer.IsOpen,
             statusValidation = offer.StatusValidation,
             Remuneration = offer.Remuneration,
             OfferType = offer.OfferType,
@@ -231,11 +231,11 @@ public class OfferService : IOfferService
         {
             throw new KeyNotFoundException($"La oferta con id {offerId} no fue encontrada.");
         }
-        if (!offer.IsValidated)
+        if (!offer.IsOpen)
         {
             throw new InvalidOperationException($"La oferta con id {offerId} ya ha sido cerrada.");
         }
-        offer.IsValidated = false;
+        offer.IsOpen = false;
         await _offerRepository.UpdateOfferAsync(offer);
 
         Log.Information(
@@ -303,7 +303,7 @@ public class OfferService : IOfferService
                 $"La oferta con ID {id} ya fue {offer.StatusValidation}. No se puede publicar."
             );
         }
-        offer.IsValidated = true;
+        offer.IsOpen = true;
         offer.StatusValidation = StatusValidation.Publicado;
         await _offerRepository.UpdateOfferAsync(offer);
 
@@ -331,7 +331,7 @@ public class OfferService : IOfferService
                 $"La oferta con ID {id} ya fue {offer.StatusValidation}. No se puede rechazar."
             );
         }
-        offer.IsValidated = false;
+        offer.IsOpen = false;
         offer.StatusValidation = StatusValidation.Rechazado;
         await _offerRepository.UpdateOfferAsync(offer);
 
@@ -379,11 +379,11 @@ public class OfferService : IOfferService
         {
             throw new KeyNotFoundException($"La oferta con id {offerId} no fue encontrada.");
         }
-        if (!offer.IsValidated)
+        if (!offer.IsOpen)
         {
             throw new InvalidOperationException($"La oferta con id {offerId} ya ha sido cerrada.");
         }
-        offer.IsValidated = false;
+        offer.IsOpen = false;
         await _offerRepository.UpdateOfferAsync(offer);
 
         Log.Information(
@@ -415,7 +415,7 @@ public class OfferService : IOfferService
             throw new KeyNotFoundException($"La oferta con id {offerId} no fue encontrada.");
         }
 
-        if (!offer.IsValidated)
+        if (!offer.IsOpen)
         {
             throw new InvalidOperationException($"La oferta con id {offerId} ya ha sido cerrada.");
         }
@@ -428,7 +428,7 @@ public class OfferService : IOfferService
             );
         }
 
-        offer.IsValidated = false;
+        offer.IsOpen = false;
         offer.StatusValidation = StatusValidation.Cerrado;
         await _offerRepository.UpdateOfferAsync(offer);
 
