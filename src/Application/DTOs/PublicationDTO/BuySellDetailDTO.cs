@@ -60,7 +60,7 @@ namespace backend.src.Application.DTOs.PublicationDTO
         /// <summary>
         /// Estado de validación de la publicación
         /// </summary>
-        public required StatusValidation StatusValidation { get; set; }
+        public required ApprovalStatus StatusValidation { get; set; }
 
         // Información del usuario
 

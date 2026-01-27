@@ -93,7 +93,7 @@ namespace backend.src.Application.Services.Implements
                     UserEmail = buySell.User.Email ?? "",
                     AboutMe = buySell.User.AboutMe,
                     Rating = buySell.User.Rating,
-                    statusValidation = buySell.StatusValidation,
+                    statusValidation = buySell.ApprovalStatus,
                 };
 
                 _logger.LogInformation(
@@ -152,7 +152,7 @@ namespace backend.src.Application.Services.Implements
                     Title = bs.Title,
                     NameOwner = bs.User.UserName ?? "Usuario",
                     PublicationDate = bs.CreatedAt,
-                    Type = bs.Type,
+                    Type = bs.PublicationType,
                     IsActive = bs.IsOpen,
                 })
                 .ToList();
@@ -203,14 +203,14 @@ namespace backend.src.Application.Services.Implements
             {
                 throw new KeyNotFoundException($"La compra/venta con id {id} no fue encontrada.");
             }
-            if (buySell.StatusValidation != StatusValidation.EnProceso)
+            if (buySell.ApprovalStatus != ApprovalStatus.EnProceso)
             {
                 throw new InvalidOperationException(
-                    $"La compra/venta con ID {id} ya fue {buySell.StatusValidation}. No se puede publicar."
+                    $"La compra/venta con ID {id} ya fue {buySell.ApprovalStatus}. No se puede publicar."
                 );
             }
             buySell.IsOpen = true;
-            buySell.StatusValidation = StatusValidation.Publicado;
+            buySell.ApprovalStatus = ApprovalStatus.Aceptado;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)
@@ -231,14 +231,14 @@ namespace backend.src.Application.Services.Implements
             {
                 throw new KeyNotFoundException($"La compra/venta con id {id} no fue encontrada.");
             }
-            if (buySell.StatusValidation != StatusValidation.EnProceso)
+            if (buySell.ApprovalStatus != ApprovalStatus.EnProceso)
             {
                 throw new InvalidOperationException(
-                    $"La compra/venta con ID {id} ya fue {buySell.StatusValidation}. No se puede rechazar."
+                    $"La compra/venta con ID {id} ya fue {buySell.ApprovalStatus}. No se puede rechazar."
                 );
             }
             buySell.IsOpen = false;
-            buySell.StatusValidation = StatusValidation.Rechazado;
+            buySell.ApprovalStatus = ApprovalStatus.Rechazado;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)
@@ -261,14 +261,14 @@ namespace backend.src.Application.Services.Implements
                     $"La compra/venta con id {buySellId} no fue encontrada."
                 );
             }
-            if (buySell.StatusValidation != StatusValidation.Publicado)
+            if (buySell.ApprovalStatus != ApprovalStatus.Aceptado)
             {
                 throw new InvalidOperationException(
-                    $"La compra/venta con ID {buySellId} está {buySell.StatusValidation}. No se puede cerrar."
+                    $"La compra/venta con ID {buySellId} está {buySell.ApprovalStatus}. No se puede cerrar."
                 );
             }
             buySell.IsOpen = false;
-            buySell.StatusValidation = StatusValidation.Cerrado;
+            buySell.ApprovalStatus = ApprovalStatus.Cerrado;
             await _buySellRepository.UpdateAsync(buySell);
 
             {
@@ -305,15 +305,15 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            if (buySell.StatusValidation != StatusValidation.Publicado)
+            if (buySell.ApprovalStatus != ApprovalStatus.Aceptado)
             {
                 throw new InvalidOperationException(
-                    $"La compra/venta con ID {buySellId} está {buySell.StatusValidation}. Solo las publicaciones activas pueden ser cerradas."
+                    $"La compra/venta con ID {buySellId} está {buySell.ApprovalStatus}. Solo las publicaciones activas pueden ser cerradas."
                 );
             }
 
             buySell.IsOpen = false;
-            buySell.StatusValidation = StatusValidation.Cerrado;
+            buySell.ApprovalStatus = ApprovalStatus.Cerrado;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)

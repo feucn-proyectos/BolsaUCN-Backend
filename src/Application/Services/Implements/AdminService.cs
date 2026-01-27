@@ -51,7 +51,7 @@ namespace backend.src.Application.Services.Implements
             );
 
             // Verificar que el solicitante es un administrador
-            var requestingAdmin = await _userRepository.GetUserByIdAsync(adminId);
+            var requestingAdmin = await _userRepository.GetByIdAsync(adminId);
             if (requestingAdmin == null)
             {
                 Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
@@ -78,7 +78,7 @@ namespace backend.src.Application.Services.Implements
             );
 
             // Obtener el usuario objetivo
-            var user = await _userRepository.GetUserByIdAsync(
+            var user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
@@ -172,7 +172,7 @@ namespace backend.src.Application.Services.Implements
         )
         {
             // Verificar que el solicitante es un administrador
-            var admin = await _userRepository.GetUserByIdAsync(adminId);
+            var admin = await _userRepository.GetByIdAsync(adminId);
             if (admin == null)
             {
                 Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
@@ -233,7 +233,7 @@ namespace backend.src.Application.Services.Implements
             //TODO Revisar si hay que hacer algo especial con el administrador.
 
             var user =
-                await _userRepository.GetUserByIdAsync(userId)
+                await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
             return user.Adapt<UserProfileForAdminDTO>();
         }

@@ -46,7 +46,7 @@ public class OfferRepository : IOfferRepository
         _logger.LogInformation("Consultando ofertas pendientes en la base de datos");
         var offers = await _context
             .Offers.Include(o => o.User)
-            .Where(o => o.StatusValidation == StatusValidation.EnProceso)
+            .Where(o => o.ApprovalStatus == ApprovalStatus.EnProceso)
             .AsNoTracking()
             .ToListAsync();
         _logger.LogInformation(
@@ -64,7 +64,7 @@ public class OfferRepository : IOfferRepository
         _logger.LogInformation("Consultando ofertas publicadas en la base de datos");
         var offers = await _context
             .Offers.Include(o => o.User)
-            .Where(o => o.StatusValidation == StatusValidation.Publicado && o.IsOpen == true)
+            .Where(o => o.ApprovalStatus == ApprovalStatus.Aceptado && o.IsOpen == true)
             .AsNoTracking()
             .ToListAsync();
         _logger.LogInformation(

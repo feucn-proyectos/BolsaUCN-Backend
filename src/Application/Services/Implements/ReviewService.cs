@@ -70,7 +70,7 @@ namespace backend.src.Application.Services.Implements
                     $"No se encontraron reseñas para el oferente con ID {offerorId}."
                 );
 
-            var user = await _userRepository.GetUserByIdAsync(offerorId);
+            var user = await _userRepository.GetByIdAsync(offerorId);
 
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
@@ -360,10 +360,10 @@ namespace backend.src.Application.Services.Implements
         {
             // Validar que existan el estudiante y el oferente
             var student =
-                await _userRepository.GetUserByIdAsync(dto.StudentId)
+                await _userRepository.GetByIdAsync(dto.StudentId)
                 ?? throw new ArgumentException($"El estudiante con ID {dto.StudentId} no existe.");
             var offeror =
-                await _userRepository.GetUserByIdAsync(dto.OfferorId)
+                await _userRepository.GetByIdAsync(dto.OfferorId)
                 ?? throw new ArgumentException($"El oferente con ID {dto.OfferorId} no existe.");
             // Validar que no exista ya una review para esta publicación
             var existingReview = await _repository.GetByPublicationIdAsync(dto.PublicationId);
@@ -424,7 +424,7 @@ namespace backend.src.Application.Services.Implements
             int userId
         )
         {
-            var user = await _userRepository.GetUserByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             IEnumerable<Review> reviews;
             if (user.UserType == UserType.Estudiante)
             {
@@ -475,7 +475,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task UpdateUserRatingAsync(int userId)
         {
-            var user = await _userRepository.GetUserByIdAsync(
+            var user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
@@ -507,7 +507,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<double?> GetUserAverageRatingAsync(int userId)
         {
-            var user = await _userRepository.GetUserByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new KeyNotFoundException($"No se encontró el usuario con ID {userId}.");

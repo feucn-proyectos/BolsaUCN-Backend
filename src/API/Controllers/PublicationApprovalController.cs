@@ -12,11 +12,11 @@ namespace backend.src.API.Controllers
     [Route("api/publications/")]
     public class ValidationController : BaseController
     {
-        private readonly IValidationService _validationService;
+        private readonly IApprovalService _approvalService;
 
-        public ValidationController(IValidationService validationService)
+        public ValidationController(IApprovalService approvalService)
         {
-            _validationService = validationService;
+            _approvalService = approvalService;
         }
 
         #region Validate Publication
@@ -40,27 +40,27 @@ namespace backend.src.API.Controllers
         */
         [HttpPatch("{publicationId}/validate")]
         [Authorize(Roles = RoleNames.Admin)]
-        public async Task<IActionResult> ValidatePublication(
+        public async Task<IActionResult> ApprovePublication(
             int publicationId,
-            [FromBody] ValidationActionDTO validationDto
+            [FromBody] ApprovalActionDTO approvalDto
         )
         {
             int parsedUserId = GetUserIdFromToken();
             Log.Information(
                 "Action: {Action} on Publication ID: {PublicationId} by Admin User ID: {AdminUserId}",
-                validationDto.Action,
+                approvalDto.Action,
                 publicationId,
                 parsedUserId
             );
-            var validationResult = await _validationService.ValidatePublication(
+            var approvalResult = await _approvalService.UpdatePublication(
                 parsedUserId,
                 publicationId,
-                validationDto.Action
+                approvalDto.Action
             );
             return Ok(
-                new GenericResponse<ValidationResponseDTO>(
+                new GenericResponse<PublicationApprovalResultDTO>(
                     "Operación realizada con éxito",
-                    validationResult
+                    approvalResult
                 )
             );
         }
@@ -68,19 +68,36 @@ namespace backend.src.API.Controllers
         #region Get Publications
         [HttpGet("pending")]
         [Authorize(Roles = RoleNames.Admin)]
-        public async Task<IActionResult> GetPendingPublicationsForValidation(
+        public async Task<IActionResult> GetPendingPublicationsForApproval(
             [FromQuery] SearchParamsDTO searchParamsDTO
         )
         {
             int adminId = GetUserIdFromToken();
-            var publications = await _validationService.GetPublicationsForValidationAsync(
+            var publications = await _approvalService.GetPendingPublicationsAsync(
                 adminId,
                 searchParamsDTO
             );
             return Ok(
-                new GenericResponse<PublicationsForValidationDTO>(
+                new GenericResponse<PublicationsAwaitingApprovalDTO>(
                     "Publicaciones pendientes obtenidas con éxito",
                     publications
+                )
+            );
+        }
+
+        [HttpGet("pending/{publicationId}")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetPublicationDetailForValidation(int publicationId)
+        {
+            int adminId = GetUserIdFromToken();
+            var publicationDetail = await _approvalService.GetPublicationDetailsAsync(
+                adminId,
+                publicationId
+            );
+            return Ok(
+                new GenericResponse<PublicationDetailsForApprovalDTO>(
+                    "Detalle de la publicación obtenido con éxito",
+                    publicationDetail
                 )
             );
         }

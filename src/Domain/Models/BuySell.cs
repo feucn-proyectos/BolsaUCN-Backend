@@ -29,7 +29,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Precio del producto o servicio en pesos chilenos.
         /// </summary>
-        public decimal Price { get; set; }
+        public int Price { get; set; }
 
         /// <summary>
         /// Categoría del producto o servicio.

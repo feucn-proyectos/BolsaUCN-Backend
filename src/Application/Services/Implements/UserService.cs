@@ -324,7 +324,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> RegisterAdminAsync(int adminId, RegisterAdminDTO registerAdminDTO)
         {
             Log.Information("Verificando permisos del admin con ID: {AdminId}", adminId);
-            var requestingAdmin = await _userRepository.GetUserByIdAsync(adminId);
+            var requestingAdmin = await _userRepository.GetByIdAsync(adminId);
             if (requestingAdmin == null)
             {
                 Log.Error("No se encontro usuario con ID: {AdminId}", adminId);
@@ -949,7 +949,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<GetUserProfileDTO> GetUserProfileByIdAsync(int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions
                 {
@@ -1032,7 +1032,7 @@ namespace backend.src.Application.Services.Implements
                 }
             }
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions
                 {
@@ -1075,7 +1075,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<GetPhotoDTO> GetUserProfilePhotoByIdAsync(int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludePhoto = true }
             );
@@ -1103,7 +1103,7 @@ namespace backend.src.Application.Services.Implements
         )
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludePhoto = true, TrackChanges = true }
             );
@@ -1136,7 +1136,7 @@ namespace backend.src.Application.Services.Implements
         )
         {
             Log.Information("Buscando usuario con la Id: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { TrackChanges = true }
             );
@@ -1183,7 +1183,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<string> UploadCVByIdAsync(UploadCVDTO uploadCVDTO, int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludeCV = true, TrackChanges = true }
             );
@@ -1228,7 +1228,7 @@ namespace backend.src.Application.Services.Implements
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
 
-            User? user = await _userRepository.GetUserByIdAsync(
+            User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludeCV = true }
             );

@@ -12,9 +12,9 @@ namespace backend.src.Domain.Models
     /// <summary>
     /// Validation state used by administrative workflows.
     /// </summary>
-    public enum StatusValidation
+    public enum ApprovalStatus
     {
-        Publicado, // Validado y publicado por un administrador
+        Aceptado, // Aprobado y publicado por un administrador
         EnProceso, // En revisión administrativa
         Rechazado, // Rechazado por un administrador
         Cerrado, // Cerrado por el usuario o administrador
@@ -64,7 +64,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Tipo de publicación (Oferta, CompraVenta).
         /// </summary>
-        public required PublicationType Type { get; set; }
+        public required PublicationType PublicationType { get; set; }
 
         /// <summary>
         /// Indica si la publicacion esta disponible para interacción por los usuarios.
@@ -75,7 +75,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Estado de validación administrativa de la publicación.
         /// </summary>
-        public StatusValidation StatusValidation { get; set; }
+        public ApprovalStatus ApprovalStatus { get; set; }
 
         /// <summary>
         /// Razón de rechazo proporcionada por el administrador.

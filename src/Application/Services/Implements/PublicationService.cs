@@ -45,7 +45,7 @@ namespace backend.src.Application.Services.Implements
         {
             // Obtener y validar el usuario actual
             User currentUser =
-                await _userRepository.GetUserByIdAsync(userId)
+                await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
             // Validaciones de fechas
             if (offerDTO.EndDate <= DateTime.UtcNow)
@@ -85,11 +85,9 @@ namespace backend.src.Application.Services.Implements
 
             // Mapeo adicional y asignaciones
             newOffer.UserId = currentUser.Id;
-            newOffer.Type = PublicationType.Oferta;
+            newOffer.PublicationType = PublicationType.Oferta;
 
-            newOffer.StatusValidation = isAdmin
-                ? StatusValidation.Publicado
-                : StatusValidation.EnProceso;
+            newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptado : ApprovalStatus.EnProceso;
 
             newOffer.IsOpen = isAdmin;
 
@@ -112,7 +110,7 @@ namespace backend.src.Application.Services.Implements
         {
             // Obtener y validar el usuario actual
             var currentUser =
-                await _userRepository.GetUserByIdAsync(currentUserId)
+                await _userRepository.GetByIdAsync(currentUserId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
             var isAdmin =
                 currentUser.UserType == UserType.Administrador
@@ -137,11 +135,11 @@ namespace backend.src.Application.Services.Implements
             BuySell newBuySell = buySellDTO.Adapt<BuySell>();
             // Mapeo adicional y asignaciones
             newBuySell.UserId = currentUser.Id;
-            newBuySell.Type = PublicationType.CompraVenta;
+            newBuySell.PublicationType = PublicationType.CompraVenta;
 
-            newBuySell.StatusValidation = isAdmin
-                ? StatusValidation.Publicado
-                : StatusValidation.EnProceso;
+            newBuySell.ApprovalStatus = isAdmin
+                ? ApprovalStatus.Aceptado
+                : ApprovalStatus.EnProceso;
             newBuySell.IsOpen = isAdmin;
 
             var createdBuySellResult = await _buySellRepository.CreateBuySellAsync(newBuySell);
@@ -171,10 +169,10 @@ namespace backend.src.Application.Services.Implements
                 IdPublication = p.Id,
                 Title = p.Title,
                 PublicationDate = p.CreatedAt,
-                StatusValidation = p.StatusValidation,
+                StatusValidation = p.ApprovalStatus,
                 UserId = p.UserId,
                 Images = p.Images,
-                Types = p.Type,
+                Types = p.PublicationType,
                 IsActive = p.IsOpen,
             });
 
@@ -195,10 +193,10 @@ namespace backend.src.Application.Services.Implements
                 IdPublication = p.Id,
                 Title = p.Title,
                 PublicationDate = p.CreatedAt,
-                StatusValidation = p.StatusValidation,
+                StatusValidation = p.ApprovalStatus,
                 UserId = p.UserId,
                 Images = p.Images,
-                Types = p.Type,
+                Types = p.PublicationType,
                 IsActive = p.IsOpen,
             });
 
@@ -223,19 +221,18 @@ namespace backend.src.Application.Services.Implements
                 Title = p.Title,
                 Description = p.Description, // ¡No olvides la descripción!
                 PublicationDate = p.CreatedAt,
-                StatusValidation = p.StatusValidation,
+                StatusValidation = p.ApprovalStatus,
                 UserId = p.UserId,
                 Images = p.Images,
-                Types = p.Type,
+                Types = p.PublicationType,
                 IsActive = p.IsOpen,
             });
 
             return publicationsDto;
         }
 
-        /// <summary>
-        /// Approves a publication and makes it visible.
-        /// </summary>
+        /**
+         *! MOVED TO VALIDATION SERVICE
         public async Task<GenericResponse<string>> AdminApprovePublicationAsync(int publicationId)
         {
             // 1. Search for publication
@@ -254,10 +251,10 @@ namespace backend.src.Application.Services.Implements
             // 4. Return success only
             return new GenericResponse<string>("Publicación aprobada y publicada exitosamente.");
         }
+        */
 
-        /// <summary>
-        /// Rejects a publication with a reason and hides it.
-        /// </summary>
+        /**
+         *! MOVED TO VALIDATION SERVICE
         public async Task<GenericResponse<string>> AdminRejectPublicationAsync(
             int publicationId,
             AdminRejectDto dto
@@ -276,6 +273,7 @@ namespace backend.src.Application.Services.Implements
 
             return new GenericResponse<string>("Publicación rechazada. Se ha guardado el motivo.");
         }
+        */
 
         /// <summary>
         /// Allows a user to appeal a rejection if limits allow.
@@ -299,7 +297,7 @@ namespace backend.src.Application.Services.Implements
                 );
 
             // 3. Validate status -> 409 Conflict (InvalidOperationException maps to 409 in your middleware)
-            if (publication.StatusValidation != StatusValidation.Rechazado)
+            if (publication.ApprovalStatus != ApprovalStatus.Rechazado)
                 throw new InvalidOperationException(
                     "Solo se pueden apelar publicaciones que han sido rechazadas."
                 );
@@ -313,7 +311,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // 5. Process appeal
-            publication.StatusValidation = StatusValidation.EnProceso;
+            publication.ApprovalStatus = ApprovalStatus.EnProceso;
             publication.UserAppealJustification = dto.Justification;
             publication.AppealCount++;
 
@@ -343,18 +341,18 @@ namespace backend.src.Application.Services.Implements
 
         public async Task UpdatePublicationStatusAsync(
             Publication publication,
-            StatusValidation newStatus
+            ApprovalStatus newStatus
         )
         {
-            var oldStatus = publication.StatusValidation;
-            publication.StatusValidation = newStatus;
+            var oldStatus = publication.ApprovalStatus;
+            publication.ApprovalStatus = newStatus;
             await _publicationRepository.UpdateAsync(publication);
-            if (publication.StatusValidation == oldStatus)
+            if (publication.ApprovalStatus == oldStatus)
             {
                 Log.Warning(
                     "El estado de la publicación con ID {PublicationId} no cambió. Estado actual: {Status}",
                     publication.Id,
-                    publication.StatusValidation
+                    publication.ApprovalStatus
                 );
             }
             else
@@ -362,7 +360,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Information(
                     "Estado de la publicación con ID {PublicationId} actualizado a {Status}",
                     publication.Id,
-                    publication.StatusValidation
+                    publication.ApprovalStatus
                 );
             }
         }

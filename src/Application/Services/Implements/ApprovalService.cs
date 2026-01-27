@@ -9,7 +9,7 @@ using Serilog;
 
 namespace backend.src.Application.Services.Implements
 {
-    public class ValidationService : IValidationService
+    public class ApprovalService : IApprovalService
     {
         private readonly IPublicationService _publicationService;
         private readonly IPublicationRepository _publicationRepository;
@@ -17,7 +17,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
-        public ValidationService(
+        public ApprovalService(
             IPublicationService publicationService,
             IPublicationRepository publicationRepository,
             IUserRepository userRepository,
@@ -31,14 +31,14 @@ namespace backend.src.Application.Services.Implements
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        public async Task<ValidationResponseDTO> ValidatePublication(
+        public async Task<PublicationApprovalResultDTO> UpdatePublication(
             int userId,
             int publicationId,
             string action
         )
         {
             User? admin =
-                await _userRepository.GetUserByIdAsync(userId)
+                await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
             bool adminResult = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
             if (!adminResult)
@@ -57,28 +57,28 @@ namespace backend.src.Application.Services.Implements
                     new PublicationQueryOptions { TrackChanges = true }
                 ) ?? throw new KeyNotFoundException("Publicación no encontrada.");
 
-            if (publication.StatusValidation != StatusValidation.EnProceso)
+            if (publication.ApprovalStatus != ApprovalStatus.EnProceso)
             {
                 Log.Error(
                     "La publicación con ID: {PublicationId} ya está {Status}.",
                     publicationId,
-                    publication.StatusValidation
+                    publication.ApprovalStatus
                 );
                 throw new InvalidOperationException(
                     "La publicacion ya ha sido accionada previamente."
                 );
             }
 
-            StatusValidation newStatus;
+            ApprovalStatus newStatus;
             if (action == "publish")
             {
                 publication.IsOpen = true;
-                newStatus = StatusValidation.Publicado;
+                newStatus = ApprovalStatus.Aceptado;
             }
             else if (action == "reject")
             {
                 publication.IsOpen = false;
-                newStatus = StatusValidation.Rechazado;
+                newStatus = ApprovalStatus.Rechazado;
             }
             else
             {
@@ -87,23 +87,23 @@ namespace backend.src.Application.Services.Implements
             }
 
             await _publicationService.UpdatePublicationStatusAsync(publication, newStatus);
-            return new ValidationResponseDTO
+            return new PublicationApprovalResultDTO
             {
                 PublicationId = publication.Id,
                 RejectionReason = action == "reject" ? "Rechazado por el administrador" : null,
             };
         }
 
-        public async Task<PublicationsForValidationDTO> GetPublicationsForValidationAsync(
+        public async Task<PublicationsAwaitingApprovalDTO> GetPendingPublicationsAsync(
             int userId,
             SearchParamsDTO searchParamsDTO
         )
         {
             // Validacion de administrador
             User? admin =
-                await _userRepository.GetUserByIdAsync(userId)
+                await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
-            bool adminResult = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
+            bool adminResult = await _userRepository.CheckRoleAsync(admin.Id, RoleNames.Admin);
             if (!adminResult)
             {
                 Log.Error(
@@ -122,7 +122,7 @@ namespace backend.src.Application.Services.Implements
 
             // Obtención de ofertas y compra/ventas pendientes con paginación y filtros
             var (pendingPublications, totalCount) =
-                await _publicationRepository.GetAllForValidationAsync(searchParamsDTO);
+                await _publicationRepository.GetAllPendingForApprovalAsync(searchParamsDTO);
             int currentPage = searchParamsDTO.PageNumber;
             int pageSize = searchParamsDTO.PageSize ?? _defaultPageSize;
             int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
@@ -133,9 +133,9 @@ namespace backend.src.Application.Services.Implements
                 pendingPublications.Count()
             );
 
-            var publicationsDto = new PublicationsForValidationDTO
+            var publicationsDto = new PublicationsAwaitingApprovalDTO
             {
-                Publications = pendingPublications.Adapt<List<PublicationForValidationDTO>>(),
+                Publications = pendingPublications.Adapt<List<PublicationAwaitingApprovalDTO>>(),
                 TotalPages = totalPages,
                 CurrentPage = currentPage,
                 PageSize = pageSize,
@@ -143,6 +143,57 @@ namespace backend.src.Application.Services.Implements
             };
 
             return publicationsDto;
+        }
+
+        public async Task<PublicationDetailsForApprovalDTO> GetPublicationDetailsAsync(
+            int adminId,
+            int publicationId
+        )
+        {
+            // Validacion de administrador
+            bool adminExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!adminExists)
+            {
+                Log.Error("El usuario con ID: {AdminId} no existe.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool hasRoles = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!hasRoles)
+            {
+                Log.Error(
+                    "El usuario con ID: {AdminId} no tiene permisos de administrador.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos de administrador."
+                );
+            }
+            Log.Information(
+                "El administrador con ID: {AdminId} está obteniendo detalles de la publicación con ID: {PublicationId} para validación.",
+                adminId,
+                publicationId
+            );
+            // Obtención de detalles de la publicación
+            Publication? publication = await _publicationRepository.GetPublicationByIdAsync(
+                publicationId,
+                new PublicationQueryOptions
+                {
+                    IncludeImages = true,
+                    IncludeUser = true,
+                    TrackChanges = false,
+                }
+            );
+            if (publication == null)
+            {
+                Log.Error("La publicación con ID: {PublicationId} no existe.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+            Log.Information(
+                "Obteniendo detalles de la {PublicationType} con ID: {PublicationId}",
+                publication.PublicationType,
+                publicationId
+            );
+            return publication.Adapt<PublicationDetailsForApprovalDTO>();
         }
     }
 }

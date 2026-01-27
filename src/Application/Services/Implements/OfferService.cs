@@ -111,7 +111,7 @@ public class OfferService : IOfferService
             EndDate = offer.EndDate,
             Remuneration = (int)offer.Remuneration, // tu DTO usa int
             OfferType = offer.OfferType.ToString(),
-            statusValidation = offer.StatusValidation,
+            statusValidation = offer.ApprovalStatus,
         };
 
         Log.Information("Detalles de oferta ID: {OfferId} obtenidos exitosamente", offerId);
@@ -209,9 +209,9 @@ public class OfferService : IOfferService
             PublicationDate = offer.CreatedAt,
             EndDate = offer.EndDate,
             DeadlineDate = offer.ApplicationDeadline,
-            Type = offer.Type,
+            Type = offer.PublicationType,
             Active = offer.IsOpen,
-            statusValidation = offer.StatusValidation,
+            statusValidation = offer.ApprovalStatus,
             Remuneration = offer.Remuneration,
             OfferType = offer.OfferType,
             Location = offer.Location,
@@ -297,14 +297,14 @@ public class OfferService : IOfferService
         {
             throw new KeyNotFoundException($"La oferta con id {id} no fue encontrada.");
         }
-        if (offer.StatusValidation != StatusValidation.EnProceso)
+        if (offer.ApprovalStatus != ApprovalStatus.EnProceso)
         {
             throw new InvalidOperationException(
-                $"La oferta con ID {id} ya fue {offer.StatusValidation}. No se puede publicar."
+                $"La oferta con ID {id} ya fue {offer.ApprovalStatus}. No se puede publicar."
             );
         }
         offer.IsOpen = true;
-        offer.StatusValidation = StatusValidation.Publicado;
+        offer.ApprovalStatus = ApprovalStatus.Aceptado;
         await _offerRepository.UpdateOfferAsync(offer);
 
         if (offer.User?.Email != null)
@@ -325,14 +325,14 @@ public class OfferService : IOfferService
         {
             throw new KeyNotFoundException($"La oferta con id {id} no fue encontrada.");
         }
-        if (offer.StatusValidation != StatusValidation.EnProceso)
+        if (offer.ApprovalStatus != ApprovalStatus.EnProceso)
         {
             throw new InvalidOperationException(
-                $"La oferta con ID {id} ya fue {offer.StatusValidation}. No se puede rechazar."
+                $"La oferta con ID {id} ya fue {offer.ApprovalStatus}. No se puede rechazar."
             );
         }
         offer.IsOpen = false;
-        offer.StatusValidation = StatusValidation.Rechazado;
+        offer.ApprovalStatus = ApprovalStatus.Rechazado;
         await _offerRepository.UpdateOfferAsync(offer);
 
         if (offer.User?.Email != null)
@@ -421,15 +421,15 @@ public class OfferService : IOfferService
         }
 
         // El estado de publicación debe ser Publicado para poder cerrarse
-        if (offer.StatusValidation != StatusValidation.Publicado)
+        if (offer.ApprovalStatus != ApprovalStatus.Aceptado)
         {
             throw new InvalidOperationException(
-                $"La oferta con ID {offerId} está {offer.StatusValidation}. Solo las publicaciones activas pueden ser cerradas."
+                $"La oferta con ID {offerId} está {offer.ApprovalStatus}. Solo las publicaciones activas pueden ser cerradas."
             );
         }
 
         offer.IsOpen = false;
-        offer.StatusValidation = StatusValidation.Cerrado;
+        offer.ApprovalStatus = ApprovalStatus.Cerrado;
         await _offerRepository.UpdateOfferAsync(offer);
 
         Log.Information(

@@ -16,15 +16,14 @@ namespace backend.src.Domain.Models
     /// <summary>
     /// Tipo de discapacidad del usuario.
     /// </summary>
-    [Flags]
     public enum Disability
     {
-        Ninguna = 0,
-        Visual = 1,
-        Auditiva = 2,
-        Motriz = 4,
-        Cognitiva = 8,
-        Otra = 16,
+        Ninguna,
+        Visual,
+        Auditiva,
+        Motriz,
+        Cognitiva,
+        Otra,
     }
 
     public class User : IdentityUser<int>

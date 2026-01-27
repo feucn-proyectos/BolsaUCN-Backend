@@ -567,9 +567,9 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = s.Title,
                     Description = s.Desc,
                     CreatedAt = now.AddDays(-i % 3), // algunas “recientes”
-                    Type = PublicationType.Oferta,
+                    PublicationType = PublicationType.Oferta,
                     IsOpen = true,
-                    StatusValidation = StatusValidation.Publicado,
+                    ApprovalStatus = ApprovalStatus.Aceptado,
 
                     EndDate = s.End,
                     ApplicationDeadline = s.Deadline,
@@ -595,9 +595,9 @@ namespace backend.src.Application.Infrastructure.Data
                 Description =
                     "Se busca estudiante para práctica de 3 meses en desarrollo backend con .NET y Azure. El postulante debe estar en último año. Esta oferta está pendiente de aprobación por la DGE.",
                 CreatedAt = now.AddDays(-1),
-                Type = PublicationType.Oferta,
+                PublicationType = PublicationType.Oferta,
                 IsOpen = true,
-                StatusValidation = StatusValidation.EnProceso, // <- Estado solicitado
+                ApprovalStatus = ApprovalStatus.EnProceso, // <- Estado solicitado
 
                 EndDate = now.AddMonths(3),
                 ApplicationDeadline = now.AddDays(14),
@@ -649,16 +649,16 @@ namespace backend.src.Application.Infrastructure.Data
                 var publicationDate = nowForFaker.AddDays(-daysSincePost);
 
                 var isActive = true;
-                var status = StatusValidation.Publicado;
+                var status = ApprovalStatus.Aceptado;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.EnProceso;
+                    status = ApprovalStatus.EnProceso;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rechazado;
+                    status = ApprovalStatus.Rechazado;
                     isActive = false;
                 }
 
@@ -667,7 +667,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     endDate = nowForFaker.AddDays(-faker.Random.Int(1, 5)); // Finalizada
                     isActive = false;
-                    status = StatusValidation.Cerrado;
+                    status = ApprovalStatus.Cerrado;
                 }
 
                 var offer = new Offer
@@ -678,9 +678,9 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = faker.Name.JobTitle(),
                     Description = faker.Lorem.Paragraph(3),
                     CreatedAt = publicationDate,
-                    Type = PublicationType.Oferta,
+                    PublicationType = PublicationType.Oferta,
                     IsOpen = isActive,
-                    StatusValidation = status,
+                    ApprovalStatus = status,
 
                     EndDate = endDate,
                     ApplicationDeadline = deadlineDate,
@@ -716,7 +716,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     Title = "Venta libro Cálculo I (Stewart 7ma)",
                     Desc = "En buen estado, pocas marcas.",
-                    Price = 12000m,
+                    Price = 12000,
                     Category = "Libros",
                     Loc = "Antofagasta",
                     Contact = "ignacio@ucn.cl",
@@ -725,7 +725,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     Title = "Teclado mecánico Redragon K552",
                     Desc = "Switch blue, 1 año de uso.",
-                    Price = 18000m,
+                    Price = 18000,
                     Category = "Tecnología",
                     Loc = "Coquimbo",
                     Contact = "+56987654321",
@@ -734,7 +734,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     Title = "Bata laboratorio talla M",
                     Desc = "Lavada y desinfectada, casi nueva.",
-                    Price = 8000m,
+                    Price = 8000,
                     Category = "Laboratorio",
                     Loc = "Antofagasta",
                     Contact = "c.labs@ucn.cl",
@@ -743,7 +743,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     Title = "Calculadora científica Casio fx-82",
                     Desc = "Funciona perfecto, con pilas nuevas.",
-                    Price = 9000m,
+                    Price = 9000,
                     Category = "Accesorios",
                     Loc = "Remoto",
                     Contact = "ventas@ucn.cl",
@@ -752,7 +752,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     Title = "Pack cuadernos + destacadores",
                     Desc = "5 cuadernos college + 6 destacadores.",
-                    Price = 6000m,
+                    Price = 6000,
                     Category = "Útiles",
                     Loc = "Coquimbo",
                     Contact = "j.vende@ucn.cl",
@@ -771,9 +771,9 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = it.Title,
                     Description = it.Desc,
                     CreatedAt = now.AddDays(-(i % 3)),
-                    Type = PublicationType.CompraVenta,
+                    PublicationType = PublicationType.CompraVenta,
                     IsOpen = true,
-                    StatusValidation = StatusValidation.Publicado,
+                    ApprovalStatus = ApprovalStatus.Aceptado,
 
                     Price = it.Price,
                     Quantity = 1,
@@ -797,11 +797,11 @@ namespace backend.src.Application.Infrastructure.Data
                 Description =
                     "Vendo todos mis apuntes de primer año de ing. civil. Están en PDF. El admin debe revisar que no sea material con copyright.",
                 CreatedAt = now.AddDays(-1),
-                Type = PublicationType.CompraVenta,
+                PublicationType = PublicationType.CompraVenta,
                 IsOpen = true,
-                StatusValidation = StatusValidation.EnProceso, // <- Estado solicitado
+                ApprovalStatus = ApprovalStatus.EnProceso, // <- Estado solicitado
 
-                Price = 15000m,
+                Price = 15000,
                 Quantity = 1,
                 Availability = Availability.Disponible,
                 Condition = Condition.Nuevo,
@@ -850,16 +850,16 @@ namespace backend.src.Application.Infrastructure.Data
                         : $"{category}: {faker.Commerce.ProductName()}";
 
                 var isActive = true;
-                var status = StatusValidation.Publicado;
+                var status = ApprovalStatus.Aceptado;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.EnProceso;
+                    status = ApprovalStatus.EnProceso;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rechazado;
+                    status = ApprovalStatus.Rechazado;
                     isActive = false;
                 }
 
@@ -871,11 +871,11 @@ namespace backend.src.Application.Infrastructure.Data
                     Description =
                         faker.Commerce.ProductDescription() + ". " + faker.Lorem.Sentence(5),
                     CreatedAt = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
-                    Type = PublicationType.CompraVenta,
+                    PublicationType = PublicationType.CompraVenta,
                     IsOpen = isActive,
-                    StatusValidation = status,
+                    ApprovalStatus = status,
 
-                    Price = faker.Random.Decimal(5000, 100000),
+                    Price = faker.Random.Int(5000, 100000),
                     Quantity = 1,
                     Availability = Availability.Disponible,
                     Condition = Condition.Nuevo,
@@ -903,10 +903,10 @@ namespace backend.src.Application.Infrastructure.Data
             var offers = await context
                 .Offers.Include(o => o.User)
                 .Where(o =>
-                    o.StatusValidation == StatusValidation.Publicado
+                    o.ApprovalStatus == ApprovalStatus.Aceptado
                     && o.IsOpen == true
                     && o.ApplicationDeadline > DateTime.UtcNow
-                    && o.Type == PublicationType.Oferta
+                    && o.PublicationType == PublicationType.Oferta
                 )
                 .ToListAsync();
 

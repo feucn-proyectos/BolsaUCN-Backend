@@ -104,5 +104,5 @@ public class OfferDetailDto
     /// </summary>
     public required string OfferType { get; set; }
 
-    public required StatusValidation statusValidation { get; set; }
+    public required ApprovalStatus statusValidation { get; set; }
 }

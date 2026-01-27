@@ -19,13 +19,6 @@ namespace backend.src.Application.Services.Interfaces
         Task<IEnumerable<PublicationsDTO>> GetMyPublishedPublicationsAsync(string userId);
         Task<IEnumerable<PublicationsDTO>> GetMyRejectedPublicationsAsync(string userId);
         Task<IEnumerable<PublicationsDTO>> GetMyPendingPublicationsAsync(string userId);
-
-        Task<GenericResponse<string>> AdminApprovePublicationAsync(int publicationId);
-
-        Task<GenericResponse<string>> AdminRejectPublicationAsync(
-            int publicationId,
-            AdminRejectDto dto
-        );
         Task<GenericResponse<string>> AppealPublicationAsync(
             int publicationId,
             int userId,
@@ -37,7 +30,7 @@ namespace backend.src.Application.Services.Interfaces
             int publicationId,
             PublicationQueryOptions options
         );
-        Task UpdatePublicationStatusAsync(Publication publication, StatusValidation newStatus);
+        Task UpdatePublicationStatusAsync(Publication publication, ApprovalStatus newStatus);
         #endregion
     }
 }

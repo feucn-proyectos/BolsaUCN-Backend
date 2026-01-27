@@ -28,7 +28,7 @@ public class PublicationRepository : IPublicationRepository
     {
         return await _context
             .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.StatusValidation == StatusValidation.Publicado
+                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.Aceptado
             ) // <-- Filtro Published
             .AsNoTracking()
             .ToListAsync();
@@ -39,7 +39,7 @@ public class PublicationRepository : IPublicationRepository
     {
         return await _context
             .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.StatusValidation == StatusValidation.Rechazado
+                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.Rechazado
             ) // <-- Filtro Rejected
             .AsNoTracking()
             .ToListAsync();
@@ -50,7 +50,7 @@ public class PublicationRepository : IPublicationRepository
     {
         return await _context
             .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.StatusValidation == StatusValidation.EnProceso
+                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.EnProceso
             ) // <-- Filtro Pending
             .AsNoTracking()
             .ToListAsync();
@@ -87,21 +87,21 @@ public class PublicationRepository : IPublicationRepository
         return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
-    public async Task<(IEnumerable<Publication>, int)> GetAllForValidationAsync(
+    public async Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
         SearchParamsDTO searchParamsDTO
     )
     {
         var query = _context
-            .Publications.Where(p => p.StatusValidation == StatusValidation.EnProceso)
+            .Publications.Where(p => p.ApprovalStatus == ApprovalStatus.EnProceso)
             .AsQueryable();
 
         // Filtrado
         if (!string.IsNullOrEmpty(searchParamsDTO.FilterBy))
         {
             if (searchParamsDTO.FilterBy == "Oferta")
-                query = query.Where(p => p.Type == PublicationType.Oferta);
+                query = query.Where(p => p.PublicationType == PublicationType.Oferta);
             else if (searchParamsDTO.FilterBy == "CompraVenta")
-                query = query.Where(p => p.Type == PublicationType.CompraVenta);
+                query = query.Where(p => p.PublicationType == PublicationType.CompraVenta);
         }
         // Busqueda
         if (!string.IsNullOrEmpty(searchParamsDTO.SearchTerm))

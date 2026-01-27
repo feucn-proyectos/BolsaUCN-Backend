@@ -184,7 +184,7 @@ try
     builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
-    builder.Services.AddScoped<IValidationService, ValidationService>();
+    builder.Services.AddScoped<IApprovalService, ApprovalService>();
     builder.Services.AddDocumentStorageProvider(builder.Configuration);
 
     builder.Services.AddMapster();

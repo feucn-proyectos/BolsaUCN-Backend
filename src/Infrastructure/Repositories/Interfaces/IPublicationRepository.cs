@@ -43,7 +43,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// </summary>
         /// <param name="searchParamsDTO">Parámetros de búsqueda y paginación</param>
         /// <returns></returns>
-        Task<(IEnumerable<Publication>, int)> GetAllForValidationAsync(
+        Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
             SearchParamsDTO searchParamsDTO
         );
     }

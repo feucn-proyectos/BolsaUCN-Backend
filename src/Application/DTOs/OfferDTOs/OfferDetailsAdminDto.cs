@@ -50,7 +50,7 @@ namespace backend.src.Application.DTOs.OfferDTOs
         /// <summary>
         /// Administrative validation status for the offer.
         /// </summary>
-        public StatusValidation statusValidation { get; set; }
+        public ApprovalStatus statusValidation { get; set; }
         public DateTime EndDate { get; set; }
         public DateTime DeadlineDate { get; set; }
         public int Remuneration { get; set; }

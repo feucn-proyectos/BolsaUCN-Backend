@@ -34,7 +34,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _userManager.FindByEmailAsync(email);
         }
 
-        public async Task<User?> GetUserByIdAsync(int userId, UserQueryOptions? options = null)
+        public async Task<User?> GetByIdAsync(int userId, UserQueryOptions? options = null)
         {
             var query = _context.Users.AsQueryable();
             if (options?.TrackChanges == false)
@@ -51,14 +51,19 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await query.FirstOrDefaultAsync(u => u.Id == userId);
         }
 
+        public async Task<bool> ExistsByIdAsync(int id)
+        {
+            return await _userManager.Users.AnyAsync(u => u.Id == id);
+        }
+
         public async Task<bool> ExistsByEmailAsync(string email)
         {
-            return await _context.Users.AnyAsync(u => u.Email == email);
+            return await _userManager.Users.AnyAsync(u => u.Email == email);
         }
 
         public async Task<bool> ExistsByRutAsync(string rut)
         {
-            return await _context.Users.AnyAsync(e => e.Rut == rut);
+            return await _userManager.Users.AnyAsync(e => e.Rut == rut);
         }
 
         public async Task<bool> CreateUserAsync(User user, string password, string role)
@@ -107,7 +112,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<bool> ConfirmEmailAsync(string email)
         {
             Log.Information("Confirmando email en base de datos: {Email}", email);
-            var result = await _context
+            var result = await _userManager
                 .Users.Where(u => u.Email == email)
                 .ExecuteUpdateAsync(u => u.SetProperty(user => user.EmailConfirmed, true));
 
@@ -288,8 +293,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
         public async Task<int> GetCountByTypeAsync(UserType userType)
         {
-            return await _context.Users.Where(u => u.UserType == userType).CountAsync();
-            //return await _context.Admins.CountAsync(a => a.GeneralUser!.Banned == false);
+            return await _userManager.Users.Where(u => u.UserType == userType).CountAsync();
         }
 
         public async Task<int> GetCountByRoleAsync(string role)
@@ -319,7 +323,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return true;
         }
 
-        private IQueryable<User> ApplySorting(
+        private static IQueryable<User> ApplySorting(
             IQueryable<User> query,
             string? sortBy,
             string? sortOrder

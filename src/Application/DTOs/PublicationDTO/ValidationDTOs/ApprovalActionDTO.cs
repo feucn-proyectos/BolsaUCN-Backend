@@ -5,10 +5,10 @@ namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
     /// <summary>
     /// DTO para representar la acción de validación en una publicación.
     /// </summary>
-    public class ValidationActionDTO
+    public class ApprovalActionDTO
     {
         /// <summary>
-        /// Acción a realizar (publicar o rechazar).
+        /// Acción a realizar (aceptar o rechazar).
         /// </summary>
         [Required(ErrorMessage = "La acción es obligatoria")]
         [RegularExpression(

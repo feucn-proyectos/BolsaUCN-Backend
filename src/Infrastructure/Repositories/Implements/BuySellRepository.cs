@@ -46,7 +46,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var buysell = await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.StatusValidation == StatusValidation.EnProceso)
+                .Where(bs => bs.ApprovalStatus == ApprovalStatus.EnProceso)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
@@ -65,7 +65,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var buysell = await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.StatusValidation == StatusValidation.Publicado)
+                .Where(bs => bs.ApprovalStatus == ApprovalStatus.Aceptado)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
