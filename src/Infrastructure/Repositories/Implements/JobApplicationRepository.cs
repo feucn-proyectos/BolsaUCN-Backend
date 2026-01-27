@@ -19,11 +19,10 @@ namespace backend.src.Infrastructure.Repositories.Implements
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        public async Task<JobApplication> AddAsync(JobApplication application)
+        public async Task<bool> AddAsync(JobApplication application)
         {
             _context.JobApplications.Add(application);
-            await _context.SaveChangesAsync();
-            return application;
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<JobApplication?> GetByIdAsync(int applicationId)

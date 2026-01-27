@@ -206,11 +206,6 @@ namespace backend.src.API.Controllers
                 return Conflict(new GenericResponse<object>(ex.Message));
             }
         }
-
-        /// <summary>
-        /// Obtiene todas las ofertas publicadas solo disponibles para admin
-        [Authorize(Roles = "Admin")]
-        [HttpGet("admin/my-published/buysells")]
         #endregion
 
         #region Administra buysells Admin
@@ -545,8 +540,10 @@ namespace backend.src.API.Controllers
 
         #region Validar ofertas (admin)
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("offers/{id}/validation")]
+        /// <summary>
+        /// !DEPRECATED
+        /// Obtiene los detalles de una oferta para su validación
+        /// </summary>
         public async Task<IActionResult> GetOfferDetailsForOfferValidation(int id)
         {
             var offer = await _offerService.GetOfferDetailForOfferValidationAsync(id);
@@ -563,6 +560,7 @@ namespace backend.src.API.Controllers
         }
 
         /// <summary>
+        /// !DEPRECATED
         /// Acepta una oferta laboral específica (solo admin)
         /// </summary>
         [Authorize(Roles = "Admin")]
@@ -593,6 +591,7 @@ namespace backend.src.API.Controllers
         }
 
         /// </summary>
+        /// !DEPRECATED
         /// Rechaza una oferta laboral específica (solo admin)
         /// </summary>
         [Authorize(Roles = "Admin")]
@@ -776,6 +775,7 @@ namespace backend.src.API.Controllers
         }
 
         /// <summary>
+        /// !DEPRECATED
         /// Obtiene los detalles de una publicación de compra/venta para validación (admin)
         /// </summary>
         [HttpGet("buysells/{id}/validation")]
@@ -832,133 +832,29 @@ namespace backend.src.API.Controllers
         #region Postulaciones a Ofertas (Requiere autenticación de estudiante)
 
         /// <summary>
+        /// !DEPRECATED
         /// Permite a un estudiante postular a una oferta laboral
         /// POSTULACIÓN DIRECTA: No requiere body. Se valida CV obligatorio del perfil
         /// SEGURIDAD: Solo estudiantes pueden postular. El studentId se obtiene del token JWT
         /// </summary>
-        [HttpPost("offers/{id}/apply1")]
-        [Authorize(Roles = "Applicant")]
         public async Task<ActionResult<JobApplicationResponseDto>> ApplyToOffer(int id)
         {
-            try
-            {
-                // Obtener el ID del usuario desde el token JWT
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (
-                    string.IsNullOrEmpty(userIdClaim)
-                    || !int.TryParse(userIdClaim, out int studentId)
-                )
-                {
-                    _logger.LogWarning("Token JWT inválido o sin claim de NameIdentifier");
-                    return Unauthorized(
-                        new GenericResponse<object>("No autenticado o token inválido")
-                    );
-                }
-
-                // Verificar que el usuario sea realmente un estudiante
-                var currentUser = await _userRepository.GetGeneralUserByIdAsync(studentId);
-                if (currentUser == null || currentUser.UserType != UserType.Estudiante)
-                {
-                    _logger.LogWarning(
-                        "Usuario {UserId} con tipo {UserType} intentó postular (solo estudiantes permitidos)",
-                        studentId,
-                        currentUser?.UserType
-                    );
-                    return Forbid();
-                }
-
-                _logger.LogInformation(
-                    "POST /api/publications/offers/{Id}/apply - Estudiante {StudentId} postulando a oferta",
-                    id,
-                    studentId
-                );
-
-                // Postulación directa - sin body
-                var application = await _jobApplicationService.CreateApplicationAsync(
-                    studentId,
-                    id
-                );
-
-                return Ok(
-                    new GenericResponse<JobApplicationResponseDto>(
-                        "Postulación creada exitosamente",
-                        application
-                    )
-                );
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning(ex, "Postulación no autorizada - {Message}", ex.Message);
-                return BadRequest(new GenericResponse<object>(ex.Message));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Recurso no encontrado");
-                return NotFound(new GenericResponse<object>(ex.Message));
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Operación inválida");
-                return Conflict(new GenericResponse<object>(ex.Message));
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
+        /// !DEPRECATED
         /// Obtiene todas las postulaciones del estudiante autenticado
         /// SEGURIDAD: Solo estudiantes pueden ver sus postulaciones. El studentId se obtiene del token JWT
         /// </summary>
-        [HttpGet("offers/my-applications1")]
-        [Authorize(Roles = "Applicant")]
         public async Task<ActionResult<IEnumerable<JobApplicationResponseDto>>> GetMyApplications()
         {
-            try
-            {
-                // Obtener el ID del usuario desde el token JWT
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (
-                    string.IsNullOrEmpty(userIdClaim)
-                    || !int.TryParse(userIdClaim, out int studentId)
-                )
-                {
-                    _logger.LogWarning("Token JWT inválido o sin claim de NameIdentifier");
-                    return Unauthorized(
-                        new GenericResponse<object>("No autenticado o token inválido")
-                    );
-                }
-
-                _logger.LogInformation(
-                    "GET /api/publications/offers/my-applications - Obteniendo postulaciones del estudiante {StudentId}",
-                    studentId
-                );
-
-                var applications = await _jobApplicationService.GetStudentApplicationsAsync(
-                    studentId
-                );
-
-                return Ok(
-                    new GenericResponse<IEnumerable<JobApplicationResponseDto>>(
-                        "Postulaciones recuperadas exitosamente",
-                        applications
-                    )
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener postulaciones");
-                return StatusCode(
-                    500,
-                    new GenericResponse<object>("Error al obtener las postulaciones")
-                );
-            }
+            throw new NotImplementedException();
         }
 
         #endregion
 
-        #region Obtener Publicaciones por Status(Filtro para Empresa y Particular)
-
-        // Importante para usar el enum
-
-        // ... (dentro de tu clase PublicationController)
+        #region Obtener Publicaciones por Status(Filtro para Empresa y Particular
 
         /// <summary>
         /// Obtiene todas las publicaciones PUBLICADAS del particular/empresa autenticado.

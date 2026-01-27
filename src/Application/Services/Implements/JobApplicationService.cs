@@ -4,6 +4,7 @@ using backend.src.Application.Events;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
@@ -14,6 +15,7 @@ namespace backend.src.Application.Services.Implements
     {
         private readonly IJobApplicationRepository _jobApplicationRepository;
         private readonly IOfferService _offerService;
+        private readonly IOfferRepository _offerRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
@@ -23,6 +25,7 @@ namespace backend.src.Application.Services.Implements
         public JobApplicationService(
             IJobApplicationRepository jobApplicationRepository,
             IOfferService offerService,
+            IOfferRepository offerRepository,
             IUserRepository userRepository,
             INotificationService notificationService,
             IReviewService reviewService,
@@ -31,6 +34,7 @@ namespace backend.src.Application.Services.Implements
         {
             _jobApplicationRepository = jobApplicationRepository;
             _offerService = offerService;
+            _offerRepository = offerRepository;
             _userRepository = userRepository;
             _notificationService = notificationService;
             _reviewService = reviewService;
@@ -38,17 +42,35 @@ namespace backend.src.Application.Services.Implements
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        //! ALMOST COMPLETE
-        //! MISSING FINAL MAPPING
-        public async Task<JobApplicationResponseDto> CreateApplicationAsync(
-            int applicantId,
-            int offerId
-        )
+        //! COMPLETE
+        public async Task<string> CreateApplicationAsync(int applicantId, int offerId)
         {
-            // Verifica que el usuario exista
-            User user = await _userRepository.GetByIdAsync(applicantId);
+            // Validar usuario
+            User? user = await _userRepository.GetByIdAsync(
+                applicantId,
+                new UserQueryOptions { IncludeCV = true }
+            );
+            if (user == null)
+            {
+                Log.Error(
+                    "Usuario ID: {ApplicantId} no encontrado al crear postulación",
+                    applicantId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(user.Id, RoleNames.Applicant);
+            if (!isApplicant)
+            {
+                Log.Error(
+                    "Usuario ID: {ApplicantId} no tiene rol de Applicant al crear postulación",
+                    applicantId
+                );
+                throw new UnauthorizedAccessException(
+                    "Solo los usuarios con rol de Applicant pueden postular a ofertas"
+                );
+            }
             // Verificar que la oferta existe y está activa
-            Offer? offer = await _offerService.GetByOfferIdAsync(offerId); //! IMPLEMENT GETBYOFFERASYNC IN THE SERVICE IF REQUIRED BY MORE METHODS
+            Offer? offer = await _offerRepository.GetByIdAsync(offerId);
             if (offer == null)
             {
                 Log.Error("Oferta ID: {OfferId} no encontrada al intentar postular", offerId);
@@ -62,6 +84,19 @@ namespace backend.src.Application.Services.Implements
                     offerId
                 );
                 throw new InvalidOperationException("No puedes postular a una oferta inactiva");
+            }
+            // Verificar que el usuario tenga CV si es necesario
+            bool isCVRequired = offer.IsCvRequired;
+            if (isCVRequired && user.CV == null)
+            {
+                Log.Error(
+                    "Usuario {UserId} intentó postular a oferta {OfferId} sin CV requerido",
+                    user.Id,
+                    offerId
+                );
+                throw new InvalidOperationException(
+                    "Se requiere un CV para postular a esta oferta"
+                );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
@@ -78,23 +113,6 @@ namespace backend.src.Application.Services.Implements
                 throw new UnauthorizedAccessException(
                     "No puedes postular a nuevas ofertas hasta que completes todas tus reseñas pendientes"
                 );
-            }
-
-            // Validar elegibilidad del estudiante (incluye validación de CV si es obligatorio)
-            if (!await ValidateStudentEligibilityAsync(user.Id, offer.IsCvRequired))
-            {
-                if (offer.IsCvRequired)
-                {
-                    throw new UnauthorizedAccessException(
-                        "Esta oferta requiere CV. Por favor, sube tu CV en tu perfil antes de postular"
-                    );
-                }
-                else
-                {
-                    throw new UnauthorizedAccessException(
-                        "El estudiante no es elegible para postular"
-                    );
-                }
             }
 
             // Validar que la fecha límite no haya expirado
@@ -123,7 +141,7 @@ namespace backend.src.Application.Services.Implements
                 throw new InvalidOperationException("Ya has postulado a esta oferta");
             }
 
-            // Crear la postulación (CV obligatorio, carta de motivación opcional del perfil)
+            // Crear la postulación
             var jobApplication = new JobApplication
             {
                 StudentId = user.Id,
@@ -134,19 +152,18 @@ namespace backend.src.Application.Services.Implements
                 CreatedAt = DateTime.UtcNow,
             };
 
-            var createdApplication = await _jobApplicationRepository.AddAsync(jobApplication);
-
-            return new JobApplicationResponseDto
+            bool result = await _jobApplicationRepository.AddAsync(jobApplication);
+            if (!result)
             {
-                Id = createdApplication.Id,
-                StudentName = $"{user.FirstName} {user.LastName}",
-                StudentEmail = user.Email!,
-                OfferTitle = offer.Title,
-                Status = createdApplication.Status.ToString(),
-                ApplicationDate = createdApplication.CreatedAt,
-                //CurriculumVitae = student.CurriculumVitae,
-                //MotivationLetter = student.MotivationLetter, // Carta opcional del perfil
-            };
+                Log.Error(
+                    "Error al crear postulación para usuario {UserId} a oferta {OfferId}",
+                    user.Id,
+                    offerId
+                );
+                throw new Exception("No se pudo crear la postulación");
+            }
+
+            return "Tu postulación ha sido creada exitosamente.";
         }
 
         public async Task<ApplicationsForApplicantDTO> GetUserApplicationsByIdAsync(
@@ -154,7 +171,19 @@ namespace backend.src.Application.Services.Implements
             SearchParamsDTO searchParams
         )
         {
-            User applicant = await _userRepository.GetByIdAsync(applicantId);
+            bool applicantExists = await _userRepository.ExistsByIdAsync(applicantId);
+            if (!applicantExists)
+            {
+                Log.Error(
+                    "Usuario ID: {ApplicantId} no encontrado al obtener sus postulaciones",
+                    applicantId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            Log.Information(
+                "Obteniendo postulaciones hechas por el usuario ID: {ApplicantId}",
+                applicantId
+            );
             var (applications, totalCount) =
                 await _jobApplicationRepository.GetByApplicantIdFilteredAsync(
                     applicantId,
@@ -344,39 +373,6 @@ namespace backend.src.Application.Services.Implements
             };
 
             await _notificationService.SendPostulationStatusChangeAsync(statusEvent);
-
-            return true;
-        }
-
-        public async Task<bool> ValidateStudentEligibilityAsync(
-            int studentId,
-            bool isCvRequired = true
-        )
-        {
-            var student = await _userRepository.GetByIdAsync(studentId);
-
-            if (student == null || student.UserType != UserType.Estudiante)
-                return false;
-
-            // Verificar que tenga correo institucional
-            if (!student.Email!.EndsWith("@alumnos.ucn.cl"))
-                return false;
-
-            // Verificar que no esté bloqueado
-            if (student.IsBlocked)
-                return false;
-
-            // Verificar que tenga CV SOLO si es obligatorio
-            /* TODO: Falta revisar la logica de CV
-            if (isCvRequired)
-            {
-                if (
-                    student.Student == null
-                    || string.IsNullOrEmpty(student.Student.CurriculumVitae)
-                )
-                    return false;
-            }
-            */
 
             return true;
         }

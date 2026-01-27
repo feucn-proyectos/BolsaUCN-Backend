@@ -15,7 +15,7 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="studentId">ID del estudiante que postula</param>
         /// <param name="offerId">ID de la oferta laboral</param>
         /// <returns>Información de la postulación creada</returns>
-        Task<JobApplicationResponseDto> CreateApplicationAsync(int studentId, int offerId);
+        Task<string> CreateApplicationAsync(int studentId, int offerId);
 
         /// <summary>
         /// Obtiene todas las postulaciones realizadas por un estudiante específico
@@ -40,8 +40,6 @@ namespace backend.src.Application.Services.Interfaces
             ApplicationStatus newStatus,
             int companyId
         );
-
-        Task<bool> ValidateStudentEligibilityAsync(int studentId, bool isCvRequired = true);
 
         Task<IEnumerable<ViewApplicantsDto>> GetApplicantsForAdminManagement(int offerId);
 

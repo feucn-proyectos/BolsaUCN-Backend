@@ -5,7 +5,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public interface IJobApplicationRepository
     {
-        Task<JobApplication> AddAsync(JobApplication application);
+        Task<bool> AddAsync(JobApplication application);
         Task<JobApplication?> GetByIdAsync(int applicationId);
         Task<JobApplication?> GetByStudentAndOfferAsync(int studentId, int offerId);
         Task<(IEnumerable<JobApplication>, int)> GetByApplicantIdFilteredAsync(

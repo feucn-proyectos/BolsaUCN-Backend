@@ -79,19 +79,9 @@ public class OfferRepository : IOfferRepository
     /// </summary>
     public async Task<Offer?> GetByIdAsync(int offerId)
     {
-        _logger.LogInformation("Consultando oferta ID: {OfferId} en la base de datos", offerId);
         var offer = await _context
             .Offers.Include(o => o.User)
             .FirstOrDefaultAsync(o => o.Id == offerId);
-
-        if (offer != null)
-        {
-            _logger.LogInformation("Oferta ID: {OfferId} encontrada en la base de datos", offerId);
-        }
-        else
-        {
-            _logger.LogWarning("Oferta ID: {OfferId} no encontrada en la base de datos", offerId);
-        }
         return offer;
     }
 

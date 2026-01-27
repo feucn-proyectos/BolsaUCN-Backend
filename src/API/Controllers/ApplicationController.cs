@@ -31,12 +31,7 @@ namespace backend.src.API.Controllers
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _service.CreateApplicationAsync(parsedUserId, offerId);
-            return Ok(
-                new GenericResponse<JobApplicationResponseDto>(
-                    "Aplicación creada exitosamente.",
-                    result
-                )
-            );
+            return Ok(new GenericResponse<string>("Aplicación creada exitosamente.", result));
         }
 
         //! COMPLETE
@@ -46,9 +41,9 @@ namespace backend.src.API.Controllers
         /// Obtiene todas las aplicaciones realizadas por el estudiante autenticado.
         /// </summary>
         /// <returns>Respuesta que entrega un DTO con las aplicaciones del estudiante.</returns>
-        [HttpGet("offers/my-applications")]
+        [HttpGet("my-applications")]
         [Authorize(Roles = "Applicant")]
-        public async Task<IActionResult> GetMyApplications([FromBody] SearchParamsDTO searchParams)
+        public async Task<IActionResult> GetMyApplications([FromQuery] SearchParamsDTO searchParams)
         {
             int parsedUserId = GetUserIdFromToken();
             var applications = await _service.GetUserApplicationsByIdAsync(
