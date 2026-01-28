@@ -860,7 +860,7 @@ namespace backend.src.API.Controllers
         /// Obtiene todas las publicaciones PUBLICADAS del particular/empresa autenticado.
         /// </summary>
         [HttpGet("offerent/my-published")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> GetMyPublishedPublications()
         {
             try

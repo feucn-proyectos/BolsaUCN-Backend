@@ -9,31 +9,50 @@ namespace backend.src.Application.Services.Interfaces
     /// </summary>
     public interface IJobApplicationService
     {
+        //! COMPLETE
         /// <summary>
         /// Crea una nueva postulación para una oferta laboral
         /// </summary>
         /// <param name="studentId">ID del estudiante que postula</param>
         /// <param name="offerId">ID de la oferta laboral</param>
         /// <returns>Información de la postulación creada</returns>
-        Task<string> CreateApplicationAsync(int studentId, int offerId);
+        Task<string> CreateApplicationAsync(int studentId, int offerId, CoverLetterDTO coverLetter);
 
+        //! COMPLETE
         /// <summary>
         /// Obtiene todas las postulaciones realizadas por un estudiante específico
         /// </summary>
         /// <param name="userId">ID del estudiante</param>
         /// <returns>Lista de postulaciones del estudiante</returns>
-        //? LEGACY RETURN TYPE: IEnumerable<JobApplicationResponseDto>
-        Task<ApplicationsForApplicantDTO> GetUserApplicationsByIdAsync(
+        Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(
             int userId,
             SearchParamsDTO searchParams
         );
 
-        //!
         Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByOfferIdAsync(int offerId);
 
-        Task<JobApplicationDetailDto?> GetApplicationDetailAsync(int applicationId);
+        //! COMPLETE
+        /// <summary>
+        /// Obtiene los detalles de una postulación específica para un estudiante.
+        /// </summary>
+        /// <param name="userId">ID del estudiante</param>
+        /// <param name="applicationId">ID de la postulación</param>
+        /// <returns>Detalles de la postulación</returns>
+        Task<GetApplicationDetailsDTO> GetApplicationDetailsForApplicantAsync(
+            int userId,
+            int applicationId
+        );
 
-        //? LEGACY METHOD Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByCompanyIdAsync(int companyId);
+        Task<string> UpdateApplicationDetailsAsync(
+            int userId,
+            int applicationId,
+            UpdateApplicationDetailsDTO updateDto
+        );
+
+        /**
+        *? DEPRECATED METHOD
+        Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByCompanyIdAsync(int companyId);
+        */
 
         Task<bool> UpdateApplicationStatusAsync(
             int applicationId,

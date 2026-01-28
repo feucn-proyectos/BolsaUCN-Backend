@@ -18,7 +18,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// El usuario estudiante que realizó la postulación.
         /// </summary>
-        public required User Student { get; set; }
+        public User? Student { get; set; }
 
         /// <summary>
         /// Identificador del usuario estudiante que realizó la postulación.
@@ -28,7 +28,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// La oferta laboral a la que el estudiante postuló.
         /// </summary>
-        public required Offer JobOffer { get; set; }
+        public Offer? JobOffer { get; set; }
 
         /// <summary>
         /// Identificador de la oferta laboral.

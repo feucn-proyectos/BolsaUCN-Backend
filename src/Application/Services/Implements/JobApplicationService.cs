@@ -43,7 +43,11 @@ namespace backend.src.Application.Services.Implements
         }
 
         //! COMPLETE
-        public async Task<string> CreateApplicationAsync(int applicantId, int offerId)
+        public async Task<string> CreateApplicationAsync(
+            int applicantId,
+            int offerId,
+            CoverLetterDTO coverLetter
+        )
         {
             // Validar usuario
             User? user = await _userRepository.GetByIdAsync(
@@ -146,9 +150,8 @@ namespace backend.src.Application.Services.Implements
             {
                 StudentId = user.Id,
                 JobOfferId = offerId,
-                Student = user,
-                JobOffer = offer,
                 Status = ApplicationStatus.Pendiente,
+                CoverLetter = coverLetter.CoverLetter,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -166,11 +169,12 @@ namespace backend.src.Application.Services.Implements
             return "Tu postulación ha sido creada exitosamente.";
         }
 
-        public async Task<ApplicationsForApplicantDTO> GetUserApplicationsByIdAsync(
+        public async Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(
             int applicantId,
             SearchParamsDTO searchParams
         )
         {
+            // Validar usuario
             bool applicantExists = await _userRepository.ExistsByIdAsync(applicantId);
             if (!applicantExists)
             {
@@ -184,6 +188,8 @@ namespace backend.src.Application.Services.Implements
                 "Obteniendo postulaciones hechas por el usuario ID: {ApplicantId}",
                 applicantId
             );
+
+            // Obtener postulaciones con filtros y paginación
             var (applications, totalCount) =
                 await _jobApplicationRepository.GetByApplicantIdFilteredAsync(
                     applicantId,
@@ -196,10 +202,18 @@ namespace backend.src.Application.Services.Implements
             if (currentPage < 1 || currentPage > totalPages)
             {
                 Log.Warning(
-                    $"Página solicitada {currentPage} fuera de rango. Total de páginas: {totalPages}. Se ajusta a la página 1."
+                    "Página solicitada {currentPage} fuera de rango. Total de páginas: {totalPages}. Se ajusta a la página 1.",
+                    currentPage,
+                    totalPages
                 );
                 currentPage = 1;
             }
+
+            Log.Information(
+                "Postulaciones obtenidas: {TotalCount} para usuario ID: {ApplicantId}",
+                totalCount,
+                applicantId
+            );
 
             return new ApplicationsForApplicantDTO
             {
@@ -209,68 +223,163 @@ namespace backend.src.Application.Services.Implements
                 PageSize = pageSize,
                 CurrentPage = currentPage,
             };
-
-            /**
-            *? LEGACY RETURN LOGIC
-            var applications = await _jobApplicationRepository.GetByStudentIdAsync(userId);
-            return applications.Select(app => new JobApplicationResponseDto
-            {
-                Id = app.Id,
-                StudentName = $"{app.Student.FirstName} {app.Student.LastName}",
-                StudentEmail = app.Student.Email!,
-                OfferTitle = app.JobOffer.Title,
-                Status = app.Status.ToString(),
-                ApplicationDate = app.CreatedAt,
-                //CurriculumVitae = app.Student.CurriculumVitae,
-                //MotivationLetter = app.Student.MotivationLetter,
-            });
-            */
         }
 
-        public async Task<JobApplicationDetailDto?> GetApplicationDetailAsync(int applicationId)
+        public async Task<GetApplicationDetailsDTO> GetApplicationDetailsForApplicantAsync(
+            int userId,
+            int applicationId
+        )
         {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} no encontrado al obtener detalles de postulación",
+                    userId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
             // Obtener la postulación
             var application = await _jobApplicationRepository.GetByIdAsync(applicationId);
-
             if (application == null)
-                return null;
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al obtener detalles",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            // Verificar que la postulación pertenezca al usuario
+            if (application.StudentId != userId)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó acceder a postulación ID: {ApplicationId} que no le pertenece",
+                    userId,
+                    applicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para ver los detalles de esta postulación"
+                );
+            }
 
+            Log.Information(
+                "Obteniendo detalles de postulación ID: {ApplicationId} para usuario ID: {UserId}",
+                applicationId,
+                userId
+            );
+            // Obtener detalles de la oferta asociada
             var offer = await _offerService.GetByOfferIdAsync(application.JobOfferId);
-
             if (offer == null)
-                return null;
+            {
+                Log.Error(
+                    "Oferta ID: {OfferId} asociada a postulación ID: {ApplicationId} no encontrada",
+                    application.JobOfferId,
+                    applicationId
+                );
+                throw new KeyNotFoundException("La oferta asociada a la postulación no existe");
+            }
 
-            var user = await _userRepository.GetByIdAsync(offer.UserId);
+            // Obtener detalles del autor de la oferta
+            User user = offer.User;
+            var authorName = user.UserType switch
+            {
+                UserType.Empresa => user.FirstName ?? "Empresa desconocida",
+                UserType.Particular or UserType.Estudiante =>
+                    $"{(user.FirstName ?? "").Trim()} {(user.LastName ?? "").Trim()}".Trim(),
+                UserType.Administrador => "Administrador",
+                _ => user.UserName ?? "Nombre desconocido",
+            };
 
-            var authorName =
-                user?.UserType == UserType.Empresa ? (user.FirstName ?? "Empresa desconocida")
-                : user?.UserType == UserType.Particular
-                    ? $"{(user.FirstName ?? "").Trim()} {(user.LastName ?? "").Trim()}".Trim()
-                : (user?.UserName ?? "Nombre desconocido");
             var statusMessage = application.Status switch
             {
                 ApplicationStatus.Pendiente =>
                     "Su solicitud fue enviada con éxito; será contactado a la brevedad.",
                 ApplicationStatus.Aceptada => "¡Felicidades! Tu solicitud ha sido aceptada.",
                 ApplicationStatus.Rechazada => "Lamentablemente, tu solicitud ha sido rechazada.",
-                _ => "",
+                _ => "Estado de solicitud desconocido.",
             };
 
-            return new JobApplicationDetailDto
+            // Mapear a DTO y agregar información configurada
+            var detailsDTO = application.Adapt<GetApplicationDetailsDTO>();
+            detailsDTO.CompanyName = authorName;
+            detailsDTO.StatusMessage = statusMessage;
+
+            return detailsDTO;
+        }
+
+        public async Task<string> UpdateApplicationDetailsAsync(
+            int userId,
+            int applicationId,
+            UpdateApplicationDetailsDTO updateDto
+        )
+        {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
             {
-                Id = application.Id,
-                OfferTitle = offer.Title,
-                CompanyName = authorName,
-                ApplicationDate = application.CreatedAt,
-                PublicationDate = offer.CreatedAt,
-                EndDate = offer.EndDate,
-                Remuneration = offer.Remuneration,
-                Description = offer.Description,
-                Requirements = offer.Requirements,
-                ContactInfo = offer.AdditionalContactInfo,
-                Status = application.Status.ToString(),
-                StatusMessage = statusMessage,
-            };
+                Log.Error(
+                    "Usuario ID: {UserId} no encontrado al intentar actualizar detalles de postulación",
+                    userId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            // Obtener la postulación
+            var application = await _jobApplicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al intentar actualizar detalles",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            // Verificar que la postulación pertenezca al usuario
+            if (application.StudentId != userId)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó actualizar postulación ID: {ApplicationId} que no le pertenece",
+                    userId,
+                    applicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para actualizar los detalles de esta postulación"
+                );
+            }
+            // Validar estado de postulacion
+            if (application.Status != ApplicationStatus.Pendiente)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó actualizar postulación ID: {ApplicationId} con estado {Status}",
+                    userId,
+                    applicationId,
+                    application.Status
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden actualizar los detalles de postulaciones en estado Pendiente"
+                );
+            }
+
+            // Actualizar los detalles
+            application.CoverLetter = updateDto.CoverLetter;
+            bool updateResult = await _jobApplicationRepository.UpdateAsync(application);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al actualizar detalles de postulación ID: {ApplicationId} para usuario ID: {UserId}",
+                    applicationId,
+                    userId
+                );
+                throw new Exception("No se pudieron actualizar los detalles de la postulación");
+            }
+
+            Log.Information(
+                "Usuario ID: {UserId} actualizó detalles de postulación ID: {ApplicationId}",
+                userId,
+                applicationId
+            );
+
+            return "Detalles de la postulación actualizados con éxito";
         }
 
         public async Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByOfferIdAsync(
