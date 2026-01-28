@@ -164,7 +164,7 @@ try
     builder.Services.AddScoped<IOfferRepository, OfferRepository>();
     builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
-    builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+    builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
     builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
     builder.Services.AddScoped<IAdminNotificationRepository, AdminNotificationRepository>();
     builder.Services.AddScoped<IFileRepository, FileRepository>();
@@ -177,7 +177,7 @@ try
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IOfferService, OfferService>();
-    builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
+    builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
     builder.Services.AddScoped<IPublicationService, PublicationService>();
     builder.Services.AddScoped<IBuySellService, BuySellService>();
     builder.Services.AddScoped<IReviewService, ReviewService>();

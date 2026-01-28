@@ -13,11 +13,11 @@ namespace backend.src.API.Controllers
     public class OfferController : BaseController
     {
         private readonly IPublicationService _publicationService;
-        private readonly IJobApplicationService _jobApplicationService;
+        private readonly IOfferApplicationService _jobApplicationService;
 
         public OfferController(
             IPublicationService publicationService,
-            IJobApplicationService jobApplicationService
+            IOfferApplicationService jobApplicationService
         )
         {
             _publicationService = publicationService;

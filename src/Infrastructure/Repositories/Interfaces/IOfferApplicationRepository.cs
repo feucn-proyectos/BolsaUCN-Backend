@@ -3,7 +3,7 @@ using backend.src.Domain.Models;
 
 namespace backend.src.Infrastructure.Repositories.Interfaces
 {
-    public interface IJobApplicationRepository
+    public interface IOfferApplicationRepository
     {
         Task<bool> AddAsync(JobApplication application);
         Task<JobApplication?> GetByIdAsync(int applicationId);

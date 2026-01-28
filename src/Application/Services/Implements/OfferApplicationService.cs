@@ -11,9 +11,9 @@ using Serilog;
 
 namespace backend.src.Application.Services.Implements
 {
-    public class JobApplicationService : IJobApplicationService
+    public class OfferApplicationService : IOfferApplicationService
     {
-        private readonly IJobApplicationRepository _jobApplicationRepository;
+        private readonly IOfferApplicationRepository _jobApplicationRepository;
         private readonly IOfferService _offerService;
         private readonly IOfferRepository _offerRepository;
         private readonly IUserRepository _userRepository;
@@ -22,8 +22,8 @@ namespace backend.src.Application.Services.Implements
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
-        public JobApplicationService(
-            IJobApplicationRepository jobApplicationRepository,
+        public OfferApplicationService(
+            IOfferApplicationRepository jobApplicationRepository,
             IOfferService offerService,
             IOfferRepository offerRepository,
             IUserRepository userRepository,

@@ -7,7 +7,7 @@ namespace backend.src.Application.Services.Interfaces
     /// <summary>
     /// Interfaz para el servicio de gestión de postulaciones a ofertas laborales
     /// </summary>
-    public interface IJobApplicationService
+    public interface IOfferApplicationService
     {
         //! COMPLETE
         /// <summary>

@@ -24,7 +24,7 @@ namespace backend.src.API.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IOfferService _offerService;
         private readonly IBuySellService _buySellService;
-        private readonly IJobApplicationService _jobApplicationService;
+        private readonly IOfferApplicationService _jobApplicationService;
         private readonly ILogger<PublicationController> _logger;
         private readonly IPublicationRepository _publicationRepository;
 
@@ -33,7 +33,7 @@ namespace backend.src.API.Controllers
             IUserRepository userRepository,
             IOfferService offerService,
             IBuySellService buySellService,
-            IJobApplicationService jobApplicationService,
+            IOfferApplicationService jobApplicationService,
             ILogger<PublicationController> logger,
             IPublicationRepository publicationRepository
         )

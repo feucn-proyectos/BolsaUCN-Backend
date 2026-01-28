@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace backend.src.Infrastructure.Repositories.Implements
 {
-    public class JobApplicationRepository : IJobApplicationRepository
+    public class OfferApplicationRepository : IOfferApplicationRepository
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
-        public JobApplicationRepository(AppDbContext context, IConfiguration configuration)
+        public OfferApplicationRepository(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
