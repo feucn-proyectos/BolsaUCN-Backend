@@ -30,7 +30,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Availability, src => src.Availability)
                 .Map(dest => dest.Condition, src => src.Condition)
                 .Map(dest => dest.Location, src => src.Location)
-                .Map(dest => dest.AdditionalContactInfo, src => src.AdditionalContactInfo);
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail);
 
             TypeAdapterConfig<BuySell, BuySellSummaryDto>
                 .NewConfig()
@@ -48,7 +48,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Category, src => src.Category)
                 .Map(dest => dest.Price, src => src.Price)
                 .Map(dest => dest.Location, src => src.Location)
-                .Map(dest => dest.ContactInfo, src => src.AdditionalContactInfo)
+                .Map(dest => dest.ContactInfo, src => src.AdditionalContactEmail)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
                 .Map(dest => dest.UserName, src => src.User.UserName)
                 .Map(dest => dest.IsActive, src => src.IsOpen);

@@ -68,7 +68,7 @@ public class OfferService : IOfferService
                     Location = "Campus Antofagasta",
 
                     // 💰 y fechas para la tarjeta
-                    Remuneration = o.Remuneration,
+                    Remuneration = o.Remuneration ?? 0,
                     DeadlineDate = o.ApplicationDeadline,
                     PublicationDate = o.CreatedAt,
                     OfferType = o.OfferType, // Trabajo / Voluntariado (enum)
@@ -151,7 +151,7 @@ public class OfferService : IOfferService
                 Description = o.Description,
                 Location = o.Location,
                 PostDate = o.CreatedAt,
-                Remuneration = o.Remuneration,
+                Remuneration = o.Remuneration ?? 0,
                 OfferType = o.OfferType,
             })
             .ToList();
@@ -177,7 +177,7 @@ public class OfferService : IOfferService
                     PublicationDate = o.CreatedAt,
                     OfferType = o.OfferType,
                     Activa = o.IsOpen,
-                    Remuneration = o.Remuneration,
+                    Remuneration = o.Remuneration ?? 0,
                 };
             })
             .ToList();
@@ -212,11 +212,11 @@ public class OfferService : IOfferService
             Type = offer.PublicationType,
             Active = offer.IsOpen,
             statusValidation = offer.ApprovalStatus,
-            Remuneration = offer.Remuneration,
+            Remuneration = offer.Remuneration ?? 0,
             OfferType = offer.OfferType,
             Location = offer.Location,
             Requirements = offer.Requirements,
-            ContactInfo = offer.AdditionalContactInfo,
+            ContactInfo = offer.AdditionalContactEmail,
             AboutMe = offer.User?.AboutMe,
             Rating = offer.User.Rating,
         };
@@ -276,14 +276,14 @@ public class OfferService : IOfferService
             Images = imageForDTO,
             Description = offer.Description,
             CompanyName = ownerName,
-            CorreoContacto = offer.AdditionalContactInfo,
+            CorreoContacto = offer.User?.Email,
             TelefonoContacto = offer.User?.PhoneNumber,
             PublicationDate = offer.CreatedAt,
             DeadlineDate = offer.ApplicationDeadline,
             EndDate = offer.EndDate,
-            Remuneration = offer.Remuneration,
+            Remuneration = offer.Remuneration ?? 0,
             OfferType = offer.OfferType,
-            ContactInfo = offer.AdditionalContactInfo,
+            ContactInfo = offer.AdditionalContactEmail,
             AboutMe = offer.User?.AboutMe,
             Requirements = offer.Requirements,
             Rating = offer.User.Rating,

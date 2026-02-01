@@ -84,7 +84,7 @@ namespace backend.src.Application.Services.Implements
                     Category = buySell.Category,
                     Price = buySell.Price,
                     Location = buySell.Location,
-                    ContactInfo = buySell.AdditionalContactInfo,
+                    ContactInfo = buySell.AdditionalContactEmail,
                     PublicationDate = buySell.CreatedAt,
                     IsActive = buySell.IsOpen,
                     ImageUrls = buySell.Images.Select(img => img.Url).ToList(),

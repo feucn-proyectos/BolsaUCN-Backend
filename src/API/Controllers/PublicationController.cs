@@ -50,10 +50,10 @@ namespace backend.src.API.Controllers
         #region Crear Publicaciones (Requiere autenticación)
 
         /// <summary>
+        /// !DEPRECATED
         /// Crea una nueva oferta laboral o de voluntariado
         /// Cualquier usuario autenticado puede crear ofertas
         /// </summary>
-        //! REPLACED
         [HttpPost("offers-old")]
         [Authorize]
         public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDTO dto)
@@ -106,10 +106,10 @@ namespace backend.src.API.Controllers
         }
 
         /// <summary>
+        /// !DEPRECATED
         /// Crea una nueva publicación de compra/venta
         /// Cualquier usuario autenticado puede crear publicaciones de compra/venta
         /// </summary>
-        //! REPLACED
         [HttpPost("buysells-old")]
         [Authorize]
         public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO dto)
@@ -902,7 +902,7 @@ namespace backend.src.API.Controllers
         /// Obtiene todas las publicaciones PENDIENTE/ENPROCESO del particular/empresa autenticado.
         /// </summary>
         [HttpGet("offerent/my-pending")]
-        [Authorize(Roles = "Offerent")]
+        [Authorize(Roles = "Offeror")]
         public async Task<IActionResult> GetMyPendingPublications()
         {
             try
@@ -944,7 +944,7 @@ namespace backend.src.API.Controllers
         /// Obtiene todas las publicaciones RECHAZADAS del particular/empresa autenticado.
         /// </summary>
         [HttpGet("offerent/my-rejected")]
-        [Authorize(Roles = "Offerent")]
+        [Authorize(Roles = "Offeror")]
         public async Task<IActionResult> GetMyRejectedPublications()
         {
             try
@@ -983,7 +983,7 @@ namespace backend.src.API.Controllers
         }
 
         [HttpGet("offerent/offer/{id:int}")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> GetOfferDetail(int id)
         {
             try
@@ -1021,7 +1021,7 @@ namespace backend.src.API.Controllers
         /// Obtiene el detalle de una publicación de Compra/Venta por su ID.
         /// </summary>
         [HttpGet("offerent/buysell/{id:int}")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> GetBuySellDetail(int id)
         {
             try
@@ -1063,7 +1063,7 @@ namespace backend.src.API.Controllers
         /// </summary>
         /// <param name="offerId">El ID de la oferta a cerrar.</param>
         [HttpPatch("offerent/my-offer/{offerId}/close")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> CloseOfferForOfferer(int offerId)
         {
             try
@@ -1114,7 +1114,7 @@ namespace backend.src.API.Controllers
         /// </summary>
         /// <param name="buySellId">El ID de la publicación de compra/venta a cerrar.</param>
         [HttpPatch("offerent/my-buysell/{buySellId}/close")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> CloseBuySellForOfferer(int buySellId)
         {
             try
@@ -1174,7 +1174,7 @@ namespace backend.src.API.Controllers
         /// <param name="offerId">El ID de la oferta</param>
         /// <returns>Una lista de los postulantes de la oferta</returns>
         [HttpGet("offerent/my-offer/{offerId}/applicants")] // <-- 1. RUTA CORREGIDA (para no chocar con la del Admin)
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> GetOfferApplicantsForOfferer(int offerId)
         {
             try
@@ -1250,7 +1250,7 @@ namespace backend.src.API.Controllers
         }
 
         [HttpGet("offerent/my-offer/{offerId}/applicants/{studentId}")] // <-- 1. RUTA CORREGIDA (para no chocar con la del Admin)
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<ActionResult<ViewApplicantUserDetailDto>> GetApplicantDetail(
             int offerId,
             int studentId
@@ -1283,7 +1283,7 @@ namespace backend.src.API.Controllers
         }
 
         [HttpPatch("offerent/my-offer/applicants/{status}")] // <-- 1. RUTA CORREGIDA (para no chocar con la del Admin)
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> AcceptApplicationOfferent(String status)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -1304,7 +1304,7 @@ namespace backend.src.API.Controllers
         /// </summary>
         /// <param name="applicationId">El ID de la postulación a aceptar.</param>
         [HttpPatch("offerent/applications/{applicationId}/accept")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> AcceptApplication(int applicationId)
         {
             return await UpdateApplicationStatusInternal(
@@ -1320,7 +1320,7 @@ namespace backend.src.API.Controllers
         /// </summary>
         /// <param name="applicationId">El ID de la postulación a rechazar.</param>
         [HttpPatch("offerent/applications/{applicationId}/reject")]
-        [Authorize(Roles = "Offerent,Admin")]
+        [Authorize(Roles = "Offeror,Admin")]
         public async Task<IActionResult> RejectApplication(int applicationId)
         {
             return await UpdateApplicationStatusInternal(

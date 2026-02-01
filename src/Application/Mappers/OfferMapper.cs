@@ -32,7 +32,8 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType)
             .Map(dest => dest.Location, src => src.Location)
             .Map(dest => dest.Requirements, src => src.Requirements)
-            .Map(dest => dest.AdditionalContactInfo, src => src.AdditionalContactInfo)
+            .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+            .Map(dest => dest.AdditionalContactPhoneNumber, src => src.AdditionalContactPhoneNumber)
             .Map(dest => dest.IsCvRequired, src => src.IsCvRequired);
 
         // Map Offer to OfferSummaryDto (used for lists)

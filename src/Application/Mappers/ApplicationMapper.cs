@@ -30,7 +30,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Remuneration, src => src.JobOffer.Remuneration)
                 .Map(dest => dest.Description, src => src.JobOffer.Description)
                 .Map(dest => dest.Requirements, src => src.JobOffer.Requirements)
-                .Map(dest => dest.ContactInfo, src => src.JobOffer.AdditionalContactInfo)
+                .Map(dest => dest.ContactInfo, src => src.JobOffer.AdditionalContactEmail)
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter)
                 .Map(dest => dest.Status, src => src.Status.ToString());
         }

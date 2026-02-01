@@ -28,9 +28,9 @@ namespace backend.src.Domain.Models
         public required DateTime ApplicationDeadline { get; set; }
 
         /// <summary>
-        /// Remuneración ofrecida en pesos chilenos. Use 0 para posiciones voluntarias.
+        /// Remuneración ofrecida en pesos chilenos. No aplica para posiciones voluntarias.
         /// </summary>
-        public required int Remuneration { get; set; }
+        public int? Remuneration { get; set; }
 
         /// <summary>
         /// Categoría de la oferta (e.g., Trabajo, Voluntariado).

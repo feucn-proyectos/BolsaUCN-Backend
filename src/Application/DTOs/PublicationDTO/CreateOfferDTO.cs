@@ -38,12 +38,15 @@ namespace backend.src.Application.DTOs.PublicationDTO
         public DateTime ApplicationDeadline { get; set; }
 
         [Required(ErrorMessage = "La remuneración es obligatoria")]
-        [Range(1, 1000000, ErrorMessage = "La remuneración debe estar entre $1 y $1.000.000")]
+        [Range(0, 1000000, ErrorMessage = "La remuneración debe estar entre $0 y $1.000.000")]
         public int? Remuneration { get; set; }
 
         [Required(ErrorMessage = "El tipo de oferta es obligatorio")]
-        [Range(0, 1, ErrorMessage = "El Tipo debe ser 1 (Voluntario) o 0 (Oferta)")]
-        public OfferTypes OfferType { get; set; }
+        [RegularExpression(
+            "^(Trabajo|Voluntariado)$",
+            ErrorMessage = "El tipo de oferta debe ser 'Trabajo' o 'Voluntariado'"
+        )]
+        public required string OfferType { get; set; }
 
         [StringLength(200, ErrorMessage = "La ubicación no puede exceder 200 caracteres")]
         public string? Location { get; set; }
@@ -55,17 +58,18 @@ namespace backend.src.Application.DTOs.PublicationDTO
             200,
             ErrorMessage = "La información de contacto no puede exceder 200 caracteres"
         )]
-        public string? AdditionalContactInfo { get; set; }
+        [EmailAddress(ErrorMessage = "El correo electrónico no es válido")]
+        public string? AdditionalContactEmail { get; set; }
 
-        /* === IMÁGENES (Manejo de imágenes se implemetara despues de la refactorizacion ===
+        [StringLength(15, ErrorMessage = "El número de teléfono no puede exceder 15 caracteres")]
+        public string? AdditionalContactPhoneNumber { get; set; }
+
+        /* === IT IS TIME ===
         [MaxLength(10, ErrorMessage = "Máximo 10 imágenes permitidas")]
         public List<IFormFile> Images { get; set; } = [];
         */
 
-        /// <summary>
-        /// Indica si el CV es obligatorio para postular a esta oferta
-        /// Por defecto es true (obligatorio)
-        /// </summary>
-        public bool IsCvRequired { get; set; } = true;
+        [Required(ErrorMessage = "Debe especificar si el CV es obligatorio")]
+        public bool IsCvRequired { get; set; }
     }
 }

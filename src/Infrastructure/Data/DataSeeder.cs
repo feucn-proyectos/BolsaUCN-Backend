@@ -577,7 +577,7 @@ namespace backend.src.Application.Infrastructure.Data
                     OfferType = s.Type,
                     Location = s.Loc,
                     Requirements = s.Req,
-                    AdditionalContactInfo = s.Contact,
+                    AdditionalContactEmail = s.Contact,
                     IsCvRequired = s.IsCv,
                 };
 
@@ -606,7 +606,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Location = "Remoto (Chile)",
                 Requirements =
                     "Cursando último año. Conocimiento en C# y SQL Server. Deseable Azure.",
-                AdditionalContactInfo = "rrhh.pending@techcorp.cl",
+                AdditionalContactEmail = "rrhh.pending@techcorp.cl",
                 IsCvRequired = true,
             };
             context.Offers.Add(inProcessOffer);
@@ -688,7 +688,7 @@ namespace backend.src.Application.Infrastructure.Data
                     OfferType = offerType,
                     Location = location,
                     Requirements = faker.Lorem.Sentence(5),
-                    AdditionalContactInfo = faker.Internet.Email(),
+                    AdditionalContactEmail = faker.Internet.Email(),
                     IsCvRequired = isCvRequired,
                 };
 
@@ -781,7 +781,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Condition = Condition.Nuevo,
                     Category = it.Category,
                     Location = it.Loc,
-                    AdditionalContactInfo = it.Contact,
+                    AdditionalContactEmail = it.Contact,
                 };
 
                 context.BuySells.Add(bs);
@@ -807,7 +807,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Condition = Condition.Nuevo,
                 Category = "Útiles",
                 Location = "Digital (PDF)",
-                AdditionalContactInfo = "apuntes.pendientes@ucn.cl",
+                AdditionalContactEmail = "apuntes.pendientes@ucn.cl",
             };
             context.BuySells.Add(inProcessBuySell);
 
@@ -881,7 +881,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Condition = Condition.Nuevo,
                     Category = category,
                     Location = faker.PickRandom(locations),
-                    AdditionalContactInfo = faker.Random.Bool(0.7f)
+                    AdditionalContactEmail = faker.Random.Bool(0.7f)
                         ? faker.Phone.PhoneNumber("+569########")
                         : faker.Internet.Email(),
                 };

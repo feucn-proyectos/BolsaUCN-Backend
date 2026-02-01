@@ -188,6 +188,16 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("La publicación con ID: {PublicationId} no existe.", publicationId);
                 throw new KeyNotFoundException("Publicación no encontrada.");
             }
+            else if (publication.ApprovalStatus != ApprovalStatus.EnProceso)
+            {
+                Log.Error(
+                    "La publicación con ID: {PublicationId} no está pendiente de aprobación.",
+                    publicationId
+                );
+                throw new InvalidOperationException(
+                    "La publicación no está pendiente de aprobación."
+                );
+            }
             Log.Information(
                 "Obteniendo detalles de la {PublicationType} con ID: {PublicationId}",
                 publication.PublicationType,

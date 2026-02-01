@@ -54,7 +54,12 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Información de contacto adicional proporcionada por el usuario.
         /// </summary>
-        public string? AdditionalContactInfo { get; set; }
+        public string? AdditionalContactEmail { get; set; }
+
+        /// <summary>
+        /// Número de teléfono de contacto adicional proporcionado por el usuario.
+        /// </summary>
+        public string? AdditionalContactPhoneNumber { get; set; }
 
         /// <summary>
         /// Coleccion de imágenes asociadas a la publicación.

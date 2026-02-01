@@ -57,8 +57,12 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
                 .Map(dest => dest.Location, src => src.Location)
                 .Map(
-                    dest => dest.AdditionalContactInfo,
-                    src => src.AdditionalContactInfo ?? string.Empty
+                    dest => dest.AdditionalContactEmail,
+                    src => src.AdditionalContactEmail ?? string.Empty
+                )
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber ?? string.Empty
                 )
                 .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
                 .Map(dest => dest.Rating, src => src.User.Rating)

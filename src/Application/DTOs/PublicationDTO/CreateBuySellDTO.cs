@@ -42,7 +42,10 @@ namespace backend.src.Application.DTOs.PublicationDTO
             200,
             ErrorMessage = "La información de contacto no puede exceder 200 caracteres"
         )]
-        public string? AdditionalContactInfo { get; set; }
+        public string? AdditionalContactEmail { get; set; }
+
+        [StringLength(15, ErrorMessage = "El número de contacto no puede exceder 200 caracteres")]
+        public string? AdditionalContactPhoneNumber { get; set; }
 
         public int Quantity { get; set; }
 

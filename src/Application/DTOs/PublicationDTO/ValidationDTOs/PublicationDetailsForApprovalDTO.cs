@@ -17,7 +17,8 @@ namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
         public required bool IsOpen { get; set; }
         public required string ApprovalStatus { get; set; }
         public required string Location { get; set; }
-        public required string AdditionalContactInfo { get; set; }
+        public string? AdditionalContactEmail { get; set; }
+        public string? AdditionalContactPhoneNumber { get; set; }
         public required string AboutMe { get; set; }
         public required double Rating { get; set; }
 

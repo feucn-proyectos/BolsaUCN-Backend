@@ -38,15 +38,26 @@ namespace backend.src.Application.Services.Implements
             _userRepository = userRepository;
         }
 
-        /// <summary>
-        /// Crea una nueva oferta laboral o de voluntariado
-        /// </summary>
+        #region Metodos para las Ofertas
+
         public async Task<string> CreateOfferAsync(CreateOfferDTO offerDTO, int userId)
         {
             // Obtener y validar el usuario actual
-            User currentUser =
-                await _userRepository.GetByIdAsync(userId)
-                ?? throw new KeyNotFoundException("Usuario no encontrado.");
+            User? currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isOfferor = await _userRepository.CheckRoleAsync(userId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error("El usuario con ID {UserId} no tiene permisos de oferente.", userId);
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para crear ofertas."
+                );
+            }
+
             // Validaciones de fechas
             if (offerDTO.EndDate <= DateTime.UtcNow)
             {
@@ -70,7 +81,7 @@ namespace backend.src.Application.Services.Implements
             if (pendingReviewsCount >= 3)
             {
                 Log.Warning(
-                    "Usuario {userId} intentó crear publicación de compra/venta con {pendingReviewsCount} reseñas pendientes",
+                    "Usuario {userId} intentó crear una oferta con {pendingReviewsCount} reseñas pendientes",
                     userId,
                     pendingReviewsCount
                 );
@@ -78,17 +89,15 @@ namespace backend.src.Application.Services.Implements
                     "No se puede crear una oferta mientras se tengan 3 o más reseñas pendientes."
                 );
             }
-            bool isAdmin = currentUser.UserType == UserType.Administrador;
 
-            // Mapeo principal DTO a Entidad
+            // Mapeo a la entidad y asignaciones adicionales
             Offer newOffer = offerDTO.Adapt<Offer>();
-
-            // Mapeo adicional y asignaciones
             newOffer.UserId = currentUser.Id;
             newOffer.PublicationType = PublicationType.Oferta;
 
+            // Asignar estado de aprobación e isOpen según el rol
+            bool isAdmin = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
             newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptado : ApprovalStatus.EnProceso;
-
             newOffer.IsOpen = isAdmin;
 
             var createOfferResult = await _offerRepository.CreateOfferAsync(newOffer);
@@ -102,6 +111,10 @@ namespace backend.src.Application.Services.Implements
 
             return $"Oferta creada exitosamente. Oferta ID: {createOfferResult}";
         }
+
+        #endregion
+
+        #region Metodos para Compra/Venta
 
         /// <summary>
         /// Crea una nueva publicación de compra/venta
@@ -153,6 +166,8 @@ namespace backend.src.Application.Services.Implements
 
             return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySellResult}";
         }
+
+        #endregion
 
         public async Task<IEnumerable<PublicationsDTO>> GetMyPublishedPublicationsAsync(
             string userId
@@ -231,50 +246,9 @@ namespace backend.src.Application.Services.Implements
             return publicationsDto;
         }
 
-        /**
-         *! MOVED TO VALIDATION SERVICE
-        public async Task<GenericResponse<string>> AdminApprovePublicationAsync(int publicationId)
-        {
-            // 1. Search for publication
-            var publication = await _publicationRepository.GetByIdAsync(publicationId);
+        #region Metodos para publicaciones en general
 
-            // 2. Validation: Use Exception to trigger Middleware 404
-            if (publication == null)
-                throw new KeyNotFoundException("La publicación no existe.");
-
-            // 3. Update logic
-            publication.StatusValidation = StatusValidation.Publicado;
-            publication.IsOpen = true;
-
-            await _publicationRepository.UpdateAsync(publication);
-
-            // 4. Return success only
-            return new GenericResponse<string>("Publicación aprobada y publicada exitosamente.");
-        }
-        */
-
-        /**
-         *! MOVED TO VALIDATION SERVICE
-        public async Task<GenericResponse<string>> AdminRejectPublicationAsync(
-            int publicationId,
-            AdminRejectDto dto
-        )
-        {
-            var publication = await _publicationRepository.GetByIdAsync(publicationId);
-
-            if (publication == null)
-                throw new KeyNotFoundException("La publicación no existe.");
-
-            publication.StatusValidation = StatusValidation.Rechazado;
-            publication.IsOpen = false;
-            publication.AdminRejectionReason = dto.Reason;
-
-            await _publicationRepository.UpdateAsync(publication);
-
-            return new GenericResponse<string>("Publicación rechazada. Se ha guardado el motivo.");
-        }
-        */
-
+        //! NEEDS MORE RESEARCH - NO FLOW DOCUMENTATION FOUND 
         /// <summary>
         /// Allows a user to appeal a rejection if limits allow.
         /// </summary>
@@ -345,6 +319,29 @@ namespace backend.src.Application.Services.Implements
         )
         {
             var oldStatus = publication.ApprovalStatus;
+
+            // Validar flujo de estados
+            if (oldStatus == newStatus)
+            {
+                Log.Warning(
+                    "El estado de la publicación con ID {PublicationId} ya es {Status}. No se realiza ningún cambio.",
+                    publication.Id,
+                    newStatus
+                );
+                return;
+            }
+            else if (oldStatus != ApprovalStatus.EnProceso)
+            {
+                Log.Error(
+                    "No se puede cambiar el estado de la publicación con ID {PublicationId} desde {OldStatus} a {NewStatus}.",
+                    publication.Id,
+                    oldStatus,
+                    newStatus
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden aprobar o rechazar publicaciones que están en estado 'EnProceso'."
+                );
+            }
             publication.ApprovalStatus = newStatus;
             await _publicationRepository.UpdateAsync(publication);
             if (publication.ApprovalStatus == oldStatus)
@@ -364,5 +361,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
         }
+
+        #endregion
     }
 }

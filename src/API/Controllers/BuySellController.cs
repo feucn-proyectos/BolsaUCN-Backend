@@ -16,6 +16,7 @@ namespace backend.src.API.Controllers
             _publicationService = publicationService;
         }
 
+        // TODO: REIMPLEMENT SOLUTION AS NOW ITS A COPY OF PUBLICATION CONTROLLER METHOD
         /// <summary>
         /// Crea una nueva publicación de compra/venta
         /// </summary>
