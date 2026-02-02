@@ -20,12 +20,12 @@ namespace backend.src.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene el perfil del estudiante autenticado.
+        /// Obtiene el perfil del usuario autenticado.
         /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/student")]
+        /// <returns>Datos del perfil del usuario.</returns>
+        [HttpGet("profile")]
         [Authorize]
-        public async Task<IActionResult> GetStudentProfile()
+        public async Task<IActionResult> GetUserProfile()
         {
             int parsedUserId = GetUserIdFromToken();
 
@@ -34,119 +34,17 @@ namespace backend.src.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene el perfil del usuario particular autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/individual")]
-        [Authorize]
-        public async Task<IActionResult> GetIndividualProfile()
-        {
-            int parsedUserId = GetUserIdFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId);
-            return Ok(new GenericResponse<GetUserProfileDTO>("Datos de perfil obtenidos.", result));
-        }
-
-        /// <summary>
-        /// Obtiene el perfil del usuario empresa autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/company")]
-        [Authorize]
-        public async Task<IActionResult> GetCompanyProfile()
-        {
-            int parsedUserId = GetUserIdFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId);
-            return Ok(new GenericResponse<GetUserProfileDTO>("Datos de perfil obtenidos.", result));
-        }
-
-        /// <summary>
-        /// Obtiene el perfil del usuario administrador autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/admin")]
-        [Authorize]
-        public async Task<IActionResult> GetAdminProfile()
-        {
-            int parsedUserId = GetUserIdFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId);
-            return Ok(new GenericResponse<GetUserProfileDTO>("Datos de perfil obtenidos.", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario estudiante autenticado.
+        /// Actualiza el perfil del usuario autenticado.
         /// </summary>
         /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario.</param>
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/student")]
+        [HttpPatch("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateStudentProfile(
+        public async Task<IActionResult> UpdateUserProfile(
             [FromForm] UpdateUserProfileDTO updateParamsDTO
         )
         {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(
-                updateParamsDTO,
-                userId,
-                userType
-            );
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario particular autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario particular.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/individual")]
-        [Authorize]
-        public async Task<IActionResult> UpdateIndividualProfile(
-            [FromForm] UpdateUserProfileDTO updateParamsDTO
-        )
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(
-                updateParamsDTO,
-                userId,
-                userType
-            );
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario empresa autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario empresa.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/company")]
-        [Authorize]
-        public async Task<IActionResult> UpdateCompanyProfile(
-            [FromForm] UpdateUserProfileDTO updateParamsDTO
-        )
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(
-                updateParamsDTO,
-                userId,
-                userType
-            );
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario administrador autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario administrador.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/admin")]
-        [Authorize]
-        public async Task<IActionResult> UpdateAdminProfile(
-            [FromForm] UpdateUserProfileDTO updateParamsDTO
-        )
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
+            var (userId, userType) = GetIdAndTypeFromToken();
             var result = await _userService.UpdateUserProfileByIdAsync(
                 updateParamsDTO,
                 userId,
