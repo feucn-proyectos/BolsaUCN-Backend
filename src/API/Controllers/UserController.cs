@@ -82,6 +82,43 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Foto de perfil actualizada", result));
         }
 
+        [HttpPatch("profile/change-email")]
+        [Authorize]
+        public async Task<IActionResult> ChangeEmail(
+            [FromBody] ChangeUserEmailDTO changeUserEmailDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ChangeUserEmailByIdAsync(
+                changeUserEmailDTO,
+                parsedUserId
+            );
+            return Ok(new GenericResponse<string>("Correo electrónico actualizado", result));
+        }
+
+        [HttpPost("profile/change-email/verify")]
+        [Authorize]
+        public async Task<IActionResult> VerifyNewEmail(
+            [FromBody] VerifyNewEmailDTO verifyNewEmailDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.VerifyNewEmailByIdAsync(
+                verifyNewEmailDTO,
+                parsedUserId
+            );
+            return Ok(new GenericResponse<string>("Nuevo correo electrónico verificado", result));
+        }
+
+        [HttpPost("profile/change-email/resend-verification")]
+        [Authorize]
+        public async Task<IActionResult> ResendChangeEmailVerification()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ResendChangeEmailVerificationByIdAsync(parsedUserId);
+            return Ok(new GenericResponse<string>("Código de verificación reenviado", result));
+        }
+
         /// <summary>
         /// Cambia la contraseña del usuario autenticado.
         /// </summary>

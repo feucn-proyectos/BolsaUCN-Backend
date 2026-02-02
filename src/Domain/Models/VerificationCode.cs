@@ -7,6 +7,7 @@ namespace backend.src.Domain.Models
     {
         EmailConfirmation,
         PasswordReset,
+        EmailChange,
     }
 
     /// <summary>

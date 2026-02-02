@@ -1121,6 +1121,212 @@ namespace backend.src.Application.Services.Implements
             return "Foto de perfil del usuario actualizada correctamente";
         }
 
+        public async Task<string> ChangeUserEmailByIdAsync(
+            ChangeUserEmailDTO changeUserEmailDTO,
+            int userId
+        )
+        {
+            // Validar disponibilidad del nuevo correo
+            bool emailExists = await _userRepository.ExistsByEmailAsync(
+                changeUserEmailDTO.NewEmail
+            );
+            if (emailExists)
+            {
+                Log.Error(
+                    "El email proporcionado ya está en uso por otro usuario: {Email}",
+                    changeUserEmailDTO.NewEmail
+                );
+                throw new InvalidOperationException("El correo electrónico ya está en uso.");
+            }
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            Log.Information("Validando contraseña actual para usuario ID: {UserId}", userId);
+            bool isPasswordValid = await _userRepository.CheckPasswordAsync(
+                user,
+                changeUserEmailDTO.CurrentPassword
+            );
+            if (!isPasswordValid)
+            {
+                Log.Warning(
+                    "Intento de cambio de correo fallido para usuario ID: {UserId} debido a contraseña incorrecta",
+                    userId
+                );
+                throw new UnauthorizedAccessException("La contraseña actual es incorrecta.");
+            }
+            Log.Information("Actualizando correo electrónico para usuario ID: {UserId}", userId);
+            int expirationTimer = 48; // Horas
+            user.PendingEmail = changeUserEmailDTO.NewEmail;
+            user.PendingEmailExpiration = DateTime.UtcNow.AddHours(expirationTimer);
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception("Error al actualizar el correo electrónico.");
+            }
+            // Enviar correo de verificación al nuevo email
+            string verificationCode = new Random().Next(100000, 999999).ToString();
+            VerificationCode newVerificationCode = new VerificationCode
+            {
+                Code = verificationCode,
+                CodeType = CodeType.EmailChange,
+                UserId = user.Id,
+                Expiration = DateTime.UtcNow.AddHours(expirationTimer), // Dos dias desde la peticion
+            };
+            var createdCode = await _verificationCodeRepository.CreateCodeAsync(
+                newVerificationCode
+            );
+            if (createdCode == null)
+            {
+                Log.Error(
+                    "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new InvalidOperationException("Error al crear el código de verificación.");
+            }
+            var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
+                user.PendingEmail!,
+                createdCode.Code
+            );
+            if (!emailResult)
+            {
+                Log.Error(
+                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                throw new Exception("Error al enviar el correo de verificación.");
+            }
+            return "Correo de verificación enviado al nuevo correo electrónico.";
+        }
+
+        public async Task<string> ResendChangeEmailVerificationByIdAsync(int userId)
+        {
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            if (user.PendingEmail == null || DateTime.UtcNow > user.PendingEmailExpiration)
+            {
+                Log.Error(
+                    "Intento de reenvío de verificación de cambio de correo sin una solicitud previa o con solicitud expirada. Usuario ID: {UserId}",
+                    userId
+                );
+                throw new InvalidOperationException(
+                    "No hay una solicitud de cambio de correo pendiente o la solicitud ha expirado."
+                );
+            }
+
+            //Validar codigo de verificacion existente
+            VerificationCode? existingCode =
+                await _verificationCodeRepository.GetByLatestUserIdAsync(
+                    user.Id,
+                    CodeType.EmailChange
+                );
+            bool stillValid = false;
+            if (existingCode != null && DateTime.UtcNow < existingCode.Expiration)
+            {
+                Log.Information(
+                    "Código de verificación aún válido para usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                stillValid = true;
+            }
+
+            VerificationCode newCode = new VerificationCode
+            {
+                Code = new Random().Next(100000, 999999).ToString(),
+                CodeType = CodeType.EmailChange,
+                UserId = user.Id,
+                Expiration = DateTime.UtcNow.AddHours(48),
+            };
+            if (!stillValid)
+            {
+                var createdCode = await _verificationCodeRepository.CreateCodeAsync(newCode);
+                if (createdCode == null)
+                {
+                    Log.Error(
+                        "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
+                        user.Id
+                    );
+                    throw new InvalidOperationException(
+                        "Error al crear el código de verificación."
+                    );
+                }
+            }
+
+            bool emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
+                user.PendingEmail!,
+                stillValid ? existingCode!.Code : newCode.Code
+            );
+            if (!emailResult)
+            {
+                Log.Error(
+                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                throw new Exception("Error al enviar el correo de verificación.");
+            }
+            return "Código de verificación reenviado exitosamente al nuevo correo electrónico.";
+        }
+
+        public async Task<string> VerifyNewEmailByIdAsync(
+            VerifyNewEmailDTO verifyNewEmailDTO,
+            int userId
+        )
+        {
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            var verificationCode = await _verificationCodeRepository.GetByLatestUserIdAsync(
+                user.Id,
+                CodeType.EmailChange
+            );
+            if (
+                verificationCode == null
+                || verificationCode.Code != verifyNewEmailDTO.VerificationCode
+                || DateTime.UtcNow >= verificationCode.Expiration
+            )
+            {
+                Log.Warning(
+                    "Código de verificación inválido o expirado para usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new Exception("El código de verificación es incorrecto o ha expirado.");
+            }
+            user.Email = user.PendingEmail;
+            user.PendingEmail = null;
+            user.PendingEmailExpiration = null;
+            bool updateResult = await _userRepository.UpdateAsync(user);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception("Error al actualizar el correo electrónico.");
+            }
+            return "Correo electrónico actualizado correctamente.";
+        }
+
         /// <summary>
         /// Cambia la contraseña de un usuario por su ID.
         /// </summary>

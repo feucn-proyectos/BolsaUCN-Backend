@@ -57,6 +57,14 @@ namespace backend.src.Application.Services.Interfaces
         );
 
         /// <summary>
+        /// Sends a verification email for changing the user's email address.
+        /// </summary>
+        /// <param name="newEmail">New email address to verify.</param>
+        /// <param name="code">Verification code to include in the email.</param>
+        /// <returns>True if the email was sent successfully; otherwise, false.</returns>
+        Task<bool> SendChangeEmailVerificationEmailAsync(string newEmail, string code);
+
+        /// <summary>
         /// Sends an email notifying the user that their publication status has changed (e.g., approved/rejected).
         /// </summary>
         /// <param name="recipientEmail">Recipient user email.</param>

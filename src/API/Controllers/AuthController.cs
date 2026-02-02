@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.AuthDTOs;
 using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -53,7 +54,7 @@ namespace backend.src.API.Controllers
         }
 
         [HttpPost("register/admin")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = RoleNames.SuperAdmin)]
         public async Task<IActionResult> Register([FromBody] RegisterAdminDTO registerAdminDTO)
         {
             var adminId = GetUserIdFromToken();

@@ -231,6 +231,39 @@ namespace backend.src.Application.Services.Implements
             }
         }
 
+        public async Task<bool> SendChangeEmailVerificationEmailAsync(string email, string code)
+        {
+            try
+            {
+                Log.Information("Iniciando envío de email de verificación a: {Email}", email);
+                var htmlBody = await LoadTemplateAsync("EmailChangeVerification", code);
+
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = _configuration["EmailConfiguration:VerificationSubject"]!,
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error("El envío del email de verificación falló para: {Email}", email);
+                    return false;
+                }
+
+                Log.Information("Email de verificación enviado exitosamente a: {Email}", email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error al enviar email de verificación a: {Email}", email);
+                return false;
+            }
+        }
+
         private async Task<string> LoadPostulationStatusTemplateAsync(
             string offerName,
             string companyName,

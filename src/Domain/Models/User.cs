@@ -91,6 +91,18 @@ namespace backend.src.Domain.Models
         public required bool IsBlocked { get; set; } = false;
 
         /// <summary>
+        /// Correo electrónico pendiente de verificación.
+        /// Este atributo es exclusivo para usuarios que han cambiado su correo electrónico y aún no lo han verificado.
+        /// Para nuevos usuarios, el correo electrónico se verifica al momento de la creación de la cuenta.
+        /// </summary>
+        public string? PendingEmail { get; set; }
+
+        /// <summary>
+        /// Fecha y hora de cuando el email pendiente de verificación expira.
+        /// </summary>
+        public DateTime? PendingEmailExpiration { get; set; }
+
+        /// <summary>
         /// Fecha y hora de creación del usuario (UTC).
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolsa Estudiantil UCN - Cambio de Correo</title>
+    <style>
+        /* Default (light mode) */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+            color: #333333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 6px;
+            overflow: hidden;
+            max-width: 600px;
+        }
+
+        .header {
+            background-color: #003366;
+            color: #ffffff;
+        }
+
+        .code {
+            font-size: 28px;
+            font-weight: bold;
+            color: #003366;
+            letter-spacing: 2px;
+        }
+
+        .footer {
+            background-color: #f0f0f0;
+            color: #666666;
+        }
+
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 16px 0;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #e0e0e0;
+            }
+
+            .container {
+                background-color: #1e1e1e;
+                border: 1px solid #333;
+            }
+
+            .header {
+                background-color: #0055aa;
+                color: #ffffff;
+            }
+
+            .code {
+                color: #66b2ff;
+            }
+
+            .footer {
+                background-color: #2a2a2a;
+                color: #bbbbbb;
+            }
+
+            .warning-box {
+                background-color: #3a3000;
+                border-left-color: #ffc107;
+            }
+
+            a {
+                color: #66b2ff;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+        <tr>
+            <td align="center">
+                <!-- Main container -->
+                <table width="600" cellpadding="0" cellspacing="0" class="container">
+
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" class="header" style="padding:20px;">
+                            <h1 style="font-size:22px; margin:0;">Bolsa Estudiantil UCN</h1>
+                            <p style="margin:5px 0 0 0; font-size:14px;">Universidad Católica del Norte</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding:24px; font-size:16px; line-height:1.5;">
+                            <p>¡Hola! 👋</p>
+                            <p>Hemos recibido una solicitud para cambiar el correo electrónico asociado a tu cuenta en
+                                BolsaUCN.</p>
+
+                            <div class="warning-box" style="font-size:14px;">
+                                <strong>Nuevo correo electrónico:</strong> {{NEW_EMAIL}}
+                            </div>
+
+                            <p style="font-weight:bold; text-align:center; margin-top:24px;">TU CÓDIGO DE VERIFICACIÓN
+                                ES:</p>
+                            <p class="code" style="text-align:center; margin:8px 0;">{{CODE}}</p>
+
+                            <h3 style="margin-top:24px;">Instrucciones:</h3>
+                            <ol style="margin:8px 0 16px 24px; padding:0;">
+                                <li>Copia el código de verificación de arriba</li>
+                                <li>Regresa a la aplicación de BolsaUCN</li>
+                                <li>Pega el código en el campo correspondiente</li>
+                                <li>Haz clic en <strong>"Verificar"</strong> para confirmar el cambio de correo</li>
+                            </ol>
+
+                            <p style="font-size:14px;">
+                                <strong>Importante:</strong> Este código expirará pronto por motivos de seguridad.
+                                Si no lo usas a tiempo, deberás solicitar uno nuevo.
+                            </p>
+
+                            <p style="font-size:14px;">
+                                Por tu seguridad, nunca compartas este código con nadie.
+                                El equipo de <strong>BolsaUCN</strong> jamás te pedirá este código por teléfono o email.
+                            </p>
+
+                            <div class="warning-box" style="font-size:14px; margin-top:20px;">
+                                <strong>¿No solicitaste este cambio?</strong><br>
+                                Si no fuiste tú quien solicitó cambiar el correo electrónico, ignora este mensaje.
+                                Tu cuenta permanecerá segura y no se realizará ningún cambio.
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" class="footer" style="padding:16px; font-size:12px;">
+                            <p style="margin:0;">Universidad Católica del Norte</p>
+                            <p style="margin:4px 0 0 0;">Si no solicitaste este cambio, puedes ignorar este email de
+                                forma segura.</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

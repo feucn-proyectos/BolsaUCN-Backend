@@ -53,7 +53,31 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="resendVerificationDTO">Datos para reenviar el correo de verificación</param>
         /// <returns>Mensaje de resultado del reenvío</returns>
         Task<string> ResendVerificationEmailAsync(ResendVerificationDTO resendVerificationDTO);
+
+        /// <summary>
+        /// Cambia el correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="changeUserEmailDTO">Datos para cambiar el correo electrónico del usuario</param>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado del cambio de correo electrónico</returns>
+        Task<string> ChangeUserEmailByIdAsync(ChangeUserEmailDTO changeUserEmailDTO, int userId);
+
+        /// <summary>
+        /// Reenvía el correo de verificación del nuevo correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado del reenvío</returns>
+        Task<string> ResendChangeEmailVerificationByIdAsync(int userId);
+
+        /// <summary>
+        /// Verifica el nuevo correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="verifyNewEmailDTO">Datos para verificar el nuevo correo electrónico del usuario</param>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado de la verificación</returns>
+        Task<string> VerifyNewEmailByIdAsync(VerifyNewEmailDTO verifyNewEmailDTO, int userId);
         #endregion
+
         #region Login and Password Management
         /// <summary>
         /// Inicia sesión de un usuario.
