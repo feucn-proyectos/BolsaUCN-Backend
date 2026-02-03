@@ -39,7 +39,9 @@ namespace backend.src.Application.Mappers
                     dest => dest.Disability,
                     src => src.Disability != null ? src.Disability.ToString() : null
                 )
-                .Map(dest => dest.ProfilePhoto, src => src.ProfilePhoto!.Url);
+                .Map(dest => dest.ProfilePhoto, src => src.ProfilePhoto!.Url)
+                .Map(dest => dest.PendingEmail, src => src.PendingEmail);
+
             TypeAdapterConfig<User, GetPhotoDTO>
                 .NewConfig()
                 .Map(

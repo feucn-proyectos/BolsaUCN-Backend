@@ -13,5 +13,6 @@ namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
         public string? CurriculumVitae { get; set; }
         public string? Disability { get; set; }
         public string? ProfilePhoto { get; set; }
+        public string? PendingEmail { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using System.Security;
 using backend.src.Application.DTOs.AuthDTOs;
 using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
 using backend.src.Application.DTOs.UserDTOs;
@@ -678,7 +679,7 @@ namespace backend.src.Application.Services.Implements
         {
             Log.Information("Intento de login para email: {Email}", loginDTO.Email);
 
-            var user = await _userRepository.GetByEmailAsync(loginDTO.Email);
+            User? user = await _userRepository.GetByEmailAsync(loginDTO.Email);
             if (user == null)
             {
                 Log.Warning("Intento de login con email no registrado: {Email}", loginDTO.Email);
@@ -1157,10 +1158,14 @@ namespace backend.src.Application.Services.Implements
                     "Intento de cambio de correo fallido para usuario ID: {UserId} debido a contraseña incorrecta",
                     userId
                 );
-                throw new UnauthorizedAccessException("La contraseña actual es incorrecta.");
+                throw new SecurityException("La contraseña actual es incorrecta.");
             }
-            Log.Information("Actualizando correo electrónico para usuario ID: {UserId}", userId);
-            int expirationTimer = 48; // Horas
+            Log.Information(
+                "Actualizando correo electrónico para usuario ID: {UserId}, Correo: {NewEmail}",
+                userId,
+                changeUserEmailDTO.NewEmail
+            );
+            int expirationTimer = 24; // Horas
             user.PendingEmail = changeUserEmailDTO.NewEmail;
             user.PendingEmailExpiration = DateTime.UtcNow.AddHours(expirationTimer);
             bool result = await _userRepository.UpdateAsync(user);
@@ -1179,7 +1184,7 @@ namespace backend.src.Application.Services.Implements
                 Code = verificationCode,
                 CodeType = CodeType.EmailChange,
                 UserId = user.Id,
-                Expiration = DateTime.UtcNow.AddHours(expirationTimer), // Dos dias desde la peticion
+                Expiration = DateTime.UtcNow.AddHours(expirationTimer), // Un día desde la petición
             };
             var createdCode = await _verificationCodeRepository.CreateCodeAsync(
                 newVerificationCode
@@ -1192,6 +1197,7 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new InvalidOperationException("Error al crear el código de verificación.");
             }
+            Log.Information("Enviando email de verificación a: {Email}", user.PendingEmail);
             var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
                 user.PendingEmail!,
                 createdCode.Code
@@ -1295,6 +1301,15 @@ namespace backend.src.Application.Services.Implements
             {
                 Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isEmailAvailable = !await _userRepository.ExistsByEmailAsync(user.PendingEmail!);
+            if (!isEmailAvailable)
+            {
+                Log.Error(
+                    "El email pendiente ya está en uso por otro usuario: {Email}",
+                    user.PendingEmail
+                );
+                throw new InvalidOperationException("El correo electrónico ya está en uso.");
             }
             var verificationCode = await _verificationCodeRepository.GetByLatestUserIdAsync(
                 user.Id,
