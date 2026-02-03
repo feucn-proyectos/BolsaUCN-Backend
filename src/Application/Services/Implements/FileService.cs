@@ -308,11 +308,102 @@ namespace backend.src.Application.Services.Implements
             return true;
         }
 
-        /// <summary>
-        /// Elimina un archivo de Cloudinary.
-        /// </summary>
-        /// <param name="publicId">El ID público del archivo a eliminar.</param>
-        /// <returns>True si la eliminación fue exitosa, de lo contrario false.</returns>
+        public async Task<bool> UploadPDFAsync(IFormFile file, User user)
+        {
+            // Validar archivo
+            if (file == null || file.Length == 0)
+            {
+                Log.Error("Intento de subir un archivo nulo o vacío");
+                throw new ArgumentException("Archivo inválido");
+            }
+            if (file.Length > _maxFileSizeInBytes)
+            {
+                Log.Error(
+                    "El archivo {FileName} excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB",
+                    file.FileName
+                );
+                throw new ArgumentException(
+                    $"El archivo excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+            }
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (fileExtension != ".pdf")
+            {
+                Log.Error("Extensión de archivo no permitida: {FileExtension}", fileExtension);
+                throw new ArgumentException("Solo se permiten archivos PDF");
+            }
+            var folder = $"user/{user.Id}/documents";
+            using var stream = file.OpenReadStream();
+
+            var uploadParams = new ImageUploadParams()
+            {
+                Folder = folder,
+                File = new FileDescription(file.FileName, stream),
+                UseFilename = true,
+                UniqueFilename = true,
+            };
+            Log.Information("Subiendo PDF: {FileName} a Cloudinary", file.FileName);
+            uploadParams.Transformation = new Transformation()
+                .Width(_transformationWidth)
+                .Crop(_transformationCrop)
+                .Chain()
+                .Quality(_transformationQuality)
+                .Page(1)
+                .Chain()
+                .FetchFormat("pdf");
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            if (uploadResult.Error != null)
+            {
+                Log.Error(
+                    "Hubo un error al subir el PDF: {ErrorMessage}",
+                    uploadResult.Error.Message
+                );
+                throw new Exception($"Error al subir el PDF: {uploadResult.Error.Message}");
+            }
+            Curriculum cv = new Curriculum()
+            {
+                PublicId = uploadResult.PublicId,
+                OriginalFileName = file.FileName,
+                Url = uploadResult.SecureUrl.ToString(),
+                FileSizeBytes = file.Length,
+            };
+            bool result = await _fileRepository.CreateCVAsync(cv);
+            if (!result)
+            {
+                Log.Error("Error al guardar el PDF en la base de datos: {FileName}", file.FileName);
+                var deleteResult = await DeleteInCloudinaryAsync(uploadResult.PublicId);
+                if (!deleteResult)
+                {
+                    Log.Error(
+                        "Error al eliminar el PDF de Cloudinary después de fallar la creación en la base de datos: {PublicId}",
+                        uploadResult.PublicId
+                    );
+                    throw new Exception(
+                        "Error al eliminar el PDF de Cloudinary después de fallar la creación en la base de datos"
+                    );
+                }
+                throw new Exception("Error al guardar el PDF en la base de datos");
+            }
+
+            // Asignar el CV al usuario
+            if (user.CV != null)
+            {
+                // Eliminar el CV anterior si existe
+                await DeleteInCloudinaryAsync(user.CV.PublicId);
+                await _fileRepository.DeleteCVAsync(user.CV.PublicId);
+            }
+            user.CVId = cv.Id;
+            bool saveUserResult = await _userRepository.UpdateAsync(user);
+            if (!saveUserResult)
+            {
+                Log.Error("Error al actualizar el usuario con el nuevo CV: {UserId}", user.Id);
+                throw new Exception("Error al actualizar el usuario con el nuevo CV");
+            }
+
+            Log.Information("PDF subido exitosamente: {SecureUrl}", uploadResult.SecureUrl);
+            return true;
+        }
+
         public async Task<bool> DeleteAsync(string publicId)
         {
             var deletionParams = new DeletionParams(publicId);
@@ -385,7 +476,7 @@ namespace backend.src.Application.Services.Implements
         /// </summary>
         /// <param name="file">El archivo a validar.</param>
         /// <returns>True si el archivo es una imagen válida, de lo contrario false.</returns>
-        private bool IsValidImageFile(IFormFile file)
+        private static bool IsValidImageFile(IFormFile file)
         {
             try
             {

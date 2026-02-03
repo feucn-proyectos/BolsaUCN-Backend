@@ -4,7 +4,6 @@ using backend.src.Application.Services.Implements;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Models;
 using backend.src.Infrastructure.Data;
-using backend.src.Infrastructure.Extensions;
 using backend.src.Infrastructure.Repositories.Implements;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
@@ -13,7 +12,6 @@ using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Net.Http.Headers; // <<-- para CORS (HeaderNames)
 using Resend;
 using Serilog;
@@ -185,7 +183,6 @@ try
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
-    builder.Services.AddDocumentStorageProvider(builder.Configuration);
 
     builder.Services.AddMapster();
 
@@ -240,24 +237,6 @@ try
     app.UseAuthentication();
     app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
     app.UseAuthorization();
-
-    // Configuración para servir archivos estáticos desde la carpeta "uploads"
-    var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
-    if (!Directory.Exists(uploadsPath))
-        Directory.CreateDirectory(uploadsPath);
-    app.UseStaticFiles(
-        new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(
-                Path.Combine(builder.Environment.ContentRootPath, "uploads")
-            ),
-            RequestPath = "/uploads",
-            OnPrepareResponse = ctx =>
-            {
-                ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=3600");
-            },
-        }
-    );
 
     app.MapControllers();
 

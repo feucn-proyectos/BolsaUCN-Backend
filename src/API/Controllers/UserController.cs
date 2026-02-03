@@ -3,6 +3,7 @@ using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.UserDTOs;
 using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
 using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -141,7 +142,7 @@ namespace backend.src.API.Controllers
         /// <param name="updateCVDTO">Parámetros para subir el CV del usuario.</param>
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
         [HttpPatch("cv")]
-        [Authorize]
+        [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> UploadCV([FromForm] UploadCVDTO updateCVDTO)
         {
             int userId = GetUserIdFromToken();
@@ -149,13 +150,27 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("CV actualizado", result));
         }
 
-        [HttpGet("cv")]
+        //? MOVE TO OFFER CONTROLLER
+        [HttpGet("cv/{userId}")]
         [Authorize]
-        public async Task<IActionResult> GetCV()
+        public async Task<IActionResult> GetCV(int userId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.DownloadCVByIdAsync(parsedUserId, userId);
+            return Ok(new GenericResponse<GetCVDTO>("CV obtenido", result));
+        }
+
+        /// <summary>
+        /// Elimina el CV del usuario autenticado.
+        /// </summary>
+        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
+        [HttpDelete("cv")]
+        [Authorize(Roles = RoleNames.Applicant)]
+        public async Task<IActionResult> DeleteCV()
         {
             int userId = GetUserIdFromToken();
-            var result = await _userService.DownloadCVByIdAsync(userId);
-            return Ok(new GenericResponse<GetCVDTO>("CV obtenido", result));
+            var result = await _userService.DeleteCVByIdAsync(userId);
+            return Ok(new GenericResponse<string>("CV eliminado", result));
         }
     }
 }

@@ -166,7 +166,7 @@ namespace backend.src.Application.Services.Interfaces
         /// </summary>
         /// <param name="userId">ID del usuario</param>
         /// <returns>Archivo del CV</returns>
-        Task<GetCVDTO> DownloadCVByIdAsync(int userId);
+        Task<GetCVDTO> DownloadCVByIdAsync(int parsedUserId, int userId);
 
         /// <summary>
         /// Elimina el CV de un usuario por su ID.

@@ -27,7 +27,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// </summary>
         /// <param name="file">El archivo de CV a crear.</param>
         /// <returns>True si el archivo se creó correctamente, de lo contrario false y null en caso de que el CV ya existe.</returns>
-        Task<bool?> CreateCVAsync(Curriculum file);
+        Task<bool> CreateCVAsync(Curriculum file);
 
         /// <summary>
         /// Actualiza un archivo de CV en la base de datos.
@@ -43,7 +43,19 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <param name="publicId">El identificador público del archivo a eliminar.</param>
         /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si la imagen no existe.</returns>
         Task<bool?> DeleteAsync(string publicId);
+
+        /// <summary>
+        /// Elimina un archivo de imagen de usuario de la base de datos.
+        /// </summary>
+        /// <param name="publicId">El identificador público del archivo a eliminar.</param>
+        /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si la imagen no existe.</returns>
         Task<bool?> DeleteUserImageAsync(string publicId);
-        Task<bool?> DeleteCVAsync(string publicId);
+
+        /// <summary>
+        /// Elimina un archivo de CV de la base de datos.
+        /// </summary>
+        /// <param name="publicId">El identificador público del archivo a eliminar.</param>
+        /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si el CV no existe.</returns>
+        Task<bool> DeleteCVAsync(string publicId);
     }
 }

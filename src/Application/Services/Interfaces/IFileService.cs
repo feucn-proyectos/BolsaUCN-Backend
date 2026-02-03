@@ -31,5 +31,13 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="publicId">El ID público del archivo a eliminar.</param>
         /// <returns>True si la eliminación fue exitosa, de lo contrario false.</returns>
         Task<bool> DeleteAsync(string publicId);
+
+        /// <summary>
+        /// Sube un archivo PDF a Cloudinary.
+        /// </summary>
+        /// <param name="file">El archivo PDF a subir.</param>
+        /// <param name="userId">El ID del usuario al que pertenece el archivo.</param>
+        /// <returns>True si la carga fue exitosa, de lo contrario False.</returns>
+        Task<bool> UploadPDFAsync(IFormFile file, User user);
     }
 }

@@ -55,7 +55,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         /// </summary>
         /// <param name="file">El archivo de currículum a crear.</param>
         /// <returns>True si el archivo se creó correctamente, de lo contrario false y null en caso de que el currículum ya existe.</returns>
-        public async Task<bool?> CreateCVAsync(Curriculum file)
+        public async Task<bool> CreateCVAsync(Curriculum file)
         {
             var existsCV = await _context.CVs.AnyAsync(i => i.PublicId == file.PublicId);
             if (!existsCV)
@@ -63,7 +63,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 _context.CVs.Add(file);
                 return await _context.SaveChangesAsync() > 0;
             }
-            return null;
+            return false;
         }
 
         public async Task<bool?> UpdateCVAsync(string publicId, Curriculum updatedCV)
@@ -109,7 +109,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return null;
         }
 
-        public async Task<bool?> DeleteCVAsync(string publicId)
+        public async Task<bool> DeleteCVAsync(string publicId)
         {
             var curriculum = await _context.CVs.FirstOrDefaultAsync(cv => cv.PublicId == publicId);
             if (curriculum != null)
@@ -117,7 +117,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 _context.CVs.Remove(curriculum);
                 return await _context.SaveChangesAsync() > 0;
             }
-            return null;
+            return false;
         }
     }
 }

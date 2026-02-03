@@ -58,16 +58,14 @@ namespace backend.src.Application.DTOs.PublicationDTO
             200,
             ErrorMessage = "La información de contacto no puede exceder 200 caracteres"
         )]
-        [EmailAddress(ErrorMessage = "El correo electrónico no es válido")]
+        [RegularExpression(
+            @"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$",
+            ErrorMessage = "El correo electrónico no es válido"
+        )]
         public string? AdditionalContactEmail { get; set; }
 
         [StringLength(15, ErrorMessage = "El número de teléfono no puede exceder 15 caracteres")]
         public string? AdditionalContactPhoneNumber { get; set; }
-
-        /* === IT IS TIME ===
-        [MaxLength(10, ErrorMessage = "Máximo 10 imágenes permitidas")]
-        public List<IFormFile> Images { get; set; } = [];
-        */
 
         [Required(ErrorMessage = "Debe especificar si el CV es obligatorio")]
         public bool IsCvRequired { get; set; }

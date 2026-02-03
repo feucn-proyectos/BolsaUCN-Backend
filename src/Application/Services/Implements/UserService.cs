@@ -23,7 +23,6 @@ namespace backend.src.Application.Services.Implements
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
-        private readonly IDocumentStorageProvider _documentService;
         private readonly IVerificationCodeRepository _verificationCodeRepository;
 
         public UserService(
@@ -33,8 +32,7 @@ namespace backend.src.Application.Services.Implements
             IVerificationCodeRepository verificationCodeRepository,
             IEmailService emailService,
             ITokenService tokenService,
-            IFileService fileService,
-            IDocumentStorageProvider documentService
+            IFileService fileService
         )
         {
             _configuration = configuration;
@@ -44,7 +42,6 @@ namespace backend.src.Application.Services.Implements
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
             _fileService = fileService;
-            _documentService = documentService;
         }
 
         /// <summary>
@@ -1419,7 +1416,7 @@ namespace backend.src.Application.Services.Implements
                     "El usuario con ID: {UserId} ya tiene un CV, se reemplazará el existente.",
                     user.Id
                 );
-                var deleteResult = await _documentService.DeleteCVAsync(user);
+                var deleteResult = await _fileRepository.DeleteCVAsync(user.CV.PublicId);
                 if (!deleteResult)
                 {
                     Log.Error(
@@ -1429,7 +1426,7 @@ namespace backend.src.Application.Services.Implements
                     throw new Exception("Error al eliminar el CV existente del estudiante");
                 }
             }
-            var uploadResult = await _documentService.UploadCVAsync(uploadCVDTO.CVFile, user);
+            var uploadResult = await _fileService.UploadPDFAsync(uploadCVDTO.CVFile, user);
             if (!uploadResult)
             {
                 Log.Error("Error al subir el CV del estudiante con ID: {UserId}", user.Id);
@@ -1445,10 +1442,30 @@ namespace backend.src.Application.Services.Implements
         /// <param name="userId">ID del usuario.</param>
         /// <returns>Datos del CV.</returns>
         /// <exception cref="KeyNotFoundException"></exception>
-        public async Task<GetCVDTO> DownloadCVByIdAsync(int userId)
+        public async Task<GetCVDTO> DownloadCVByIdAsync(int parsedUserId, int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
 
+            // Validacion de usuarios
+            bool requestingUserExists = await _userRepository.ExistsByIdAsync(parsedUserId);
+            if (!requestingUserExists)
+            {
+                Log.Error("Usuario solicitante no encontrado con la ID: {UserId}", parsedUserId);
+                throw new KeyNotFoundException("Usuario solicitante no encontrado.");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(
+                parsedUserId,
+                RoleNames.Applicant
+            );
+            if (isApplicant && parsedUserId != userId)
+            {
+                Log.Warning(
+                    "El usuario solicitante con ID: {RequestingUserId} no tiene permiso para descargar el CV del usuario con ID: {UserId}",
+                    parsedUserId,
+                    userId
+                );
+                throw new UnauthorizedAccessException("No tienes permiso para descargar este CV.");
+            }
             User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludeCV = true }
@@ -1469,7 +1486,40 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<string> DeleteCVByIdAsync(int userId)
         {
-            throw new NotImplementedException();
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true, TrackChanges = true }
+            );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            if (user.CV == null || user.UserType != UserType.Estudiante)
+            {
+                Log.Warning("El usuario con ID: {UserId} no tiene un CV para eliminar.", userId);
+                throw new KeyNotFoundException("El usuario no tiene un CV para eliminar");
+            }
+            // Eliminar CV
+            var deleteResult = await _fileRepository.DeleteCVAsync(user.CV.PublicId);
+            if (!deleteResult)
+            {
+                Log.Error("Error al eliminar el CV del estudiante con ID: {UserId}", user.Id);
+                throw new Exception("Error al eliminar el CV del estudiante");
+            }
+            user.CVId = null;
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar el usuario después de eliminar el CV. ID: {UserId}",
+                    user.Id
+                );
+                throw new Exception("Error al actualizar el usuario después de eliminar el CV");
+            }
+            return "CV eliminado exitosamente";
         }
         #endregion
 

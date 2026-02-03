@@ -10,12 +10,12 @@ namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/publications")]
-    public class OfferController : BaseController
+    public class NewPublicationController : BaseController
     {
         private readonly IPublicationService _publicationService;
         private readonly IOfferApplicationService _jobApplicationService;
 
-        public OfferController(
+        public NewPublicationController(
             IPublicationService publicationService,
             IOfferApplicationService jobApplicationService
         )
