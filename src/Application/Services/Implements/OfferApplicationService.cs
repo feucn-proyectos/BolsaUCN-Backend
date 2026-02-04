@@ -1,5 +1,7 @@
+using System.Security;
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -13,7 +15,7 @@ namespace backend.src.Application.Services.Implements
 {
     public class OfferApplicationService : IOfferApplicationService
     {
-        private readonly IOfferApplicationRepository _jobApplicationRepository;
+        private readonly IOfferApplicationRepository _applicationRepository;
         private readonly IOfferService _offerService;
         private readonly IOfferRepository _offerRepository;
         private readonly IUserRepository _userRepository;
@@ -23,7 +25,7 @@ namespace backend.src.Application.Services.Implements
         private readonly int _defaultPageSize;
 
         public OfferApplicationService(
-            IOfferApplicationRepository jobApplicationRepository,
+            IOfferApplicationRepository applicationRepository,
             IOfferService offerService,
             IOfferRepository offerRepository,
             IUserRepository userRepository,
@@ -32,7 +34,7 @@ namespace backend.src.Application.Services.Implements
             IConfiguration configuration
         )
         {
-            _jobApplicationRepository = jobApplicationRepository;
+            _applicationRepository = applicationRepository;
             _offerService = offerService;
             _offerRepository = offerRepository;
             _userRepository = userRepository;
@@ -155,7 +157,7 @@ namespace backend.src.Application.Services.Implements
                 CreatedAt = DateTime.UtcNow,
             };
 
-            bool result = await _jobApplicationRepository.AddAsync(jobApplication);
+            bool result = await _applicationRepository.AddAsync(jobApplication);
             if (!result)
             {
                 Log.Error(
@@ -191,7 +193,7 @@ namespace backend.src.Application.Services.Implements
 
             // Obtener postulaciones con filtros y paginación
             var (applications, totalCount) =
-                await _jobApplicationRepository.GetByApplicantIdFilteredAsync(
+                await _applicationRepository.GetByApplicantIdFilteredAsync(
                     applicantId,
                     searchParams
                 );
@@ -241,7 +243,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Obtener la postulación
-            var application = await _jobApplicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
             if (application == null)
             {
                 Log.Error(
@@ -325,7 +327,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Obtener la postulación
-            var application = await _jobApplicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
             if (application == null)
             {
                 Log.Error(
@@ -362,7 +364,7 @@ namespace backend.src.Application.Services.Implements
 
             // Actualizar los detalles
             application.CoverLetter = updateDto.CoverLetter;
-            bool updateResult = await _jobApplicationRepository.UpdateAsync(application);
+            bool updateResult = await _applicationRepository.UpdateAsync(application);
             if (!updateResult)
             {
                 Log.Error(
@@ -382,23 +384,70 @@ namespace backend.src.Application.Services.Implements
             return "Detalles de la postulación actualizados con éxito";
         }
 
-        public async Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByOfferIdAsync(
-            int offerId
+        public async Task<ApplicationsForOfferorDTO> GetAllApplicationsByOfferIdAsync(
+            int offerId,
+            int offererId,
+            ApplicationsForOfferorSearchParamsDTO searchParams
         )
         {
-            var applications = await _jobApplicationRepository.GetByOfferIdAsync(offerId);
-
-            return applications.Select(app => new JobApplicationResponseDto
+            // Validar usuario
+            bool offererExists = await _userRepository.ExistsByIdAsync(offererId);
+            if (!offererExists)
             {
-                Id = app.Id,
-                StudentName = $"{app.Student.FirstName} {app.Student.LastName}",
-                StudentEmail = app.Student.Email!,
-                OfferTitle = app.JobOffer.Title,
-                Status = app.Status.ToString(),
-                ApplicationDate = app.CreatedAt,
-                //CurriculumVitae = app.Student.CurriculumVitae,
-                //MotivationLetter = app.Student.MotivationLetter,
-            });
+                Log.Error(
+                    "Usuario ID: {OffererId} no encontrado al obtener postulaciones de oferta ID: {OfferId}",
+                    offererId,
+                    offerId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            // Validar que la oferta existe y pertenece al usuario
+            Offer? offer = await _offerRepository.GetByIdAsync(offerId);
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta ID: {OfferId} no encontrada al intentar obtener postulaciones",
+                    offerId
+                );
+                throw new KeyNotFoundException("La oferta no existe");
+            }
+            else if (offer.UserId != offererId)
+            {
+                Log.Error(
+                    "Usuario ID: {OffererId} intentó acceder a postulaciones de oferta ID: {OfferId} que no le pertenece",
+                    offererId,
+                    offerId
+                );
+                throw new SecurityException(
+                    "No tienes permiso para ver las postulaciones de esta oferta"
+                );
+            }
+            // Obtener postulaciones
+            var (applications, totalCount) = await _applicationRepository.GetAllByOfferIdAsync(
+                offerId,
+                searchParams
+            );
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+            int currentPage = searchParams.PageNumber;
+            if (currentPage < 1 || currentPage > totalPages)
+            {
+                Log.Warning(
+                    "Página solicitada {currentPage} fuera de rango. Total de páginas: {totalPages}. Se ajusta a la página 1.",
+                    currentPage,
+                    totalPages
+                );
+                currentPage = 1;
+            }
+            ApplicationsForOfferorDTO applicationsDTO = new ApplicationsForOfferorDTO
+            {
+                Applications = applications.Adapt<List<ApplicationForOfferorDTO>>(),
+                TotalCount = totalCount,
+                TotalPages = totalPages,
+                PageSize = pageSize,
+                CurrentPage = currentPage,
+            };
+            return applicationsDTO;
         }
 
         /**
@@ -439,7 +488,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Obtener la postulación
-            var application = await _jobApplicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
             if (application == null)
             {
                 Log.Error(
@@ -460,7 +509,7 @@ namespace backend.src.Application.Services.Implements
 
             // Actualizar el estado
             application.Status = newStatus;
-            await _jobApplicationRepository.UpdateAsync(application);
+            await _applicationRepository.UpdateAsync(application);
 
             // Obtener información del oferente para el email
             var offererUser = await _userRepository.GetByIdAsync(OwnnerUserId);
@@ -490,7 +539,7 @@ namespace backend.src.Application.Services.Implements
             int offerId
         )
         {
-            var applicant = await _jobApplicationRepository.GetByOfferIdAsync(offerId);
+            var applicant = await _applicationRepository.GetByOfferIdAsync(offerId);
             return applicant
                 .Select(app => new ViewApplicantsDto
                 {
@@ -504,7 +553,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<ViewApplicantDetailAdminDto> GetApplicantDetailForAdmin(int studentId)
         {
-            var applicant = await _jobApplicationRepository.GetByIdAsync(studentId); // Esto no tiene sentido. GetbyIdAsync recibe applicationId, no studentId y devuelve una solicitud, no un estudiante (usuario).
+            var applicant = await _applicationRepository.GetByIdAsync(studentId); // Esto no tiene sentido. GetbyIdAsync recibe applicationId, no studentId y devuelve una solicitud, no un estudiante (usuario).
             return new ViewApplicantDetailAdminDto
             {
                 Id = applicant.Id,
@@ -544,7 +593,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Tu repositorio GetByOfferIdAsync ya incluye Student y Student.Student (según tu código)
-            var applications = await _jobApplicationRepository.GetByOfferIdAsync(offerId);
+            var applications = await _applicationRepository.GetByOfferIdAsync(offerId);
 
             // 4. Mapear al nuevo DTO que creamos
             var applicantDtos = applications
@@ -577,7 +626,7 @@ namespace backend.src.Application.Services.Implements
             if (offer.UserId != offererUserId)
                 throw new UnauthorizedAccessException("No eres el dueño de esta oferta.");
 
-            var applicationsList = await _jobApplicationRepository.GetByStudentIdAsync(studentId);
+            var applicationsList = await _applicationRepository.GetByStudentIdAsync(studentId);
 
             var applicant = applicationsList.FirstOrDefault(app => app.JobOfferId == offerId);
 
@@ -613,7 +662,7 @@ namespace backend.src.Application.Services.Implements
         /// <returns>Indica si el estudiante ya ha postulado a la oferta</returns>
         private async Task<bool> HasAlreadyAppliedAsync(int applicantId, int offerId)
         {
-            return await _jobApplicationRepository.ExistsByApplicantIdAndOfferId(
+            return await _applicationRepository.ExistsByApplicantIdAndOfferId(
                 applicantId,
                 offerId
             );
@@ -626,7 +675,7 @@ namespace backend.src.Application.Services.Implements
             int studentId
         )
         {
-            var applications = await _jobApplicationRepository.GetByStudentIdAsync(studentId);
+            var applications = await _applicationRepository.GetByStudentIdAsync(studentId);
             return applications.Select(app => new JobApplicationResponseDto
             {
                 Id = app.Id,

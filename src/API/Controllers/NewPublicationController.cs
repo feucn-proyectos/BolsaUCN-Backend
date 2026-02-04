@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -15,15 +16,15 @@ namespace backend.src.API.Controllers
     public class NewPublicationController : BaseController
     {
         private readonly IPublicationService _publicationService;
-        private readonly IOfferApplicationService _jobApplicationService;
+        private readonly IOfferApplicationService _applicationService;
 
         public NewPublicationController(
             IPublicationService publicationService,
-            IOfferApplicationService jobApplicationService
+            IOfferApplicationService applicationService
         )
         {
             _publicationService = publicationService;
-            _jobApplicationService = jobApplicationService;
+            _applicationService = applicationService;
         }
 
         /// <summary>
@@ -45,7 +46,7 @@ namespace backend.src.API.Controllers
         public async Task<IActionResult> AcceptApplication(int applicationId)
         {
             int parsedUserId = GetUserIdFromToken();
-            var result = await _jobApplicationService.UpdateApplicationStatusAsync(
+            var result = await _applicationService.UpdateApplicationStatusAsync(
                 applicationId,
                 ApplicationStatus.Aceptada,
                 parsedUserId
@@ -58,7 +59,7 @@ namespace backend.src.API.Controllers
         public async Task<IActionResult> RejectApplication(int applicationId)
         {
             int parsedUserId = GetUserIdFromToken();
-            var result = await _jobApplicationService.UpdateApplicationStatusAsync(
+            var result = await _applicationService.UpdateApplicationStatusAsync(
                 applicationId,
                 ApplicationStatus.Rechazada,
                 parsedUserId
@@ -73,12 +74,38 @@ namespace backend.src.API.Controllers
         [HttpGet("my-publications")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> GetPublicationsForOfferer(
-            [FromForm] MyPublicationsSeachParamsDTO searchParamsDTO
+            [FromQuery] MyPublicationsSeachParamsDTO searchParamsDTO
         )
         {
             int parsedUserId = GetUserIdFromToken();
-            var result = await _publicationService.GetMyPublicationsAsync(parsedUserId, searchParamsDTO);
+            var result = await _publicationService.GetMyPublicationsAsync(
+                parsedUserId,
+                searchParamsDTO
+            );
             return Ok(new GenericResponse<MyPublicationsDTO>("Publicaciones obtenidas", result));
         }
+
+        [HttpGet("my-publications/{offerId}/applications")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> GetAllApplicationsByOfferId(
+            int offerId,
+            [FromQuery] ApplicationsForOfferorSearchParamsDTO searchParams
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _applicationService.GetAllApplicationsByOfferIdAsync(
+                offerId,
+                parsedUserId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<ApplicationsForOfferorDTO>(
+                    "Aplicaciones obtenidas exitosamente.",
+                    result
+                )
+            );
+        }
+
+        //public async Task<IActionResult> 
     }
 }

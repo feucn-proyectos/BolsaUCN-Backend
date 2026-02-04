@@ -1,4 +1,5 @@
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Domain.Models;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
@@ -56,7 +57,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             {
                 string term = searchParams.SearchTerm.ToLower();
                 query = query.Where(ja =>
-                    ja.JobOffer.Title.ToLower().Contains(term)
+                    ja.JobOffer!.Title.ToLower().Contains(term)
                     || ja.JobOffer.User.FirstName.ToLower().Contains(term)
                     || ja.JobOffer.User.LastName.ToLower().Contains(term)
                 );
@@ -85,10 +86,59 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 {
                     case "OfferTitle":
                         query = ascending
-                            ? query.OrderBy(ja => ja.JobOffer.Title)
-                            : query.OrderByDescending(ja => ja.JobOffer.Title);
+                            ? query.OrderBy(ja => ja.JobOffer!.Title)
+                            : query.OrderByDescending(ja => ja.JobOffer!.Title);
                         break;
                     case "CreatedAt":
+                        query = ascending
+                            ? query.OrderBy(ja => ja.CreatedAt)
+                            : query.OrderByDescending(ja => ja.CreatedAt);
+                        break;
+                }
+            }
+            else // Orden por defecto
+            {
+                query = query.OrderByDescending(ja => ja.CreatedAt);
+            }
+
+            int totalCount = await query.CountAsync();
+            int pageNumber = searchParams.PageNumber > 0 ? searchParams.PageNumber : 1;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+
+            var applications = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (applications, totalCount);
+        }
+
+        public async Task<(IEnumerable<JobApplication>, int)> GetAllByOfferIdAsync(
+            int offerId,
+            ApplicationsForOfferorSearchParamsDTO searchParams
+        )
+        {
+            var query = _context
+                .JobApplications.Include(ja => ja.Student)
+                .Include(ja => ja.JobOffer)
+                .Where(ja => ja.JobOfferId == offerId);
+
+            // Aplicar ordenamiento
+            if (!string.IsNullOrEmpty(searchParams.SortBy))
+            {
+                bool ascending = searchParams.SortOrder?.ToLower() == "asc";
+                switch (searchParams.SortBy)
+                {
+                    case "FirstName":
+                        query = ascending
+                            ? query
+                                .OrderBy(ja => ja.Student!.FirstName)
+                                .ThenBy(ja => ja.Student!.LastName)
+                            : query
+                                .OrderByDescending(ja => ja.Student!.FirstName)
+                                .ThenByDescending(ja => ja.Student!.LastName);
+                        break;
+                    case "ApplicationDate":
                         query = ascending
                             ? query.OrderBy(ja => ja.CreatedAt)
                             : query.OrderByDescending(ja => ja.CreatedAt);

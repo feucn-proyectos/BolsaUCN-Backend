@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Domain.Models;
 
 namespace backend.src.Application.Services.Interfaces
@@ -29,7 +30,11 @@ namespace backend.src.Application.Services.Interfaces
             SearchParamsDTO searchParams
         );
 
-        Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByOfferIdAsync(int offerId);
+        Task<ApplicationsForOfferorDTO> GetAllApplicationsByOfferIdAsync(
+            int offerId,
+            int offererId,
+            ApplicationsForOfferorSearchParamsDTO searchParams
+        );
 
         //! COMPLETE
         /// <summary>
@@ -48,11 +53,6 @@ namespace backend.src.Application.Services.Interfaces
             int applicationId,
             UpdateApplicationDetailsDTO updateDto
         );
-
-        /**
-        *? DEPRECATED METHOD
-        Task<IEnumerable<JobApplicationResponseDto>> GetApplicationsByCompanyIdAsync(int companyId);
-        */
 
         Task<bool> UpdateApplicationStatusAsync(
             int applicationId,
