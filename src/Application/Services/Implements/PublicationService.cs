@@ -377,7 +377,7 @@ namespace backend.src.Application.Services.Implements
 
             MyPublicationsDTO myPublicationsDTO = new MyPublicationsDTO
             {
-                Publications = myPublications.Adapt<List<PublicationForOfferor>>(),
+                Publications = myPublications.Adapt<List<PublicationForOfferorDTO>>(),
                 TotalPages = totalPages,
                 CurrentPage = currentPage,
                 PageSize = pageSize,

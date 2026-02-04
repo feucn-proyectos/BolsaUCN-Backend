@@ -1,6 +1,6 @@
 namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
 {
-    public class PublicationForOfferor
+    public class PublicationForOfferorDTO
     {
         public required int IdPublication { get; set; }
         public required string Title { get; set; }

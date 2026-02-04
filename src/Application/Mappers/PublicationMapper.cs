@@ -99,6 +99,16 @@ namespace backend.src.Application.Mappers
 
         public void ConfigurePublicationsForOfferor()
         {
+            TypeAdapterConfig<Publication, PublicationForOfferorDTO>
+                .NewConfig()
+                .Map(dest => dest.IdPublication, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.PublicationType, src => src.PublicationType)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.IsOpen, src => src.IsOpen)
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
+                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0 ? true : false);
+
             TypeAdapterConfig<Publication, MyPublicationDetailsDTO>
                 .NewConfig()
                 // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
