@@ -96,7 +96,7 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<PublicationsAwaitingApprovalDTO> GetPendingPublicationsAsync(
             int userId,
-            SearchParamsDTO searchParamsDTO
+            PendingPublicationSearchParamsDTO searchParams
         )
         {
             // Validacion de administrador
@@ -122,9 +122,9 @@ namespace backend.src.Application.Services.Implements
 
             // Obtención de ofertas y compra/ventas pendientes con paginación y filtros
             var (pendingPublications, totalCount) =
-                await _publicationRepository.GetAllPendingForApprovalAsync(searchParamsDTO);
-            int currentPage = searchParamsDTO.PageNumber;
-            int pageSize = searchParamsDTO.PageSize ?? _defaultPageSize;
+                await _publicationRepository.GetAllPendingForApprovalAsync(searchParams);
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
             int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 
             Log.Information(

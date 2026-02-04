@@ -1,6 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
-using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 
@@ -10,12 +10,6 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateOfferAsync(CreateOfferDTO publicationDTO, int userId);
         Task<string> CreateBuySellAsync(CreateBuySellDTO publicationDTO, int userId);
-
-        /// <summary>
-        /// Funcion
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
         Task<IEnumerable<PublicationsDTO>> GetMyPublishedPublicationsAsync(string userId);
         Task<IEnumerable<PublicationsDTO>> GetMyRejectedPublicationsAsync(string userId);
         Task<IEnumerable<PublicationsDTO>> GetMyPendingPublicationsAsync(string userId);
@@ -26,9 +20,15 @@ namespace backend.src.Application.Services.Interfaces
         );
 
         #region New Methods
-        Task<Publication> GetPublicationByIdAsync(
-            int publicationId,
-            PublicationQueryOptions options
+
+        /// <summary>
+        /// Obtiene las publicaciones del usuario autenticado
+        /// </summary>
+        /// <param name="userId">Id del usuario autenticado</param>
+        /// <returns>Lista de publicaciones del usuario</returns>
+        Task<MyPublicationsDTO> GetMyPublicationsAsync(
+            int userId,
+            MyPublicationsSeachParamsDTO searchParamsDTO
         );
         Task UpdatePublicationStatusAsync(Publication publication, ApprovalStatus newStatus);
         #endregion

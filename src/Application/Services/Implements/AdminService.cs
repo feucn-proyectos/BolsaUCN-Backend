@@ -168,7 +168,7 @@ namespace backend.src.Application.Services.Implements
         /// <returns>DTO con la lista de usuarios</returns>
         public async Task<UsersForAdminDTO> GetAllUsersAsync(
             int adminId,
-            SearchParamsDTO searchParams
+            UsersForAdminSearchParamsDTO searchParams
         )
         {
             // Verificar que el solicitante es un administrador

@@ -26,7 +26,7 @@ namespace backend.src.Application.Services.Interfaces
         /// <returns>Publicaciones pendientes para validación</returns>
         Task<PublicationsAwaitingApprovalDTO> GetPendingPublicationsAsync(
             int userId,
-            SearchParamsDTO searchParamsDTO
+            PendingPublicationSearchParamsDTO searchParamsDTO
         );
 
         /// <summary>

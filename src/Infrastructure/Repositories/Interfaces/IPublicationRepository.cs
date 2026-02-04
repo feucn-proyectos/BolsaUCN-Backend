@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
@@ -44,7 +45,18 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <param name="searchParamsDTO">Parámetros de búsqueda y paginación</param>
         /// <returns></returns>
         Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
-            SearchParamsDTO searchParamsDTO
+            PendingPublicationSearchParamsDTO searchParamsDTO
+        );
+
+        /// <summary>
+        /// Obtiene las publicaciones del usuario autenticado con filtros y paginación
+        /// </summary>
+        /// <param name="offerorId">Id del usuario autenticado</param>
+        /// <param name="searchParams">Parámetros de búsqueda y paginación</param>
+        /// <returns></returns>
+        Task<(IEnumerable<Publication>, int)> GetMyPublicationsFilteredByUserIdAsync(
+            int offerorId,
+            MyPublicationsSeachParamsDTO searchParams
         );
     }
 }

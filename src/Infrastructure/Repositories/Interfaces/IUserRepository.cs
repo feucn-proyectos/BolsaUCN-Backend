@@ -36,7 +36,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<bool> ConfirmEmailAsync(string email);
         Task<(IEnumerable<User>, int TotalCount)> GetUsersFilteredForAdminAsync(
             int adminId,
-            SearchParamsDTO searchParams
+            UsersForAdminSearchParamsDTO searchParams
         );
         Task<int> GetCountByTypeAsync(UserType userType);
         Task<int> GetCountByRoleAsync(string role);

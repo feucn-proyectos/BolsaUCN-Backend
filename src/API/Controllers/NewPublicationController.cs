@@ -1,6 +1,8 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,11 +40,6 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
         }
 
-        /// <summary>
-        /// Acepta una postulación a una oferta laboral
-        /// </summary>
-        /// <param name="applicationId">ID de la postulación a aceptar</param>
-        /// <returns>Resultado de la aceptación de la postulación</returns>
         [HttpPatch("offerent/applications/{applicationId}/accept")]
         [Authorize]
         public async Task<IActionResult> AcceptApplication(int applicationId)
@@ -56,11 +53,6 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<bool>("Aplicación aceptada exitosamente.", result));
         }
 
-        /// <summary>
-        /// Rechaza una postulación a una oferta laboral
-        /// </summary>
-        /// <param name="applicationId">ID de la postulación a rechazar</param>
-        /// <returns>Resultado del rechazo de la postulación</returns>
         [HttpPatch("offerent/applications/{applicationId}/reject")]
         [Authorize]
         public async Task<IActionResult> RejectApplication(int applicationId)
@@ -72,6 +64,21 @@ namespace backend.src.API.Controllers
                 parsedUserId
             );
             return Ok(new GenericResponse<bool>("Aplicación rechazada exitosamente.", result));
+        }
+
+        /// <summary>
+        /// Obtiene las publicaciones del usuario autenticado
+        /// </summary>
+        /// <returns>Lista de publicaciones del usuario</returns>
+        [HttpGet("my-publications")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> GetPublicationsForOfferer(
+            [FromForm] MyPublicationsSeachParamsDTO searchParamsDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.GetMyPublicationsAsync(parsedUserId, searchParamsDTO);
+            return Ok(new GenericResponse<MyPublicationsDTO>("Publicaciones obtenidas", result));
         }
     }
 }

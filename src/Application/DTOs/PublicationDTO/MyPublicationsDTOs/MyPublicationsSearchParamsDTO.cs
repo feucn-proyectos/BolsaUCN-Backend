@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
+namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
 {
-    public class SearchParamsDTO
+    public class MyPublicationsSeachParamsDTO
     {
         [MaxLength(
             100,
@@ -11,12 +11,15 @@ namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
         public string? SearchTerm { get; set; }
 
         [RegularExpression("Oferta|CompraVenta", ErrorMessage = "Tipo de usuario inválido.")]
-        public string? FilterBy { get; set; }
+        public string? FilterByPublicationType { get; set; }
 
         [RegularExpression(
-            "Title|CreatedAt|CreatedBy",
-            ErrorMessage = "Campo de ordenamiento inválido."
+            "Aprobada|Rechazada|Pendiente",
+            ErrorMessage = "Estado de aprobación inválido."
         )]
+        public string? FilterByApprovalStatus { get; set; }
+
+        [RegularExpression("Title|CreatedAt", ErrorMessage = "Campo de ordenamiento inválido.")]
         public string? SortBy { get; set; }
 
         [RegularExpression("asc|desc", ErrorMessage = "Orden de ordenamiento inválido.")]

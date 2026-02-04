@@ -233,7 +233,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
         public async Task<(IEnumerable<User>, int TotalCount)> GetUsersFilteredForAdminAsync(
             int adminId,
-            SearchParamsDTO searchParams
+            UsersForAdminSearchParamsDTO searchParams
         )
         {
             var query = _context.Users.Where(u => u.Id != adminId).AsNoTracking().AsQueryable();

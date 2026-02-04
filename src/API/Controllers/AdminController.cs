@@ -44,7 +44,9 @@ namespace backend.src.API.Controllers
         /// <returns>Lista paginada y filtrada de usuarios.</returns>
         [HttpGet("users")]
         [Authorize(Roles = RoleNames.Admin)]
-        public async Task<IActionResult> GetAllUsers([FromQuery] SearchParamsDTO searchParams)
+        public async Task<IActionResult> GetAllUsers(
+            [FromQuery] UsersForAdminSearchParamsDTO searchParams
+        )
         {
             var adminId = GetUserIdFromToken();
             Log.Information("Obteniendo todos los usuarios.");

@@ -5,7 +5,7 @@ using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
-using SearchParamsDTO = backend.src.Application.DTOs.PublicationDTO.ValidationDTOs.SearchParamsDTO;
+using PendingPublicationSearchParamsDTO = backend.src.Application.DTOs.PublicationDTO.ValidationDTOs.PendingPublicationSearchParamsDTO;
 
 namespace backend.src.API.Controllers
 {
@@ -69,7 +69,7 @@ namespace backend.src.API.Controllers
         [HttpGet("pending")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> GetPendingPublicationsForApproval(
-            [FromQuery] SearchParamsDTO searchParamsDTO
+            [FromQuery] PendingPublicationSearchParamsDTO searchParamsDTO
         )
         {
             int adminId = GetUserIdFromToken();

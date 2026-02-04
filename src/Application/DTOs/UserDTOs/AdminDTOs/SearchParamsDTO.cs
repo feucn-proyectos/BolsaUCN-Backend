@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace backend.src.Application.DTOs.UserDTOs.AdminDTOs
 {
-    public class SearchParamsDTO
+    public class UsersForAdminSearchParamsDTO
     {
         /// <summary>
         /// Término de búsqueda para filtrar usuarios por nombre, correo electrónico, RUT o número de teléfono.

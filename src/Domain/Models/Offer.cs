@@ -38,11 +38,6 @@ namespace backend.src.Domain.Models
         public required OfferTypes OfferType { get; set; }
 
         /// <summary>
-        /// Requisitos específicos para la oferta (habilidades, educación, experiencia).
-        /// </summary>
-        public string? Requirements { get; set; }
-
-        /// <summary>
         /// Colección de postulaciones realizadas a esta oferta.
         /// </summary>
         public ICollection<JobApplication> Applications { get; set; } = [];

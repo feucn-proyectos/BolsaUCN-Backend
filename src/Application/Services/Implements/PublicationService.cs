@@ -1,6 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
-using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -19,6 +19,8 @@ namespace backend.src.Application.Services.Implements
         private readonly IOfferRepository _offerRepository;
         private readonly IBuySellRepository _buySellRepository;
         private const int MAX_APPEALS = 3;
+        private readonly int _defaultPageSize;
+        private readonly IConfiguration _configuration;
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
@@ -28,7 +30,8 @@ namespace backend.src.Application.Services.Implements
             IBuySellRepository buySellRepository,
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
-            IUserRepository userRepository
+            IUserRepository userRepository,
+            IConfiguration configuration
         )
         {
             _offerRepository = offerRepository;
@@ -36,6 +39,8 @@ namespace backend.src.Application.Services.Implements
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
             _userRepository = userRepository;
+            _configuration = configuration;
+            _defaultPageSize = configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
         #region Metodos para las Ofertas
@@ -248,7 +253,7 @@ namespace backend.src.Application.Services.Implements
 
         #region Metodos para publicaciones en general
 
-        //! NEEDS MORE RESEARCH - NO FLOW DOCUMENTATION FOUND 
+        //! NEEDS MORE RESEARCH - NO FLOW DOCUMENTATION FOUND
         /// <summary>
         /// Allows a user to appeal a rejection if limits allow.
         /// </summary>
@@ -294,23 +299,6 @@ namespace backend.src.Application.Services.Implements
             return new GenericResponse<string>(
                 $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {MAX_APPEALS}. Un administrador revisará tu caso."
             );
-        }
-
-        public async Task<Publication> GetPublicationByIdAsync(
-            int publicationId,
-            PublicationQueryOptions options
-        )
-        {
-            Publication? publication = await _publicationRepository.GetPublicationByIdAsync(
-                publicationId,
-                options
-            );
-            if (publication == null)
-            {
-                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
-                throw new KeyNotFoundException("La publicación no existe.");
-            }
-            return publication;
         }
 
         public async Task UpdatePublicationStatusAsync(
@@ -360,6 +348,42 @@ namespace backend.src.Application.Services.Implements
                     publication.ApprovalStatus
                 );
             }
+        }
+        #endregion
+
+        #region New Methods
+
+        public async Task<MyPublicationsDTO> GetMyPublicationsAsync(
+            int offerorId,
+            MyPublicationsSeachParamsDTO searchParams
+        )
+        {
+            // Validar usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            var (myPublications, totalCount) =
+                await _publicationRepository.GetMyPublicationsFilteredByUserIdAsync(
+                    offerorId,
+                    searchParams
+                );
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            MyPublicationsDTO myPublicationsDTO = new MyPublicationsDTO
+            {
+                Publications = myPublications.Adapt<List<PublicationForOfferor>>(),
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return myPublicationsDTO;
         }
 
         #endregion
