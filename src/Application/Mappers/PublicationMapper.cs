@@ -101,7 +101,7 @@ namespace backend.src.Application.Mappers
         {
             TypeAdapterConfig<Publication, PublicationForOfferorDTO>
                 .NewConfig()
-                .Map(dest => dest.IdPublication, src => src.Id)
+                .Map(dest => dest.PublicationId, src => src.Id)
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.PublicationType, src => src.PublicationType)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)

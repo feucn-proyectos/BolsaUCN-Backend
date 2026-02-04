@@ -576,7 +576,6 @@ namespace backend.src.Application.Infrastructure.Data
                     Remuneration = s.Rem,
                     OfferType = s.Type,
                     Location = s.Loc,
-                    Requirements = s.Req,
                     AdditionalContactEmail = s.Contact,
                     IsCvRequired = s.IsCv,
                 };
@@ -604,8 +603,6 @@ namespace backend.src.Application.Infrastructure.Data
                 Remuneration = 400000, // Remuneración de práctica
                 OfferType = OfferTypes.Trabajo, // Asumiendo que Práctica es un tipo de Trabajo
                 Location = "Remoto (Chile)",
-                Requirements =
-                    "Cursando último año. Conocimiento en C# y SQL Server. Deseable Azure.",
                 AdditionalContactEmail = "rrhh.pending@techcorp.cl",
                 IsCvRequired = true,
             };
@@ -687,7 +684,6 @@ namespace backend.src.Application.Infrastructure.Data
                     Remuneration = remuneration,
                     OfferType = offerType,
                     Location = location,
-                    Requirements = faker.Lorem.Sentence(5),
                     AdditionalContactEmail = faker.Internet.Email(),
                     IsCvRequired = isCvRequired,
                 };

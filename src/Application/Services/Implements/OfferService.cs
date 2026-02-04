@@ -215,7 +215,6 @@ public class OfferService : IOfferService
             Remuneration = offer.Remuneration ?? 0,
             OfferType = offer.OfferType,
             Location = offer.Location,
-            Requirements = offer.Requirements,
             ContactInfo = offer.AdditionalContactEmail,
             AboutMe = offer.User?.AboutMe,
             Rating = offer.User.Rating,
@@ -285,7 +284,6 @@ public class OfferService : IOfferService
             OfferType = offer.OfferType,
             ContactInfo = offer.AdditionalContactEmail,
             AboutMe = offer.User?.AboutMe,
-            Requirements = offer.Requirements,
             Rating = offer.User.Rating,
         };
     }
