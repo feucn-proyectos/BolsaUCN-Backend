@@ -27,6 +27,11 @@ namespace backend.src.Domain.Models
     public class BuySell : Publication
     {
         /// <summary>
+        /// Coleccion de imágenes asociadas a la publicación.
+        /// </summary>
+        public ICollection<Image> Images { get; set; } = [];
+        
+        /// <summary>
         /// Precio del producto o servicio en pesos chilenos.
         /// </summary>
         public int Price { get; set; }

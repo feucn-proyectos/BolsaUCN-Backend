@@ -62,11 +62,6 @@ namespace backend.src.Domain.Models
         public string? AdditionalContactPhoneNumber { get; set; }
 
         /// <summary>
-        /// Coleccion de imágenes asociadas a la publicación.
-        /// </summary>
-        public ICollection<Image> Images { get; set; } = [];
-
-        /// <summary>
         /// Tipo de publicación (Oferta, CompraVenta).
         /// </summary>
         public required PublicationType PublicationType { get; set; }

@@ -51,7 +51,7 @@ namespace backend.src.Infrastructure.Data
             builder
                 .Entity<JobApplication>()
                 .HasOne(ja => ja.JobOffer)
-                .WithMany()
+                .WithMany(o => o.Applications)
                 .HasForeignKey(ja => ja.JobOfferId);
 
             // Relaciones de Publication (clase base para ofertas y compra/venta)
