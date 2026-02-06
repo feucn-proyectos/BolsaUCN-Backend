@@ -33,6 +33,11 @@ namespace backend.src.Domain.Models
         public int? Remuneration { get; set; }
 
         /// <summary>
+        /// Número de postulantes requeridos para la oferta.
+        /// </summary>
+        public int OpenSpots { get; set; }
+
+        /// <summary>
         /// Categoría de la oferta (e.g., Trabajo, Voluntariado).
         /// </summary>
         public required OfferTypes OfferType { get; set; }

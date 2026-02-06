@@ -22,9 +22,5 @@ namespace backend.src.Domain.Options
         /// </summary>
         public bool IncludeUser { get; set; } = false;
 
-        /// <summary>
-        /// Filtrar por tipo de publicación (Oferta o CompraVenta)
-        /// </summary>
-        public PublicationType? IsTypeOf { get; set; } = null;
     }
 }

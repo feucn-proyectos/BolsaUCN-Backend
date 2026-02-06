@@ -263,7 +263,7 @@ namespace backend.src.Application.Services.Implements
             UserAppealDto dto
         )
         {
-            var publication = await _publicationRepository.GetByIdAsync(publicationId);
+            var publication = await _publicationRepository.GetPublicationByIdAsync(publicationId);
 
             // 1. Validate existence -> 404 Not Found
             if (publication == null)
@@ -299,6 +299,74 @@ namespace backend.src.Application.Services.Implements
             return new GenericResponse<string>(
                 $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {MAX_APPEALS}. Un administrador revisará tu caso."
             );
+        }
+        #endregion
+
+        #region New Methods
+
+        public async Task<MyPublicationsDTO> GetMyPublicationsAsync(
+            int offerorId,
+            MyPublicationsSeachParamsDTO searchParams
+        )
+        {
+            // Validar usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            var (myPublications, totalCount) =
+                await _publicationRepository.GetMyPublicationsFilteredByUserIdAsync(
+                    offerorId,
+                    searchParams
+                );
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            MyPublicationsDTO myPublicationsDTO = new MyPublicationsDTO
+            {
+                Publications = myPublications.Adapt<List<PublicationForOfferorDTO>>(),
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return myPublicationsDTO;
+        }
+
+        public async Task<MyPublicationDetailsDTO> GetPublicationDetailsForOffererAsync(
+            int publicationId,
+            int offerorId
+        )
+        {
+            // Validar usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            var publication = await _publicationRepository.GetPublicationByIdAsync(
+                publicationId,
+                new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+            );
+            if (publication == null || publication.UserId != offerorId)
+            {
+                Log.Error(
+                    "Publicación con ID {PublicationId} no encontrada para el usuario {UserId}.",
+                    publicationId,
+                    offerorId
+                );
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+
+            MyPublicationDetailsDTO publicationDetails =
+                publication.Adapt<MyPublicationDetailsDTO>();
+            return publicationDetails;
         }
 
         public async Task UpdatePublicationStatusAsync(
@@ -349,43 +417,6 @@ namespace backend.src.Application.Services.Implements
                 );
             }
         }
-        #endregion
-
-        #region New Methods
-
-        public async Task<MyPublicationsDTO> GetMyPublicationsAsync(
-            int offerorId,
-            MyPublicationsSeachParamsDTO searchParams
-        )
-        {
-            // Validar usuario
-            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
-            if (!userExists)
-            {
-                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
-                throw new KeyNotFoundException("Usuario no encontrado.");
-            }
-            var (myPublications, totalCount) =
-                await _publicationRepository.GetMyPublicationsFilteredByUserIdAsync(
-                    offerorId,
-                    searchParams
-                );
-
-            int currentPage = searchParams.PageNumber;
-            int pageSize = searchParams.PageSize ?? _defaultPageSize;
-            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
-
-            MyPublicationsDTO myPublicationsDTO = new MyPublicationsDTO
-            {
-                Publications = myPublications.Adapt<List<PublicationForOfferorDTO>>(),
-                TotalPages = totalPages,
-                CurrentPage = currentPage,
-                PageSize = pageSize,
-                TotalCount = totalCount,
-            };
-            return myPublicationsDTO;
-        }
-
         #endregion
     }
 }

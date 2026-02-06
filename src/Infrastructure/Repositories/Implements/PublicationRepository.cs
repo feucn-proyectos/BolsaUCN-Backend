@@ -8,9 +8,7 @@ using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
-using Resend;
 
 public class PublicationRepository : IPublicationRepository
 {
@@ -22,70 +20,41 @@ public class PublicationRepository : IPublicationRepository
     {
         _context = context;
         _configuration = configuration;
-        _defaultPageSize = configuration.GetValue<int>("Pagination:DefaultPageSize");
+        _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
     }
 
-    public async Task<IEnumerable<Publication>> GetPublishedPublicationsByUserIdAsync(string userId)
+    public async Task<bool> CheckOwnershipAsync(int offerorId, int publicationId)
     {
-        return await _context
-            .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.Aceptado
-            ) // <-- Filtro Published
-            .AsNoTracking()
-            .ToListAsync();
+        return await _context.Publications.AnyAsync(p =>
+            p.Id == publicationId && p.UserId == offerorId
+        );
     }
 
-    // --- IMPLEMENTACIÓN REJECTED ---
-    public async Task<IEnumerable<Publication>> GetRejectedPublicationsByUserIdAsync(string userId)
+    public async Task<bool> UpdateAsync<T>(T publication)
+        where T : Publication
     {
-        return await _context
-            .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.Rechazado
-            ) // <-- Filtro Rejected
-            .AsNoTracking()
-            .ToListAsync();
+        _context.Set<T>().Update(publication);
+        return await _context.SaveChangesAsync() > 0;
     }
 
-    // --- IMPLEMENTACIÓN PENDING ("InProcess") ---
-    public async Task<IEnumerable<Publication>> GetPendingPublicationsByUserIdAsync(string userId)
-    {
-        return await _context
-            .Publications.Where(p =>
-                p.UserId == int.Parse(userId) && p.ApprovalStatus == ApprovalStatus.EnProceso
-            ) // <-- Filtro Pending
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    public async Task<Publication?> GetByIdAsync(int id)
-    {
-        return await _context.Publications.FirstOrDefaultAsync(p => p.Id == id);
-    }
-
-    // --- NUEVA IMPLEMENTACIÓN: UpdateAsync ---
-    public async Task UpdateAsync(Publication publication)
-    {
-        _context.Publications.Update(publication);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<Publication?> GetPublicationByIdAsync(
+    public async Task<T?> GetPublicationByIdAsync<T>(
         int publicationId,
-        PublicationQueryOptions options
+        PublicationQueryOptions? options = null
     )
+        where T : Publication
     {
-        var query = _context.Publications.AsQueryable();
+        var query = _context.Set<T>().AsQueryable();
 
-        if (!options.TrackChanges)
+        if (options?.TrackChanges == false)
             query = query.AsNoTracking();
 
-        if (options.IncludeImages)
+        if (typeof(T) == typeof(BuySell) && options?.IncludeImages == true)
             query = query.Include(p => p.Images);
 
-        if (options.IncludeUser)
+        if (options?.IncludeUser == true)
             query = query.Include(p => p.User);
 
-        return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
+        return (T?)await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
     public async Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(

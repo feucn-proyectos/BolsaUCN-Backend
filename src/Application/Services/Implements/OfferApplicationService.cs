@@ -2,6 +2,7 @@ using System.Security;
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -16,8 +17,7 @@ namespace backend.src.Application.Services.Implements
     public class OfferApplicationService : IOfferApplicationService
     {
         private readonly IOfferApplicationRepository _applicationRepository;
-        private readonly IOfferService _offerService;
-        private readonly IOfferRepository _offerRepository;
+        private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
@@ -26,8 +26,7 @@ namespace backend.src.Application.Services.Implements
 
         public OfferApplicationService(
             IOfferApplicationRepository applicationRepository,
-            IOfferService offerService,
-            IOfferRepository offerRepository,
+            IPublicationRepository publicationRepository,
             IUserRepository userRepository,
             INotificationService notificationService,
             IReviewService reviewService,
@@ -35,9 +34,8 @@ namespace backend.src.Application.Services.Implements
         )
         {
             _applicationRepository = applicationRepository;
-            _offerService = offerService;
-            _offerRepository = offerRepository;
             _userRepository = userRepository;
+            _publicationRepository = publicationRepository;
             _notificationService = notificationService;
             _reviewService = reviewService;
             _configuration = configuration;
@@ -76,7 +74,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Verificar que la oferta existe y está activa
-            Offer? offer = await _offerRepository.GetByIdAsync(offerId);
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
             if (offer == null)
             {
                 Log.Error("Oferta ID: {OfferId} no encontrada al intentar postular", offerId);
@@ -91,9 +89,28 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new InvalidOperationException("No puedes postular a una oferta inactiva");
             }
+            // Verficar que el usuario no postule a su propia oferta
+            if (offer.UserId == user.Id)
+            {
+                Log.Error(
+                    "Usuario {UserId} intentó postular a su propia oferta {OfferId}",
+                    user.Id,
+                    offerId
+                );
+                throw new InvalidOperationException("No puedes postular a tu propia oferta");
+            }
+            // Verifiar que la oferta tenga espacios abiertos
+            if (offer.OpenSpots <= 0)
+            {
+                Log.Error(
+                    "Usuario {UserId} intentó postular a oferta {OfferId} sin espacios disponibles",
+                    user.Id,
+                    offerId
+                );
+                throw new InvalidOperationException("No hay espacios disponibles en esta oferta");
+            }
             // Verificar que el usuario tenga CV si es necesario
-            bool isCVRequired = offer.IsCvRequired;
-            if (isCVRequired && user.CV == null)
+            if (offer.IsCvRequired && user.CV == null)
             {
                 Log.Error(
                     "Usuario {UserId} intentó postular a oferta {OfferId} sin CV requerido",
@@ -135,8 +152,8 @@ namespace backend.src.Application.Services.Implements
                 throw new InvalidOperationException("Esta oferta ha finalizado");
             }
 
-            // Verificar que no haya postulado anteriormente
-            var hasAppliedResult = await HasAlreadyAppliedAsync(user.Id, offerId);
+            // Verificar que no haya postulado anteriormente chequeando
+            var hasAppliedResult = await _applicationRepository.ExistsByApplicantIdAndOfferId(user.Id, offerId);
             if (hasAppliedResult)
             {
                 Log.Error(
@@ -271,7 +288,9 @@ namespace backend.src.Application.Services.Implements
                 userId
             );
             // Obtener detalles de la oferta asociada
-            var offer = await _offerService.GetByOfferIdAsync(application.JobOfferId);
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                application.JobOfferId
+            );
             if (offer == null)
             {
                 Log.Error(
@@ -308,6 +327,143 @@ namespace backend.src.Application.Services.Implements
             detailsDTO.StatusMessage = statusMessage;
 
             return detailsDTO;
+        }
+
+        public async Task<string> UpdateApplicationStatusByOfferorAsync(
+            int offerorId,
+            int applicationId,
+            int offerId,
+            UpdateApplicationStatusDTO newStatus
+        )
+        {
+            // Validacion de oferente
+            bool offerorExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!offerorExists)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} no encontrado al actualizar estado de postulación",
+                    offerorId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} sin rol de Offeror intentó actualizar estado de postulación",
+                    offerorId
+                );
+                throw new SecurityException("El usuario no tiene permisos de Oferente");
+            }
+            bool isOwner = await _publicationRepository.CheckOwnershipAsync(offerorId, offerId);
+            if (!isOwner)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} intentó actualizar postulación de oferta ID: {OfferId} que no le pertenece",
+                    offerorId,
+                    offerId
+                );
+                throw new SecurityException("No tienes permiso para actualizar esta postulación");
+            }
+            // Validacion de la solicitud
+            JobApplication? application = await _applicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al actualizar estado",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            if (application.JobOfferId != offerId)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no pertenece a oferta ID: {OfferId}",
+                    applicationId,
+                    offerId
+                );
+                throw new SecurityException("La postulación no pertenece a la oferta especificada");
+            }
+            if (application.StudentId == offerorId) // Edge case correspondiente a un estudiante que postula a su propia oferta (Estudiantes tienen rol de Applicant y Offeror)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} intentó actualizar su propia postulación ID: {ApplicationId}",
+                    offerorId,
+                    applicationId
+                );
+                throw new SecurityException(
+                    "No puedes actualizar el estado de tu propia postulación"
+                );
+            }
+            // Parseo y validacion del nuevo estado
+            bool parseSuccess = Enum.TryParse(
+                newStatus.NewStatus,
+                out ApplicationStatus parsedStatus
+            );
+            if (!parseSuccess || !Enum.IsDefined(parsedStatus))
+            {
+                Log.Error(
+                    "Estado inválido {NewStatus} proporcionado para postulación ID: {ApplicationId}",
+                    newStatus.NewStatus,
+                    applicationId
+                );
+                throw new ArgumentException("El estado proporcionado no es válido");
+            }
+            // Chequeo de flujo de estados
+            if (application.Status == parsedStatus)
+            {
+                Log.Warning(
+                    "El estado de postulación ID: {ApplicationId} ya es {Status}",
+                    applicationId,
+                    parsedStatus
+                );
+                return "El estado de la postulación ya es el especificado"; // Edge case: no deberia ocurrir.
+            }
+            else if (application.Status != ApplicationStatus.Pendiente)
+            {
+                Log.Error(
+                    "Intento de cambiar estado de postulación ID: {ApplicationId} desde {CurrentStatus} a {NewStatus} inválido",
+                    applicationId,
+                    application.Status,
+                    parsedStatus
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden actualizar postulaciones que están en estado Pendiente"
+                );
+            }
+            // Verificar espacios disponibles en la oferta
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta ID: {OfferId} no encontrada al intentar actualizar estado de postulación",
+                    offerId
+                );
+                throw new KeyNotFoundException("La oferta no existe");
+            }
+            if (offer.OpenSpots <= 0 && parsedStatus == ApplicationStatus.Aceptada)
+            {
+                Log.Error(
+                    "No hay espacios disponibles en la oferta ID: {OfferId} al intentar actualizar estado de postulación",
+                    offerId
+                );
+                throw new InvalidOperationException("No hay espacios disponibles en la oferta");
+            }
+            application.Status = parsedStatus;
+            offer.OpenSpots =
+                parsedStatus == ApplicationStatus.Aceptada ? offer.OpenSpots - 1 : offer.OpenSpots;
+            bool applicationUpdateResult = await _applicationRepository.UpdateAsync(application);
+            bool offerUpdateResult = await _publicationRepository.UpdateAsync(offer);
+            if (!applicationUpdateResult || !offerUpdateResult)
+            {
+                Log.Error(
+                    "Error al actualizar estado de postulación ID: {ApplicationId} para oferente ID: {OfferorId}",
+                    applicationId,
+                    offerorId
+                );
+                throw new Exception("No se pudo actualizar el estado de la postulación");
+            }
+            return "El estado de la postulación ha sido actualizado con éxito.";
         }
 
         public async Task<string> UpdateApplicationDetailsAsync(
@@ -402,7 +558,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Validar que la oferta existe y pertenece al usuario
-            Offer? offer = await _offerRepository.GetByIdAsync(offerId);
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
             if (offer == null)
             {
                 Log.Error(
@@ -499,7 +655,9 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Verificar que la oferta pertenece a la empresa
-            var offer = await _offerService.GetByOfferIdAsync(application.JobOfferId);
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                application.JobOfferId
+            );
             if (offer == null || offer.UserId != OwnnerUserId)
             {
                 throw new UnauthorizedAccessException(
@@ -527,7 +685,7 @@ namespace backend.src.Application.Services.Implements
                 NewStatus = newStatus,
                 OfferName = offer.Title,
                 CompanyName = companyName,
-                StudentEmail = application.Student.Email!,
+                StudentEmail = application.Student!.Email!,
             };
 
             await _notificationService.SendPostulationStatusChangeAsync(statusEvent);
@@ -577,7 +735,7 @@ namespace backend.src.Application.Services.Implements
             int offererUserId
         )
         {
-            var offer = await _offerService.GetByOfferIdAsync(offerId);
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
             if (offer == null)
             {
                 throw new KeyNotFoundException($"La oferta con id {offerId} no fue encontrada.");
@@ -619,7 +777,7 @@ namespace backend.src.Application.Services.Implements
             int offererUserId
         )
         {
-            var offer = await _offerService.GetByOfferIdAsync(offerId);
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
             if (offer == null)
                 throw new KeyNotFoundException($"Oferta {offerId} no encontrada.");
 
@@ -652,41 +810,6 @@ namespace backend.src.Application.Services.Implements
                 Disability = applicant.Student.Disability.ToString(),
                 ProfilePicture = applicant.Student.ProfilePhoto?.Url,
             };
-        }
-
-        /// <summary>
-        /// Verifica si un estudiante ya ha postulado a una oferta específica.
-        /// </summary>
-        /// <param name="applicantId">ID del estudiante</param>
-        /// <param name="offerId">ID de la oferta</param>
-        /// <returns>Indica si el estudiante ya ha postulado a la oferta</returns>
-        private async Task<bool> HasAlreadyAppliedAsync(int applicantId, int offerId)
-        {
-            return await _applicationRepository.ExistsByApplicantIdAndOfferId(
-                applicantId,
-                offerId
-            );
-        }
-
-        /**
-        * ? LEGACY METHOD FOR COMPATIBILTY
-        */
-        public async Task<IEnumerable<JobApplicationResponseDto>> GetStudentApplicationsAsync(
-            int studentId
-        )
-        {
-            var applications = await _applicationRepository.GetByStudentIdAsync(studentId);
-            return applications.Select(app => new JobApplicationResponseDto
-            {
-                Id = app.Id,
-                StudentName = $"{app.Student.FirstName} {app.Student.LastName}",
-                StudentEmail = app.Student.Email!,
-                OfferTitle = app.JobOffer.Title,
-                Status = app.Status.ToString(),
-                ApplicationDate = app.CreatedAt,
-                //CurriculumVitae = app.Student.CurriculumVitae,
-                //MotivationLetter = app.Student.MotivationLetter,
-            });
         }
     }
 }

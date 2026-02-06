@@ -30,6 +30,17 @@ namespace backend.src.Application.Services.Interfaces
             int userId,
             MyPublicationsSeachParamsDTO searchParamsDTO
         );
+
+        /// <summary>
+        /// Obtiene los detalles de una publicación específica del usuario autenticado
+        /// </summary>
+        /// <param name="publicationId">Id de la publicación</param>
+        /// <param name="userId">Id del usuario autenticado</param>
+        /// <returns>Detalles de la publicación</returns>
+        Task<MyPublicationDetailsDTO> GetPublicationDetailsForOffererAsync(
+            int publicationId,
+            int offerorId
+        );
         Task UpdatePublicationStatusAsync(Publication publication, ApprovalStatus newStatus);
         #endregion
     }

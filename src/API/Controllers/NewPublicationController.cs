@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -85,6 +86,23 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<MyPublicationsDTO>("Publicaciones obtenidas", result));
         }
 
+        [HttpGet("my-publications/{publicationId}")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> GetPublicationDetailsForOfferer(int publicationId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.GetPublicationDetailsForOffererAsync(
+                publicationId,
+                parsedUserId
+            );
+            return Ok(
+                new GenericResponse<MyPublicationDetailsDTO>(
+                    "Detalles de la publicación obtenidos exitosamente.",
+                    result
+                )
+            );
+        }
+
         [HttpGet("my-publications/{offerId}/applications")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> GetAllApplicationsByOfferId(
@@ -106,6 +124,27 @@ namespace backend.src.API.Controllers
             );
         }
 
-        //public async Task<IActionResult> 
+        [HttpPatch("my-publications/{offerId}/applications/{applicationId}/update-status")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> UpdateApplicationStatus(
+            int offerId,
+            int applicationId,
+            [FromBody] UpdateApplicationStatusDTO statusDto
+        )
+        {
+            int parsedOffererId = GetUserIdFromToken();
+            var result = await _applicationService.UpdateApplicationStatusByOfferorAsync(
+                parsedOffererId,
+                applicationId,
+                offerId,
+                statusDto
+            );
+            return Ok(
+                new GenericResponse<string>(
+                    "Estado de la aplicación actualizado exitosamente.",
+                    result
+                )
+            );
+        }
     }
 }

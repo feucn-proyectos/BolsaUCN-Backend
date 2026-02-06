@@ -1,6 +1,7 @@
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Domain.Models;
 
 namespace backend.src.Application.Services.Interfaces
@@ -54,6 +55,13 @@ namespace backend.src.Application.Services.Interfaces
             UpdateApplicationDetailsDTO updateDto
         );
 
+        Task<string> UpdateApplicationStatusByOfferorAsync(
+            int offererId,
+            int applicationId,
+            int offerId,
+            UpdateApplicationStatusDTO newStatus
+        );
+
         Task<bool> UpdateApplicationStatusAsync(
             int applicationId,
             ApplicationStatus newStatus,
@@ -74,10 +82,5 @@ namespace backend.src.Application.Services.Interfaces
             int offerId,
             int offererUserId
         );
-
-        /**
-        * ? LEGACY METHOD FOR COMPATIBILTY
-        */
-        Task<IEnumerable<JobApplicationResponseDto>> GetStudentApplicationsAsync(int studentId);
     }
 }

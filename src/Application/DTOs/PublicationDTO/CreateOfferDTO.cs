@@ -52,7 +52,7 @@ namespace backend.src.Application.DTOs.PublicationDTO
         public string? Location { get; set; }
 
         [StringLength(1000, ErrorMessage = "Los requisitos no pueden exceder 1000 caracteres")]
-        public string? Requirements { get; set; }
+        public int RequiredApplicants { get; set; }
 
         [StringLength(
             200,

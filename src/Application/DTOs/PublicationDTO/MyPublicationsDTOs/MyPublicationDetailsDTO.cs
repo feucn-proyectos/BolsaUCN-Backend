@@ -6,15 +6,22 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
     public class MyPublicationDetailsDTO
     {
         // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
-        public int Id { get; set; }
-        public string Title { get; set; } = null!;
-        public string Description { get; set; } = null!;
-        public string Location { get; set; } = null!;
+        // Informacion basica
+        public required int Id { get; set; }
+        public required string Title { get; set; }
+        public required string Description { get; set; }
+        public required string Location { get; set; }
+
+        // Informacion de contacto
+        public required string ContactEmail { get; set; }
+        public required string ContactPhone { get; set; }
         public string? AdditionalContactEmail { get; set; }
-        public string? AdditionalContactPhone { get; set; }
-        public string PublicationType { get; set; } = null!;
-        public string ApprovalStatus { get; set; } = null!;
-        public DateTime CreatedAt { get; set; }
+        public string? AdditionalContactPhoneNumber { get; set; }
+
+        // Metadata
+        public required string PublicationType { get; set; }
+        public required string ApprovalStatus { get; set; }
+        public required DateTime CreatedAt { get; set; }
 
         // === OFERTAS DE TRABAJO ===
         public string? OfferType { get; set; }

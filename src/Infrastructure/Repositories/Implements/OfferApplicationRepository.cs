@@ -120,6 +120,9 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             var query = _context
                 .JobApplications.Include(ja => ja.Student)
+                .ThenInclude(p => p!.ProfilePhoto)
+                .Include(ja => ja.Student)
+                .ThenInclude(c => c!.CV)
                 .Include(ja => ja.JobOffer)
                 .Where(ja => ja.JobOfferId == offerId);
 

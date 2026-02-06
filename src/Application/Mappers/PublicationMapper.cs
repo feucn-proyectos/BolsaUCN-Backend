@@ -11,6 +11,7 @@ namespace backend.src.Application.Mappers
         public void ConfigureAllMappings()
         {
             ConfigurePublicationMapping();
+            ConfigurePublicationsForOfferor();
         }
 
         public void ConfigurePublicationMapping()
@@ -116,8 +117,13 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.Description, src => src.Description)
                 .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.ContactEmail, src => src.User.Email)
+                .Map(dest => dest.ContactPhone, src => src.User.PhoneNumber)
                 .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
-                .Map(dest => dest.AdditionalContactPhone, src => src.AdditionalContactPhoneNumber)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
                 .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
                 .Map(dest => dest.CreatedAt, src => src.CreatedAt)
@@ -147,7 +153,13 @@ namespace backend.src.Application.Mappers
                     src => src is Offer ? ((Offer)src).Applications.Count : (int?)null
                 )
                 // === COMPRA / VENTAS ===
-                .Map(dest => dest.ImageUrls, src => src is BuySell ? ((BuySell)src).Images : null)
+                .Map(
+                    dest => dest.ImageUrls,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
+                            : null
+                )
                 .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
                 .Map(dest => dest.Category, src => src is BuySell ? ((BuySell)src).Category : null)
                 .Map(
