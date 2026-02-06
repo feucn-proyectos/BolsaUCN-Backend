@@ -42,32 +42,6 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
         }
 
-        [HttpPatch("offerent/applications/{applicationId}/accept")]
-        [Authorize]
-        public async Task<IActionResult> AcceptApplication(int applicationId)
-        {
-            int parsedUserId = GetUserIdFromToken();
-            var result = await _applicationService.UpdateApplicationStatusAsync(
-                applicationId,
-                ApplicationStatus.Aceptada,
-                parsedUserId
-            );
-            return Ok(new GenericResponse<bool>("Aplicación aceptada exitosamente.", result));
-        }
-
-        [HttpPatch("offerent/applications/{applicationId}/reject")]
-        [Authorize]
-        public async Task<IActionResult> RejectApplication(int applicationId)
-        {
-            int parsedUserId = GetUserIdFromToken();
-            var result = await _applicationService.UpdateApplicationStatusAsync(
-                applicationId,
-                ApplicationStatus.Rechazada,
-                parsedUserId
-            );
-            return Ok(new GenericResponse<bool>("Aplicación rechazada exitosamente.", result));
-        }
-
         /// <summary>
         /// Obtiene las publicaciones del usuario autenticado
         /// </summary>
