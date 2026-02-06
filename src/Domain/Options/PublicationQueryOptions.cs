@@ -18,9 +18,13 @@ namespace backend.src.Domain.Options
         public bool IncludeImages { get; set; } = false;
 
         /// <summary>
+        /// Incluir aplicaciones asociadas a la publicación en la consulta
+        /// </summary>
+        public bool IncludeApplications { get; set; } = false;
+
+        /// <summary>
         /// Incluir usuario que creó la publicación en la consulta
         /// </summary>
         public bool IncludeUser { get; set; } = false;
-
     }
 }

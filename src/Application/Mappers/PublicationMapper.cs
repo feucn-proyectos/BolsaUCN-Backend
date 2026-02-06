@@ -23,7 +23,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Types, src => src.PublicationType)
                 .Map(dest => dest.Description, src => src.Description)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
-                .Map(dest => dest.Images, src => src.Images)
                 .Map(dest => dest.IsActive, src => src.IsOpen)
                 .Map(dest => dest.StatusValidation, src => src.ApprovalStatus);
 
@@ -52,7 +51,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.UserName, src => src.User.UserName)
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.Description, src => src.Description)
-                .Map(dest => dest.Images, src => src.Images)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
                 .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
                 .Map(dest => dest.IsOpen, src => src.IsOpen)
@@ -94,7 +92,13 @@ namespace backend.src.Application.Mappers
                 // Legacy
                 .Map(dest => dest.Active, src => src.IsOpen)
                 .Map(dest => dest.IsActive, src => src.IsOpen)
-                .Map(dest => dest.ImageUrls, src => src.Images)
+                .Map(
+                    dest => dest.ImageUrls,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(i => i.Url).ToList()
+                            : new List<string>()
+                )
                 .Map(dest => dest.CompanyName, src => src.User.FirstName);
         }
 

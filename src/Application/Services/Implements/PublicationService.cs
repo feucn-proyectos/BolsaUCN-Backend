@@ -5,8 +5,10 @@ using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
+using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 namespace backend.src.Application.Services.Implements
@@ -16,7 +18,6 @@ namespace backend.src.Application.Services.Implements
     /// </summary>
     public class PublicationService : IPublicationService
     {
-        private readonly IOfferRepository _offerRepository;
         private readonly IBuySellRepository _buySellRepository;
         private const int MAX_APPEALS = 3;
         private readonly int _defaultPageSize;
@@ -24,23 +25,24 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly AppDbContext _context;
 
         public PublicationService(
-            IOfferRepository offerRepository,
             IBuySellRepository buySellRepository,
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
             IUserRepository userRepository,
-            IConfiguration configuration
+            IConfiguration configuration,
+            AppDbContext context
         )
         {
-            _offerRepository = offerRepository;
             _buySellRepository = buySellRepository;
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
             _userRepository = userRepository;
             _configuration = configuration;
             _defaultPageSize = configuration.GetValue<int>("Pagination:DefaultPageSize");
+            _context = context;
         }
 
         #region Metodos para las Ofertas
@@ -105,7 +107,7 @@ namespace backend.src.Application.Services.Implements
             newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptado : ApprovalStatus.EnProceso;
             newOffer.IsOpen = isAdmin;
 
-            var createOfferResult = await _offerRepository.CreateOfferAsync(newOffer);
+            bool createOfferResult = await _publicationRepository.CreatePublicationAsync(newOffer);
 
             Log.Information(
                 "Oferta creada exitosamente. ID: {OfferId}, Título: {Title}, Usuario: {UserId}",
@@ -174,82 +176,9 @@ namespace backend.src.Application.Services.Implements
 
         #endregion
 
-        public async Task<IEnumerable<PublicationsDTO>> GetMyPublishedPublicationsAsync(
-            string userId
-        )
-        {
-            // 1. Llama al Repositorio para obtener los datos de la BD
-            var publications = await _publicationRepository.GetPublishedPublicationsByUserIdAsync(
-                userId
-            );
-
-            // 2. Mapea las entidades a DTOs
-            var publicationsDto = publications.Select(p => new PublicationsDTO
-            {
-                IdPublication = p.Id,
-                Title = p.Title,
-                PublicationDate = p.CreatedAt,
-                StatusValidation = p.ApprovalStatus,
-                UserId = p.UserId,
-                Images = p.Images,
-                Types = p.PublicationType,
-                IsActive = p.IsOpen,
-            });
-
-            return publicationsDto;
-        }
-
-        public async Task<IEnumerable<PublicationsDTO>> GetMyRejectedPublicationsAsync(
-            string userId
-        )
-        {
-            // 1. Llama al repositorio
-            var publications = await _publicationRepository.GetRejectedPublicationsByUserIdAsync(
-                userId
-            );
-            // 2. Mapea y devuelve el DTO
-            var publicationsDto = publications.Select(p => new PublicationsDTO
-            {
-                IdPublication = p.Id,
-                Title = p.Title,
-                PublicationDate = p.CreatedAt,
-                StatusValidation = p.ApprovalStatus,
-                UserId = p.UserId,
-                Images = p.Images,
-                Types = p.PublicationType,
-                IsActive = p.IsOpen,
-            });
-
-            return publicationsDto;
-        }
 
         // --- IMPLEMENTACIÓN PENDING ("InProcess") ---
         // --- IMPLEMENTACIÓN PENDING ("InProcess") CORREGIDA ---
-        public async Task<IEnumerable<PublicationsDTO>> GetMyPendingPublicationsAsync(string userId)
-        {
-            // 1. Llama al repositorio
-            var publications = await _publicationRepository.GetPendingPublicationsByUserIdAsync(
-                userId
-            );
-
-            // 2. Mapea y devuelve el DTO MANUALMENTE (Para asegurar el ID)
-            var publicationsDto = publications.Select(p => new PublicationsDTO
-            {
-                // ✅ AQUÍ ASIGNAMOS EL ID CORRECTAMENTE
-                IdPublication = p.Id,
-
-                Title = p.Title,
-                Description = p.Description, // ¡No olvides la descripción!
-                PublicationDate = p.CreatedAt,
-                StatusValidation = p.ApprovalStatus,
-                UserId = p.UserId,
-                Images = p.Images,
-                Types = p.PublicationType,
-                IsActive = p.IsOpen,
-            });
-
-            return publicationsDto;
-        }
 
         #region Metodos para publicaciones en general
 
@@ -263,7 +192,9 @@ namespace backend.src.Application.Services.Implements
             UserAppealDto dto
         )
         {
-            var publication = await _publicationRepository.GetPublicationByIdAsync(publicationId);
+            var publication = await _publicationRepository.GetPublicationByIdAsync<Publication>(
+                publicationId
+            );
 
             // 1. Validate existence -> 404 Not Found
             if (publication == null)
@@ -349,11 +280,26 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
-
-            var publication = await _publicationRepository.GetPublicationByIdAsync(
+            // Revisar el tipo de publicacion para despues cargar las relaciones correspondientes.
+            bool? isOffer = await _publicationRepository.CheckType(
                 publicationId,
-                new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+                PublicationType.Oferta
             );
+            if (isOffer == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+
+            Publication? publication = (bool)isOffer
+                ? await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                    publicationId,
+                    new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
+                )
+                : await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                    publicationId,
+                    new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+                );
             if (publication == null || publication.UserId != offerorId)
             {
                 Log.Error(
@@ -363,9 +309,9 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new KeyNotFoundException("Publicación no encontrada.");
             }
-
             MyPublicationDetailsDTO publicationDetails =
                 publication.Adapt<MyPublicationDetailsDTO>();
+
             return publicationDetails;
         }
 
@@ -399,6 +345,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             publication.ApprovalStatus = newStatus;
+            publication.IsOpen = newStatus != ApprovalStatus.Rechazado;
             await _publicationRepository.UpdateAsync(publication);
             if (publication.ApprovalStatus == oldStatus)
             {

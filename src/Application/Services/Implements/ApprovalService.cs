@@ -52,7 +52,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             Publication? publication =
-                await _publicationRepository.GetPublicationByIdAsync(
+                await _publicationRepository.GetPublicationByIdAsync<Publication>(
                     publicationId,
                     new PublicationQueryOptions { TrackChanges = true }
                 ) ?? throw new KeyNotFoundException("Publicación no encontrada.");
@@ -174,15 +174,16 @@ namespace backend.src.Application.Services.Implements
                 publicationId
             );
             // Obtención de detalles de la publicación
-            Publication? publication = await _publicationRepository.GetPublicationByIdAsync(
-                publicationId,
-                new PublicationQueryOptions
-                {
-                    IncludeImages = true,
-                    IncludeUser = true,
-                    TrackChanges = false,
-                }
-            );
+            Publication? publication =
+                await _publicationRepository.GetPublicationByIdAsync<Publication>(
+                    publicationId,
+                    new PublicationQueryOptions
+                    {
+                        IncludeImages = true,
+                        IncludeUser = true,
+                        TrackChanges = false,
+                    }
+                );
             if (publication == null)
             {
                 Log.Error("La publicación con ID: {PublicationId} no existe.", publicationId);

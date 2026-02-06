@@ -16,7 +16,21 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
     /// </summary>
     public interface IPublicationRepository
     {
+        /// <summary>
+        /// Crea una nueva publicación en la base de datos.
+        /// </summary>
+        Task<bool> CreatePublicationAsync<T>(T publication)
+            where T : Publication;
+
+        /// <summary>
+        /// Revisa si una publicación pertenece a un usuario específico.
+        /// </summary>
         Task<bool> CheckOwnershipAsync(int offerorId, int publicationId);
+
+        /// <summary>
+        /// Revisa el tipo de publicación (Oferta o CompraVenta) según su Id.
+        /// </summary>
+        Task<bool?> CheckType(int publicationId, PublicationType type);
 
         /// <summary>
         /// Actualiza una publicación en la base de datos.

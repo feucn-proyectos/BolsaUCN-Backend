@@ -10,9 +10,6 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateOfferAsync(CreateOfferDTO publicationDTO, int userId);
         Task<string> CreateBuySellAsync(CreateBuySellDTO publicationDTO, int userId);
-        Task<IEnumerable<PublicationsDTO>> GetMyPublishedPublicationsAsync(string userId);
-        Task<IEnumerable<PublicationsDTO>> GetMyRejectedPublicationsAsync(string userId);
-        Task<IEnumerable<PublicationsDTO>> GetMyPendingPublicationsAsync(string userId);
         Task<GenericResponse<string>> AppealPublicationAsync(
             int publicationId,
             int userId,

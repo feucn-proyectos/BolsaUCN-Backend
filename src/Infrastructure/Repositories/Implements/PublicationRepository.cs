@@ -23,11 +23,26 @@ public class PublicationRepository : IPublicationRepository
         _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
     }
 
+    public async Task<bool> CreatePublicationAsync<T>(T publication)
+        where T : Publication
+    {
+        await _context.Set<T>().AddAsync(publication);
+        return await _context.SaveChangesAsync() > 0;
+    }
+
     public async Task<bool> CheckOwnershipAsync(int offerorId, int publicationId)
     {
         return await _context.Publications.AnyAsync(p =>
             p.Id == publicationId && p.UserId == offerorId
         );
+    }
+
+    public async Task<bool?> CheckType(int publicationId, PublicationType type)
+    {
+        var result = _context.Publications.AnyAsync(p =>
+            p.Id == publicationId && p.PublicationType == type
+        );
+        return await result;
     }
 
     public async Task<bool> UpdateAsync<T>(T publication)
@@ -49,12 +64,14 @@ public class PublicationRepository : IPublicationRepository
             query = query.AsNoTracking();
 
         if (typeof(T) == typeof(BuySell) && options?.IncludeImages == true)
-            query = query.Include(p => p.Images);
+            query = (IQueryable<T>)((IQueryable<BuySell>)query).Include(o => o.Images);
 
+        if (typeof(T) == typeof(Offer) && options?.IncludeApplications == true)
+            query = (IQueryable<T>)((IQueryable<Offer>)query).Include(o => o.Applications);
         if (options?.IncludeUser == true)
             query = query.Include(p => p.User);
 
-        return (T?)await query.FirstOrDefaultAsync(p => p.Id == publicationId);
+        return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
     public async Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
