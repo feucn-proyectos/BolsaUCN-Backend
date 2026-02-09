@@ -22,7 +22,6 @@ namespace backend.src.API.Controllers
     {
         private readonly IPublicationService _publicationService;
         private readonly IUserRepository _userRepository;
-        private readonly IBuySellService _buySellService;
         private readonly IOfferApplicationService _jobApplicationService;
         private readonly ILogger<PublicationController> _logger;
         private readonly IPublicationRepository _publicationRepository;
@@ -30,7 +29,6 @@ namespace backend.src.API.Controllers
         public PublicationController(
             IPublicationService publicationService,
             IUserRepository userRepository,
-            IBuySellService buySellService,
             IOfferApplicationService jobApplicationService,
             ILogger<PublicationController> logger,
             IPublicationRepository publicationRepository
@@ -38,7 +36,6 @@ namespace backend.src.API.Controllers
         {
             _publicationService = publicationService;
             _userRepository = userRepository;
-            _buySellService = buySellService;
             _jobApplicationService = jobApplicationService;
             _logger = logger;
             _publicationRepository = publicationRepository;
@@ -112,9 +109,9 @@ namespace backend.src.API.Controllers
             _logger.LogInformation(
                 "GET /api/publications/buysells - Obteniendo publicaciones de compra/venta activas"
             );
-            var buySells = await _buySellService.GetActiveBuySellsAsync();
+            var buySells = true; //await _buySellService.GetActiveBuySellsAsync();
             return Ok(
-                new GenericResponse<IEnumerable<object>>(
+                new GenericResponse<bool>(
                     "Publicaciones de compra/venta recuperadas exitosamente",
                     buySells
                 )
@@ -131,43 +128,10 @@ namespace backend.src.API.Controllers
                 "GET /api/publications/buysells/{Id} - Obteniendo detalles de publicación (público)",
                 id
             );
-            var buySell = await _buySellService.GetBuySellDetailsAsync(id);
-
-            if (buySell == null)
-            {
-                _logger.LogWarning("Publicación de compra/venta {Id} no encontrada", id);
-                return NotFound(new GenericResponse<object>("Publicación no encontrada"));
-            }
+            var buySell = true; //await _buySellService.GetBuySellDetailsAsync(id);
 
             return Ok(
-                new GenericResponse<object>(
-                    "Detalles de publicación recuperados exitosamente",
-                    buySell
-                )
-            );
-        }
-
-        /// <summary>
-        /// !DEPRECATED
-        /// Obtiene los detalles de una publicación de compra/venta para validación (admin)
-        /// </summary>
-        [HttpGet("buysells/{id}/validation")]
-        public async Task<IActionResult> GetBuySellDetailsValidation(int id)
-        {
-            _logger.LogInformation(
-                "GET /api/publications/buysells/{Id}/validation - Obteniendo detalles de publicación para validación",
-                id
-            );
-            var buySell = await _buySellService.GetBuySellDetailsAsync(id);
-
-            if (buySell == null)
-            {
-                _logger.LogWarning("Publicación de compra/venta {Id} no encontrada", id);
-                return NotFound(new GenericResponse<object>("Publicación no encontrada"));
-            }
-
-            return Ok(
-                new GenericResponse<object>(
+                new GenericResponse<bool>(
                     "Detalles de publicación recuperados exitosamente",
                     buySell
                 )
@@ -184,16 +148,10 @@ namespace backend.src.API.Controllers
                 "GET /api/publications/buysells/{Id}/validation - Obteniendo detalles de publicación para validación",
                 id
             );
-            var buySell = await _buySellService.GetBuySellDetailsAsync(id);
-
-            if (buySell == null)
-            {
-                _logger.LogWarning("Publicación de compra/venta {Id} no encontrada", id);
-                return NotFound(new GenericResponse<object>("Publicación no encontrada"));
-            }
+            var buySell = true; //await _buySellService.GetBuySellDetailsAsync(id);
 
             return Ok(
-                new GenericResponse<object>(
+                new GenericResponse<bool>(
                     "Detalles de publicación recuperados exitosamente",
                     buySell
                 )
@@ -207,10 +165,9 @@ namespace backend.src.API.Controllers
         /// Allows the owner of a rejected publication to appeal the decision.
         /// </summary>
         /// <param name="id">The ID of the publication to appeal.</param>
-        /// <param name="dto">The justification for the appeal.</param>
         [HttpPost("{id}/appeal")]
         [Authorize] // Cualquier usuario autenticado (que sea dueño)
-        public async Task<IActionResult> AppealPublication(int id, [FromBody] UserAppealDto dto)
+        public async Task<IActionResult> AppealPublication(int id)
         {
             // 1. Obtener ID del usuario desde el Token JWT (Claims)
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
@@ -220,7 +177,7 @@ namespace backend.src.API.Controllers
             var userId = int.Parse(userIdClaim.Value);
 
             // 2. Llamar al servicio (validará si es dueño, si está rechazada, límites, etc.)
-            var response = await _publicationService.AppealPublicationAsync(id, userId, dto);
+            var response = await _publicationService.AppealPublicationAsync(id, userId);
 
             return Ok(response);
         }

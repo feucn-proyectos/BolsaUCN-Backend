@@ -159,7 +159,6 @@ try
     builder.Services.AddScoped<ProfileMapper>();
 
     builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
     builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
     builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -175,7 +174,6 @@ try
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
     builder.Services.AddScoped<IPublicationService, PublicationService>();
-    builder.Services.AddScoped<IBuySellService, BuySellService>();
     builder.Services.AddScoped<IReviewService, ReviewService>();
     builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
     builder.Services.AddScoped<IFileService, FileService>();

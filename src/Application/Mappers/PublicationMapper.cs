@@ -23,7 +23,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Types, src => src.PublicationType)
                 .Map(dest => dest.Description, src => src.Description)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
-                .Map(dest => dest.IsActive, src => src.IsVisibleToApplicants)
                 .Map(dest => dest.StatusValidation, src => src.ApprovalStatus);
 
             TypeAdapterConfig<Publication, PublicationAwaitingApprovalDTO>
@@ -53,7 +52,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Description, src => src.Description)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
                 .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
-                .Map(dest => dest.IsOpen, src => src.IsVisibleToApplicants)
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
                 .Map(dest => dest.Location, src => src.Location)
                 .Map(
@@ -90,8 +88,6 @@ namespace backend.src.Application.Mappers
                 )
                 .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
                 // Legacy
-                .Map(dest => dest.Active, src => src.IsVisibleToApplicants)
-                .Map(dest => dest.IsActive, src => src.IsVisibleToApplicants)
                 .Map(
                     dest => dest.ImageUrls,
                     src =>
@@ -110,7 +106,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.PublicationType, src => src.PublicationType)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
-                .Map(dest => dest.IsOpen, src => src.IsVisibleToApplicants)
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
                 .Map(dest => dest.HasAppealed, src => src.AppealCount > 0 ? true : false);
 

@@ -50,8 +50,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Location, src => src.Location)
                 .Map(dest => dest.ContactInfo, src => src.AdditionalContactEmail)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
-                .Map(dest => dest.UserName, src => src.User.UserName)
-                .Map(dest => dest.IsActive, src => src.IsVisibleToApplicants);
+                .Map(dest => dest.UserName, src => src.User.UserName);
         }
     }
 }

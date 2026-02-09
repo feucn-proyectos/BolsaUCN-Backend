@@ -80,7 +80,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Oferta ID: {OfferId} no encontrada al intentar postular", offerId);
                 throw new KeyNotFoundException("La oferta no existe");
             }
-            else if (!offer.IsVisibleToApplicants)
+            else if (!offer.ApprovalStatus.Equals(ApprovalStatus.Aceptada))
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta inactiva {OfferId}",

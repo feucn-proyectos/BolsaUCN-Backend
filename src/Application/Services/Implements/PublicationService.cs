@@ -17,7 +17,6 @@ namespace backend.src.Application.Services.Implements
     /// </summary>
     public class PublicationService : IPublicationService
     {
-        private readonly IBuySellRepository _buySellRepository;
         private readonly int _maxAppeals;
         private readonly int _defaultPageSize;
         private readonly IConfiguration _configuration;
@@ -26,14 +25,12 @@ namespace backend.src.Application.Services.Implements
         private readonly IReviewService _reviewService;
 
         public PublicationService(
-            IBuySellRepository buySellRepository,
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
             IUserRepository userRepository,
             IConfiguration configuration
         )
         {
-            _buySellRepository = buySellRepository;
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
             _userRepository = userRepository;
@@ -157,7 +154,7 @@ namespace backend.src.Application.Services.Implements
                 ? ApprovalStatus.Aceptada
                 : ApprovalStatus.Pendiente;
 
-            var createdBuySellResult = await _buySellRepository.CreateBuySellAsync(newBuySell);
+            var createdBuySellResult = true; //await _buySellRepository.CreateBuySellAsync(newBuySell);
 
             Log.Information(
                 "Publicación de compra/venta creada exitosamente. ID: {BuySellId}, Título: {Title}, Usuario: {UserId}",
