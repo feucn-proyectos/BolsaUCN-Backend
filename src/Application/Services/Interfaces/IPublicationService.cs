@@ -10,11 +10,7 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateOfferAsync(CreateOfferDTO publicationDTO, int userId);
         Task<string> CreateBuySellAsync(CreateBuySellDTO publicationDTO, int userId);
-        Task<GenericResponse<string>> AppealPublicationAsync(
-            int publicationId,
-            int userId,
-            UserAppealDto dto
-        );
+        Task<GenericResponse<string>> AppealPublicationAsync(int publicationId, int userId);
 
         #region New Methods
 
@@ -38,7 +34,13 @@ namespace backend.src.Application.Services.Interfaces
             int publicationId,
             int offerorId
         );
-        Task UpdatePublicationStatusAsync(Publication publication, ApprovalStatus newStatus);
+        Task UpdatePublicationStatusAsync(
+            Publication publication,
+            ApprovalStatus newStatus,
+            string? rejectionReason = null
+        );
+
+        Task<string> CloseOfferManuallyAsync(int publicationId, int requestingUserId);
         #endregion
     }
 }

@@ -8,7 +8,6 @@ using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 namespace backend.src.Application.Services.Implements
@@ -19,21 +18,19 @@ namespace backend.src.Application.Services.Implements
     public class PublicationService : IPublicationService
     {
         private readonly IBuySellRepository _buySellRepository;
-        private const int MAX_APPEALS = 3;
+        private readonly int _maxAppeals;
         private readonly int _defaultPageSize;
         private readonly IConfiguration _configuration;
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
-        private readonly AppDbContext _context;
 
         public PublicationService(
             IBuySellRepository buySellRepository,
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
             IUserRepository userRepository,
-            IConfiguration configuration,
-            AppDbContext context
+            IConfiguration configuration
         )
         {
             _buySellRepository = buySellRepository;
@@ -41,8 +38,8 @@ namespace backend.src.Application.Services.Implements
             _reviewService = reviewService;
             _userRepository = userRepository;
             _configuration = configuration;
-            _defaultPageSize = configuration.GetValue<int>("Pagination:DefaultPageSize");
-            _context = context;
+            _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
+            _maxAppeals = _configuration.GetValue<int>("PublicationSettings:MaxAppeals");
         }
 
         #region Metodos para las Ofertas
@@ -105,7 +102,6 @@ namespace backend.src.Application.Services.Implements
             // Asignar estado de aprobación e isOpen según el rol
             bool isAdmin = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
             newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptada : ApprovalStatus.Pendiente;
-            newOffer.IsVisibleToApplicants = isAdmin;
 
             bool createOfferResult = await _publicationRepository.CreatePublicationAsync(newOffer);
 
@@ -160,7 +156,6 @@ namespace backend.src.Application.Services.Implements
             newBuySell.ApprovalStatus = isAdmin
                 ? ApprovalStatus.Aceptada
                 : ApprovalStatus.Pendiente;
-            newBuySell.IsVisibleToApplicants = isAdmin;
 
             var createdBuySellResult = await _buySellRepository.CreateBuySellAsync(newBuySell);
 
@@ -188,8 +183,7 @@ namespace backend.src.Application.Services.Implements
         /// </summary>
         public async Task<GenericResponse<string>> AppealPublicationAsync(
             int publicationId,
-            int userId,
-            UserAppealDto dto
+            int userId
         )
         {
             var publication = await _publicationRepository.GetPublicationByIdAsync<Publication>(
@@ -213,22 +207,22 @@ namespace backend.src.Application.Services.Implements
                 );
 
             // 4. Validate limits -> 409 Conflict
-            if (publication.AppealCount >= MAX_APPEALS)
+            if (publication.AppealCount >= _maxAppeals)
             {
                 throw new InvalidOperationException(
-                    $"Has alcanzado el límite máximo de {MAX_APPEALS} apelaciones para esta publicación."
+                    $"Has alcanzado el límite máximo de {_maxAppeals} apelaciones para esta publicación."
                 );
             }
 
             // 5. Process appeal
             publication.ApprovalStatus = ApprovalStatus.Pendiente;
-            publication.UserAppealJustification = dto.Justification;
+            //publication.UserAppealJustification = dto.Justification; Clients dont want any justification provided, just notice that the publiction has been resubmitted
             publication.AppealCount++;
 
             await _publicationRepository.UpdateAsync(publication);
 
             return new GenericResponse<string>(
-                $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {MAX_APPEALS}. Un administrador revisará tu caso."
+                $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {_maxAppeals}. Un administrador revisará tu caso."
             );
         }
         #endregion
@@ -317,7 +311,8 @@ namespace backend.src.Application.Services.Implements
 
         public async Task UpdatePublicationStatusAsync(
             Publication publication,
-            ApprovalStatus newStatus
+            ApprovalStatus newStatus,
+            string? rejectionReason = null
         )
         {
             var oldStatus = publication.ApprovalStatus;
@@ -341,11 +336,13 @@ namespace backend.src.Application.Services.Implements
                     newStatus
                 );
                 throw new InvalidOperationException(
-                    "Solo se pueden aprobar o rechazar publicaciones que están en estado 'EnProceso'."
+                    "Solo se pueden aprobar o rechazar publicaciones que están en estado 'Pendiente'."
                 );
             }
             publication.ApprovalStatus = newStatus;
-            publication.IsVisibleToApplicants = newStatus != ApprovalStatus.Rechazada;
+            if (newStatus == ApprovalStatus.Rechazada)
+                publication.AdminRejectionReason =
+                    rejectionReason ?? "No se proporcionó una razón de rechazo.";
             await _publicationRepository.UpdateAsync(publication);
             if (publication.ApprovalStatus == oldStatus)
             {
@@ -363,6 +360,64 @@ namespace backend.src.Application.Services.Implements
                     publication.ApprovalStatus
                 );
             }
+        }
+
+        public async Task<string> CloseOfferManuallyAsync(int publicationId, int offerorId)
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            // Validacion de publicacion y propiedad
+            var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                publicationId,
+                new PublicationQueryOptions { IncludeUser = true }
+            );
+            if (publication == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+            // Validacion de permisos (propietario o admin)
+            bool isAdmin = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Admin);
+            if (publication.UserId != offerorId && !isAdmin)
+            {
+                Log.Error(
+                    "Usuario con ID {UserId} no es el propietario de la publicación con ID {PublicationId}.",
+                    offerorId,
+                    publicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para cerrar esta publicación."
+                );
+            }
+            // Validacion de estado actual
+            if (publication.ApprovalStatus != ApprovalStatus.Aceptada)
+            {
+                Log.Error(
+                    "No se puede cerrar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
+                    publicationId,
+                    publication.ApprovalStatus
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden cerrar manualmente las publicaciones que están en estado 'Aceptada'."
+                );
+            }
+            // Cierre de la oferta
+            publication.ApprovalStatus = ApprovalStatus.Cerrada;
+            bool updateResult = await _publicationRepository.UpdateAsync(publication);
+            if (!updateResult)
+            {
+                Log.Error("Error al cerrar la publicación con ID {PublicationId}.", publicationId);
+                throw new Exception("No se pudo cerrar la publicación. Inténtalo de nuevo.");
+            }
+
+            //TODO: Activar flujo de reseñas para ofertas cerradas manualmente por el oferente
+
+            return "Publicación cerrada exitosamente.";
         }
         #endregion
     }

@@ -15,7 +15,7 @@ namespace backend.src.Application.Services.Interfaces
         Task<PublicationApprovalResultDTO> UpdatePublication(
             int userId,
             int publicationId,
-            string action
+            ApprovalActionDTO action
         );
 
         /// <summary>

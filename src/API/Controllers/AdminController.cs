@@ -11,10 +11,12 @@ namespace backend.src.API.Controllers
     public class AdminController : BaseController
     {
         private readonly IAdminService _adminService;
+        private readonly IPublicationService _publicationService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IPublicationService publicationService)
         {
             _adminService = adminService;
+            _publicationService = publicationService;
         }
 
         #region User Management
@@ -90,6 +92,21 @@ namespace backend.src.API.Controllers
             var result = await _adminService.ToggleUserBlockedStatusAsync(superAdminId, userId);
             return Ok(new GenericResponse<bool>("Admin eliminado exitosamente.", result));
         }
+        #endregion
+        #region Publication Management
+
+        [HttpPatch("publications/{publicationId}/close")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> CloseOfferManually(int publicationId)
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var result = await _publicationService.CloseOfferManuallyAsync(
+                publicationId,
+                parsedAdminId
+            );
+            return Ok(new GenericResponse<string>("Oferta cerrada exitosamente.", result));
+        }
+
         #endregion
     }
 }

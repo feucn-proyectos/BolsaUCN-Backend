@@ -34,7 +34,7 @@ namespace backend.src.Application.Services.Implements
         public async Task<PublicationApprovalResultDTO> UpdatePublication(
             int userId,
             int publicationId,
-            string action
+            ApprovalActionDTO actionDTO
         )
         {
             User? admin =
@@ -70,19 +70,17 @@ namespace backend.src.Application.Services.Implements
             }
 
             ApprovalStatus newStatus;
-            if (action == "publish")
+            if (actionDTO.Action == "publish")
             {
-                publication.IsVisibleToApplicants = true;
                 newStatus = ApprovalStatus.Aceptada;
             }
-            else if (action == "reject")
+            else if (actionDTO.Action == "reject")
             {
-                publication.IsVisibleToApplicants = false;
                 newStatus = ApprovalStatus.Rechazada;
             }
             else
             {
-                Log.Error("Acción inválida: {Action}", action);
+                Log.Error("Acción inválida: {Action}", actionDTO.Action);
                 throw new ArgumentException("Acción inválida. Debe ser 'publish' o 'reject'.");
             }
 
@@ -90,7 +88,7 @@ namespace backend.src.Application.Services.Implements
             return new PublicationApprovalResultDTO
             {
                 PublicationId = publication.Id,
-                RejectionReason = action == "reject" ? "Rechazado por el administrador" : null,
+                RejectionReason = actionDTO.RejectionReason ?? "Razon no especificada",
             };
         }
 
