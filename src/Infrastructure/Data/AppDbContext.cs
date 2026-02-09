@@ -175,9 +175,9 @@ namespace backend.src.Infrastructure.Data
                     .Entries<Publication>()
                     .Where(e =>
                         e.State == EntityState.Modified
-                        && e.Property(p => p.IsOpen).IsModified
-                        && e.Property(p => p.IsOpen).CurrentValue == false
-                        && e.Property(p => p.IsOpen).OriginalValue == true
+                        && e.Property(p => p.IsVisibleToApplicants).IsModified
+                        && e.Property(p => p.IsVisibleToApplicants).CurrentValue == false
+                        && e.Property(p => p.IsVisibleToApplicants).OriginalValue == true
                     )
                     .Select(e => e.Entity),
             ];

@@ -80,7 +80,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Oferta ID: {OfferId} no encontrada al intentar postular", offerId);
                 throw new KeyNotFoundException("La oferta no existe");
             }
-            else if (!offer.IsOpen)
+            else if (!offer.IsVisibleToApplicants)
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta inactiva {OfferId}",
@@ -100,7 +100,7 @@ namespace backend.src.Application.Services.Implements
                 throw new InvalidOperationException("No puedes postular a tu propia oferta");
             }
             // Verifiar que la oferta tenga espacios abiertos
-            if (offer.OpenSpots <= 0)
+            if (offer.AvailableSlots <= 0)
             {
                 Log.Error(
                     "Usuario {UserId} intentó postular a oferta {OfferId} sin espacios disponibles",
@@ -153,7 +153,10 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Verificar que no haya postulado anteriormente chequeando
-            var hasAppliedResult = await _applicationRepository.ExistsByApplicantIdAndOfferId(user.Id, offerId);
+            var hasAppliedResult = await _applicationRepository.ExistsByApplicantIdAndOfferId(
+                user.Id,
+                offerId
+            );
             if (hasAppliedResult)
             {
                 Log.Error(
@@ -441,7 +444,7 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new KeyNotFoundException("La oferta no existe");
             }
-            if (offer.OpenSpots <= 0 && parsedStatus == ApplicationStatus.Aceptada)
+            if (offer.AvailableSlots <= 0 && parsedStatus == ApplicationStatus.Aceptada)
             {
                 Log.Error(
                     "No hay espacios disponibles en la oferta ID: {OfferId} al intentar actualizar estado de postulación",
@@ -450,8 +453,10 @@ namespace backend.src.Application.Services.Implements
                 throw new InvalidOperationException("No hay espacios disponibles en la oferta");
             }
             application.Status = parsedStatus;
-            offer.OpenSpots =
-                parsedStatus == ApplicationStatus.Aceptada ? offer.OpenSpots - 1 : offer.OpenSpots;
+            offer.AvailableSlots =
+                parsedStatus == ApplicationStatus.Aceptada
+                    ? offer.AvailableSlots - 1
+                    : offer.AvailableSlots;
             bool applicationUpdateResult = await _applicationRepository.UpdateAsync(application);
             bool offerUpdateResult = await _publicationRepository.UpdateAsync(offer);
             if (!applicationUpdateResult || !offerUpdateResult)

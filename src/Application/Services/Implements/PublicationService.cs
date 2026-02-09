@@ -104,8 +104,8 @@ namespace backend.src.Application.Services.Implements
 
             // Asignar estado de aprobación e isOpen según el rol
             bool isAdmin = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
-            newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptado : ApprovalStatus.EnProceso;
-            newOffer.IsOpen = isAdmin;
+            newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptada : ApprovalStatus.Pendiente;
+            newOffer.IsVisibleToApplicants = isAdmin;
 
             bool createOfferResult = await _publicationRepository.CreatePublicationAsync(newOffer);
 
@@ -158,9 +158,9 @@ namespace backend.src.Application.Services.Implements
             newBuySell.PublicationType = PublicationType.CompraVenta;
 
             newBuySell.ApprovalStatus = isAdmin
-                ? ApprovalStatus.Aceptado
-                : ApprovalStatus.EnProceso;
-            newBuySell.IsOpen = isAdmin;
+                ? ApprovalStatus.Aceptada
+                : ApprovalStatus.Pendiente;
+            newBuySell.IsVisibleToApplicants = isAdmin;
 
             var createdBuySellResult = await _buySellRepository.CreateBuySellAsync(newBuySell);
 
@@ -207,7 +207,7 @@ namespace backend.src.Application.Services.Implements
                 );
 
             // 3. Validate status -> 409 Conflict (InvalidOperationException maps to 409 in your middleware)
-            if (publication.ApprovalStatus != ApprovalStatus.Rechazado)
+            if (publication.ApprovalStatus != ApprovalStatus.Rechazada)
                 throw new InvalidOperationException(
                     "Solo se pueden apelar publicaciones que han sido rechazadas."
                 );
@@ -221,7 +221,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // 5. Process appeal
-            publication.ApprovalStatus = ApprovalStatus.EnProceso;
+            publication.ApprovalStatus = ApprovalStatus.Pendiente;
             publication.UserAppealJustification = dto.Justification;
             publication.AppealCount++;
 
@@ -332,7 +332,7 @@ namespace backend.src.Application.Services.Implements
                 );
                 return;
             }
-            else if (oldStatus != ApprovalStatus.EnProceso)
+            else if (oldStatus != ApprovalStatus.Pendiente)
             {
                 Log.Error(
                     "No se puede cambiar el estado de la publicación con ID {PublicationId} desde {OldStatus} a {NewStatus}.",
@@ -345,7 +345,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             publication.ApprovalStatus = newStatus;
-            publication.IsOpen = newStatus != ApprovalStatus.Rechazado;
+            publication.IsVisibleToApplicants = newStatus != ApprovalStatus.Rechazada;
             await _publicationRepository.UpdateAsync(publication);
             if (publication.ApprovalStatus == oldStatus)
             {

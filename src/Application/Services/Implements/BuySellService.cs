@@ -86,7 +86,7 @@ namespace backend.src.Application.Services.Implements
                     Location = buySell.Location,
                     ContactInfo = buySell.AdditionalContactEmail,
                     PublicationDate = buySell.CreatedAt,
-                    IsActive = buySell.IsOpen,
+                    IsActive = buySell.IsVisibleToApplicants,
                     ImageUrls = buySell.Images.Select(img => img.Url).ToList(),
                     UserId = buySell.UserId,
                     UserName = buySell.User.UserName ?? "Usuario",
@@ -153,7 +153,7 @@ namespace backend.src.Application.Services.Implements
                     NameOwner = bs.User.UserName ?? "Usuario",
                     PublicationDate = bs.CreatedAt,
                     Type = bs.PublicationType,
-                    IsActive = bs.IsOpen,
+                    IsActive = bs.IsVisibleToApplicants,
                 })
                 .ToList();
             _logger.LogInformation(
@@ -203,14 +203,14 @@ namespace backend.src.Application.Services.Implements
             {
                 throw new KeyNotFoundException($"La compra/venta con id {id} no fue encontrada.");
             }
-            if (buySell.ApprovalStatus != ApprovalStatus.EnProceso)
+            if (buySell.ApprovalStatus != ApprovalStatus.Pendiente)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con ID {id} ya fue {buySell.ApprovalStatus}. No se puede publicar."
                 );
             }
-            buySell.IsOpen = true;
-            buySell.ApprovalStatus = ApprovalStatus.Aceptado;
+            buySell.IsVisibleToApplicants = true;
+            buySell.ApprovalStatus = ApprovalStatus.Aceptada;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)
@@ -231,14 +231,14 @@ namespace backend.src.Application.Services.Implements
             {
                 throw new KeyNotFoundException($"La compra/venta con id {id} no fue encontrada.");
             }
-            if (buySell.ApprovalStatus != ApprovalStatus.EnProceso)
+            if (buySell.ApprovalStatus != ApprovalStatus.Pendiente)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con ID {id} ya fue {buySell.ApprovalStatus}. No se puede rechazar."
                 );
             }
-            buySell.IsOpen = false;
-            buySell.ApprovalStatus = ApprovalStatus.Rechazado;
+            buySell.IsVisibleToApplicants = false;
+            buySell.ApprovalStatus = ApprovalStatus.Rechazada;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)
@@ -261,14 +261,14 @@ namespace backend.src.Application.Services.Implements
                     $"La compra/venta con id {buySellId} no fue encontrada."
                 );
             }
-            if (buySell.ApprovalStatus != ApprovalStatus.Aceptado)
+            if (buySell.ApprovalStatus != ApprovalStatus.Aceptada)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con ID {buySellId} está {buySell.ApprovalStatus}. No se puede cerrar."
                 );
             }
-            buySell.IsOpen = false;
-            buySell.ApprovalStatus = ApprovalStatus.Cerrado;
+            buySell.IsVisibleToApplicants = false;
+            buySell.ApprovalStatus = ApprovalStatus.Cerrada;
             await _buySellRepository.UpdateAsync(buySell);
 
             {
@@ -298,22 +298,22 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            if (!buySell.IsOpen)
+            if (!buySell.IsVisibleToApplicants)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con id {buySellId} ya ha sido cerrada."
                 );
             }
 
-            if (buySell.ApprovalStatus != ApprovalStatus.Aceptado)
+            if (buySell.ApprovalStatus != ApprovalStatus.Aceptada)
             {
                 throw new InvalidOperationException(
                     $"La compra/venta con ID {buySellId} está {buySell.ApprovalStatus}. Solo las publicaciones activas pueden ser cerradas."
                 );
             }
 
-            buySell.IsOpen = false;
-            buySell.ApprovalStatus = ApprovalStatus.Cerrado;
+            buySell.IsVisibleToApplicants = false;
+            buySell.ApprovalStatus = ApprovalStatus.Cerrada;
             await _buySellRepository.UpdateAsync(buySell);
 
             if (buySell.User?.Email != null)

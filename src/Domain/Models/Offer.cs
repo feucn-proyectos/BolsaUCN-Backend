@@ -11,6 +11,15 @@ namespace backend.src.Domain.Models
         Voluntariado,
     }
 
+    public enum ReviewStatus
+    {
+        NoDisponible, // Para publicaciones que no son ofertas o que no están listas para revisión
+        SinRevisar, // Estado inicial, sin revisiones realizadas
+        RevisadaPorOferta, // Revisada por el oferente (solo para ofertas)
+        RevisadaPorPostulante, // Revisada por el postulante (solo para ofertas)
+        RevisadaPorAmbos, // Revisada tanto por oferente como por postulante (solo para ofertas)
+    }
+
     /// <summary>
     /// Representa una oferta de trabajo o voluntariado publicada en el sistema.
     /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
@@ -35,7 +44,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Número de postulantes requeridos para la oferta.
         /// </summary>
-        public int OpenSpots { get; set; }
+        public int AvailableSlots { get; set; }
 
         /// <summary>
         /// Categoría de la oferta (e.g., Trabajo, Voluntariado).
@@ -46,6 +55,11 @@ namespace backend.src.Domain.Models
         /// Colección de postulaciones realizadas a esta oferta.
         /// </summary>
         public ICollection<JobApplication> Applications { get; set; } = [];
+
+        /// <summary>
+        /// Indica el estado de revision de la oferta.
+        /// </summary>
+        public ReviewStatus ReviewStatus { get; set; } = ReviewStatus.NoDisponible;
 
         /// <summary>
         /// Indica si es obligatorio subir un CV para postular.

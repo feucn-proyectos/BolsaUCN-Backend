@@ -57,7 +57,7 @@ namespace backend.src.Application.Services.Implements
                     new PublicationQueryOptions { TrackChanges = true }
                 ) ?? throw new KeyNotFoundException("Publicación no encontrada.");
 
-            if (publication.ApprovalStatus != ApprovalStatus.EnProceso)
+            if (publication.ApprovalStatus != ApprovalStatus.Pendiente)
             {
                 Log.Error(
                     "La publicación con ID: {PublicationId} ya está {Status}.",
@@ -72,13 +72,13 @@ namespace backend.src.Application.Services.Implements
             ApprovalStatus newStatus;
             if (action == "publish")
             {
-                publication.IsOpen = true;
-                newStatus = ApprovalStatus.Aceptado;
+                publication.IsVisibleToApplicants = true;
+                newStatus = ApprovalStatus.Aceptada;
             }
             else if (action == "reject")
             {
-                publication.IsOpen = false;
-                newStatus = ApprovalStatus.Rechazado;
+                publication.IsVisibleToApplicants = false;
+                newStatus = ApprovalStatus.Rechazada;
             }
             else
             {
@@ -189,7 +189,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("La publicación con ID: {PublicationId} no existe.", publicationId);
                 throw new KeyNotFoundException("Publicación no encontrada.");
             }
-            else if (publication.ApprovalStatus != ApprovalStatus.EnProceso)
+            else if (publication.ApprovalStatus != ApprovalStatus.Pendiente)
             {
                 Log.Error(
                     "La publicación con ID: {PublicationId} no está pendiente de aprobación.",

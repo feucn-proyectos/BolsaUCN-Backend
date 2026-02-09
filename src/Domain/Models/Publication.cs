@@ -14,10 +14,10 @@ namespace backend.src.Domain.Models
     /// </summary>
     public enum ApprovalStatus
     {
-        Aceptado, // Aprobado y publicado por un administrador
-        EnProceso, // En revisión administrativa
-        Rechazado, // Rechazado por un administrador
-        Cerrado, // Cerrado por el usuario o administrador
+        Aceptada, // Aprobado y publicado por un administrador
+        Pendiente, // En revisión administrativa
+        Rechazada, // Rechazado por un administrador
+        Cerrada, // Cerrado por el usuario o administrador, o automaticamente cuando llega a la fecha de finalización.
     }
 
     /// <summary>
@@ -67,10 +67,10 @@ namespace backend.src.Domain.Models
         public required PublicationType PublicationType { get; set; }
 
         /// <summary>
-        /// Indica si la publicacion esta disponible para interacción por los usuarios.
+        /// Indica si la publicacion esta visible para los postulantes.
         /// true = Abierta y validada, false = Cerrada
         /// </summary>
-        public bool IsOpen { get; set; }
+        public bool IsVisibleToApplicants { get; set; }
 
         /// <summary>
         /// Estado de validación administrativa de la publicación.

@@ -32,7 +32,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.IsOpen)
+                .Where(bs => bs.IsVisibleToApplicants)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
@@ -46,7 +46,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var buysell = await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.ApprovalStatus == ApprovalStatus.EnProceso)
+                .Where(bs => bs.ApprovalStatus == ApprovalStatus.Pendiente)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
@@ -65,7 +65,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var buysell = await _context
                 .BuySells.Include(bs => bs.User)
                 .Include(bs => bs.Images)
-                .Where(bs => bs.ApprovalStatus == ApprovalStatus.Aceptado)
+                .Where(bs => bs.ApprovalStatus == ApprovalStatus.Aceptada)
                 .OrderByDescending(bs => bs.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync();
@@ -115,7 +115,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 if (buySell == null)
                     return false;
 
-                buySell.IsOpen = false;
+                buySell.IsVisibleToApplicants = false;
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -129,7 +129,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context
                 .BuySells.Where(bs =>
-                    bs.IsOpen && bs.Category.ToLower().Contains(category.ToLower())
+                    bs.IsVisibleToApplicants && bs.Category.ToLower().Contains(category.ToLower())
                 )
                 .Include(bs => bs.User)
                 .Include(bs => bs.Images)
@@ -143,7 +143,9 @@ namespace backend.src.Infrastructure.Repositories.Implements
         )
         {
             return await _context
-                .BuySells.Where(bs => bs.IsOpen && bs.Price >= minPrice && bs.Price <= maxPrice)
+                .BuySells.Where(bs =>
+                    bs.IsVisibleToApplicants && bs.Price >= minPrice && bs.Price <= maxPrice
+                )
                 .Include(bs => bs.User)
                 .Include(bs => bs.Images)
                 .OrderBy(bs => bs.Price)

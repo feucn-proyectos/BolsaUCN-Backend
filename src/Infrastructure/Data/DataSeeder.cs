@@ -568,8 +568,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Description = s.Desc,
                     CreatedAt = now.AddDays(-i % 3), // algunas “recientes”
                     PublicationType = PublicationType.Oferta,
-                    IsOpen = true,
-                    ApprovalStatus = ApprovalStatus.Aceptado,
+                    IsVisibleToApplicants = true,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
                     EndDate = s.End,
                     ApplicationDeadline = s.Deadline,
@@ -595,8 +595,8 @@ namespace backend.src.Application.Infrastructure.Data
                     "Se busca estudiante para práctica de 3 meses en desarrollo backend con .NET y Azure. El postulante debe estar en último año. Esta oferta está pendiente de aprobación por la DGE.",
                 CreatedAt = now.AddDays(-1),
                 PublicationType = PublicationType.Oferta,
-                IsOpen = true,
-                ApprovalStatus = ApprovalStatus.EnProceso, // <- Estado solicitado
+                IsVisibleToApplicants = true,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
                 EndDate = now.AddMonths(3),
                 ApplicationDeadline = now.AddDays(14),
@@ -646,16 +646,16 @@ namespace backend.src.Application.Infrastructure.Data
                 var publicationDate = nowForFaker.AddDays(-daysSincePost);
 
                 var isActive = true;
-                var status = ApprovalStatus.Aceptado;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = ApprovalStatus.EnProceso;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = ApprovalStatus.Rechazado;
+                    status = ApprovalStatus.Rechazada;
                     isActive = false;
                 }
 
@@ -664,7 +664,7 @@ namespace backend.src.Application.Infrastructure.Data
                 {
                     endDate = nowForFaker.AddDays(-faker.Random.Int(1, 5)); // Finalizada
                     isActive = false;
-                    status = ApprovalStatus.Cerrado;
+                    status = ApprovalStatus.Cerrada;
                 }
 
                 var offer = new Offer
@@ -676,7 +676,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Description = faker.Lorem.Paragraph(3),
                     CreatedAt = publicationDate,
                     PublicationType = PublicationType.Oferta,
-                    IsOpen = isActive,
+                    IsVisibleToApplicants = isActive,
                     ApprovalStatus = status,
 
                     EndDate = endDate,
@@ -768,8 +768,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Description = it.Desc,
                     CreatedAt = now.AddDays(-(i % 3)),
                     PublicationType = PublicationType.CompraVenta,
-                    IsOpen = true,
-                    ApprovalStatus = ApprovalStatus.Aceptado,
+                    IsVisibleToApplicants = true,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
                     Price = it.Price,
                     Quantity = 1,
@@ -794,8 +794,8 @@ namespace backend.src.Application.Infrastructure.Data
                     "Vendo todos mis apuntes de primer año de ing. civil. Están en PDF. El admin debe revisar que no sea material con copyright.",
                 CreatedAt = now.AddDays(-1),
                 PublicationType = PublicationType.CompraVenta,
-                IsOpen = true,
-                ApprovalStatus = ApprovalStatus.EnProceso, // <- Estado solicitado
+                IsVisibleToApplicants = true,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
                 Price = 15000,
                 Quantity = 1,
@@ -846,16 +846,16 @@ namespace backend.src.Application.Infrastructure.Data
                         : $"{category}: {faker.Commerce.ProductName()}";
 
                 var isActive = true;
-                var status = ApprovalStatus.Aceptado;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = ApprovalStatus.EnProceso;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = ApprovalStatus.Rechazado;
+                    status = ApprovalStatus.Rechazada;
                     isActive = false;
                 }
 
@@ -868,7 +868,7 @@ namespace backend.src.Application.Infrastructure.Data
                         faker.Commerce.ProductDescription() + ". " + faker.Lorem.Sentence(5),
                     CreatedAt = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
                     PublicationType = PublicationType.CompraVenta,
-                    IsOpen = isActive,
+                    IsVisibleToApplicants = isActive,
                     ApprovalStatus = status,
 
                     Price = faker.Random.Int(5000, 100000),
@@ -899,8 +899,8 @@ namespace backend.src.Application.Infrastructure.Data
             var offers = await context
                 .Offers.Include(o => o.User)
                 .Where(o =>
-                    o.ApprovalStatus == ApprovalStatus.Aceptado
-                    && o.IsOpen == true
+                    o.ApprovalStatus == ApprovalStatus.Aceptada
+                    && o.IsVisibleToApplicants == true
                     && o.ApplicationDeadline > DateTime.UtcNow
                     && o.PublicationType == PublicationType.Oferta
                 )

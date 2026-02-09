@@ -79,7 +79,7 @@ public class PublicationRepository : IPublicationRepository
     )
     {
         IQueryable<Publication> query = _context
-            .Publications.Where(p => p.ApprovalStatus == ApprovalStatus.EnProceso)
+            .Publications.Where(p => p.ApprovalStatus == ApprovalStatus.Pendiente)
             .AsQueryable();
 
         // Filtrado
@@ -156,15 +156,15 @@ public class PublicationRepository : IPublicationRepository
         {
             if (searchParams.FilterByApprovalStatus == "Aprobada")
             {
-                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Aceptado);
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Aceptada);
             }
             else if (searchParams.FilterByApprovalStatus == "Rechazada")
             {
-                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Rechazado);
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Rechazada);
             }
             else if (searchParams.FilterByApprovalStatus == "Pendiente")
             {
-                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.EnProceso);
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Pendiente);
             }
         }
 
