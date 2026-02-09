@@ -1,7 +1,7 @@
 namespace backend.src.Domain.Models
 {
     /// <summary>
-    /// Enum that defines types of publications in the system.
+    /// Enum que define los tipos de publicaciones disponibles en la plataforma. Usado para diferenciar entre ofertas laborales/voluntariados y anuncios de compra/venta, permitiendo manejar lógicas específicas para cada tipo de publicación en el sistema.
     /// </summary>
     public enum PublicationType
     {
@@ -10,7 +10,7 @@ namespace backend.src.Domain.Models
     }
 
     /// <summary>
-    /// Validation state used by administrative workflows.
+    /// Enum que define el estado de aprobación administrativa de una publicación. Usado para controlar el flujo de revisión y publicación de las ofertas y anuncios en la plataforma.
     /// </summary>
     public enum ApprovalStatus
     {
@@ -18,6 +18,16 @@ namespace backend.src.Domain.Models
         Pendiente, // En revisión administrativa
         Rechazada, // Rechazado por un administrador
         Cerrada, // Cerrado por el usuario o administrador, o automaticamente cuando llega a la fecha de finalización.
+    }
+
+    /// <summary>
+    /// Enum que define la visibilidad de una publicación, usada pricipalmente por administradores para manejar casos de publicaciones que necesitan ser ocultadas temporalmente por motivos administrativos
+    /// o por oferentes que quieren guardar borradores de sus publicaciones sin que sean visibles para otros usuarios. Esto solo maneja visibilidad, en caso de ofertas la logica de aprovacion, apelacion, y reseñas sigue activa.
+    /// </summary>
+    public enum Visibility
+    {
+        Publica, // Visible para todos los usuarios
+        Privada, // Visible solo para el usuario que creó la publicación (usada principalmente para borradores)
     }
 
     /// <summary>
@@ -67,12 +77,6 @@ namespace backend.src.Domain.Models
         public required PublicationType PublicationType { get; set; }
 
         /// <summary>
-        /// Indica si la publicacion esta visible para los postulantes.
-        /// true = Abierta y validada, false = Cerrada
-        /// </summary>
-        public bool IsVisibleToApplicants { get; set; }
-
-        /// <summary>
         /// Estado de validación administrativa de la publicación.
         /// </summary>
         public ApprovalStatus ApprovalStatus { get; set; }
@@ -82,11 +86,6 @@ namespace backend.src.Domain.Models
         /// Esta retroalimentación permite al usuario corregir su publicación.
         /// </summary>
         public string? AdminRejectionReason { get; set; }
-
-        /// <summary>
-        /// Justificación proporcionada por el usuario al apelar un rechazo.
-        /// </summary>
-        public string? UserAppealJustification { get; set; }
 
         /// <summary>
         /// Contador del número de intentos de apelación realizados por el usuario.

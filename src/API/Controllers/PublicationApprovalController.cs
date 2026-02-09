@@ -13,10 +13,12 @@ namespace backend.src.API.Controllers
     public class ValidationController : BaseController
     {
         private readonly IApprovalService _approvalService;
+        private readonly IPublicationService _publicationService;
 
-        public ValidationController(IApprovalService approvalService)
+        public ValidationController(IApprovalService approvalService, IPublicationService publicationService)
         {
             _approvalService = approvalService;
+            _publicationService = publicationService;
         }
 
         #region Validate Publication
@@ -55,7 +57,7 @@ namespace backend.src.API.Controllers
             var approvalResult = await _approvalService.UpdatePublication(
                 parsedUserId,
                 publicationId,
-                approvalDto.Action
+                approvalDto
             );
             return Ok(
                 new GenericResponse<PublicationApprovalResultDTO>(

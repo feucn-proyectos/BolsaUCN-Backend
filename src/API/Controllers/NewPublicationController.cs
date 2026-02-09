@@ -28,6 +28,7 @@ namespace backend.src.API.Controllers
             _applicationService = applicationService;
         }
 
+        #region Crear Publicación
         /// <summary>
         /// Crea una nueva oferta laboral
         /// </summary>
@@ -41,7 +42,9 @@ namespace backend.src.API.Controllers
             var result = await _publicationService.CreateOfferAsync(offerDto, parsedUserId);
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
         }
+        #endregion
 
+        #region Punto de vista del oferente
         /// <summary>
         /// Obtiene las publicaciones del usuario autenticado
         /// </summary>
@@ -120,5 +123,18 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+
+        [HttpPatch("my-publications/{publicationId}/close")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> CloseOfferManually(int publicationId)
+        {
+            int parsedOffererId = GetUserIdFromToken();
+            var result = await _publicationService.CloseOfferManuallyAsync(
+                publicationId,
+                parsedOffererId
+            );
+            return Ok(new GenericResponse<string>("Oferta cerrada exitosamente.", result));
+        }
+        #endregion
     }
 }

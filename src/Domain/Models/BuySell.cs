@@ -30,7 +30,7 @@ namespace backend.src.Domain.Models
         /// Coleccion de imágenes asociadas a la publicación.
         /// </summary>
         public ICollection<Image> Images { get; set; } = [];
-        
+
         /// <summary>
         /// Precio del producto o servicio en pesos chilenos.
         /// </summary>
