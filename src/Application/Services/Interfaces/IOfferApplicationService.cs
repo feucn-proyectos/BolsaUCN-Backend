@@ -11,21 +11,8 @@ namespace backend.src.Application.Services.Interfaces
     /// </summary>
     public interface IOfferApplicationService
     {
-        //! COMPLETE
-        /// <summary>
-        /// Crea una nueva postulación para una oferta laboral
-        /// </summary>
-        /// <param name="studentId">ID del estudiante que postula</param>
-        /// <param name="offerId">ID de la oferta laboral</param>
-        /// <returns>Información de la postulación creada</returns>
         Task<string> CreateApplicationAsync(int studentId, int offerId, CoverLetterDTO coverLetter);
 
-        //! COMPLETE
-        /// <summary>
-        /// Obtiene todas las postulaciones realizadas por un estudiante específico
-        /// </summary>
-        /// <param name="userId">ID del estudiante</param>
-        /// <returns>Lista de postulaciones del estudiante</returns>
         Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(
             int userId,
             SearchParamsDTO searchParams
@@ -37,13 +24,6 @@ namespace backend.src.Application.Services.Interfaces
             ApplicationsForOfferorSearchParamsDTO searchParams
         );
 
-        //! COMPLETE
-        /// <summary>
-        /// Obtiene los detalles de una postulación específica para un estudiante.
-        /// </summary>
-        /// <param name="userId">ID del estudiante</param>
-        /// <param name="applicationId">ID de la postulación</param>
-        /// <returns>Detalles de la postulación</returns>
         Task<GetApplicationDetailsDTO> GetApplicationDetailsForApplicantAsync(
             int userId,
             int applicationId
@@ -60,27 +40,6 @@ namespace backend.src.Application.Services.Interfaces
             int applicationId,
             int offerId,
             UpdateApplicationStatusDTO newStatus
-        );
-
-        Task<bool> UpdateApplicationStatusAsync(
-            int applicationId,
-            ApplicationStatus newStatus,
-            int companyId
-        );
-
-        Task<IEnumerable<ViewApplicantsDto>> GetApplicantsForAdminManagement(int offerId);
-
-        Task<ViewApplicantDetailAdminDto> GetApplicantDetailForAdmin(int studentId);
-
-        Task<IEnumerable<OffererApplicantViewDto>> GetApplicantsForOffererAsync(
-            int offerId,
-            int offererUserId
-        );
-
-        Task<ViewApplicantUserDetailDto> GetApplicantDetailForOfferer(
-            int studentId,
-            int offerId,
-            int offererUserId
         );
     }
 }

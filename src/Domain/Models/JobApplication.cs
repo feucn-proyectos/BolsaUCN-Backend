@@ -10,6 +10,15 @@ namespace backend.src.Domain.Models
         Rechazada,
     }
 
+    public enum ReviewStatus
+    {
+        NoDisponible,
+        SinRevisar,
+        RevisadaPorOferente,
+        RevisadaPorPostulante,
+        RevisadaPorAmbos,
+    }
+
     /// <summary>
     /// Representa una postulación realizada por un estudiante a una oferta laboral.
     /// </summary>
@@ -44,5 +53,10 @@ namespace backend.src.Domain.Models
         /// Estado actual de la postulación (Pendiente, Aceptada, Rechazada).
         /// </summary>
         public required ApplicationStatus Status { get; set; }
+
+        /// <summary>
+        /// Indica el estado de revision de la postulación.
+        /// </summary>
+        public required ReviewStatus ReviewStatus { get; set; } = ReviewStatus.NoDisponible;
     }
 }

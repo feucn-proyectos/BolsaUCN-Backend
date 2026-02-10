@@ -931,6 +931,7 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[4],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-2),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -940,6 +941,7 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[3],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-7),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -949,6 +951,7 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[0],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-5),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -958,6 +961,7 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[1],
                         Status = ApplicationStatus.Aceptada,
                         CreatedAt = DateTime.UtcNow.AddDays(-3),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -967,6 +971,7 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[2],
                         Status = ApplicationStatus.Rechazada,
                         CreatedAt = DateTime.UtcNow.AddDays(-1),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                 }
             );
@@ -999,6 +1004,7 @@ namespace backend.src.Application.Infrastructure.Data
                             JobOffer = offerToApply,
                             Status = faker.PickRandom<ApplicationStatus>(),
                             CreatedAt = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
+                            ReviewStatus = ReviewStatus.NoDisponible,
                         }
                     );
                 }

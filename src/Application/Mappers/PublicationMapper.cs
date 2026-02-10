@@ -107,7 +107,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.PublicationType, src => src.PublicationType)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
-                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0 ? true : false);
+                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0);
 
             TypeAdapterConfig<Publication, MyPublicationDetailsDTO>
                 .NewConfig()

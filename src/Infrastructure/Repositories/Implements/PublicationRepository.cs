@@ -140,7 +140,7 @@ public class PublicationRepository : IPublicationRepository
             .Publications.Where(p => p.UserId == offerorId)
             .AsQueryable();
 
-        // Filtrado por estado de aprobación
+        // Filtrado por tipo y estado de aprobación
         if (!string.IsNullOrEmpty(searchParams.FilterByPublicationType))
         {
             if (searchParams.FilterByPublicationType == "Oferta")
