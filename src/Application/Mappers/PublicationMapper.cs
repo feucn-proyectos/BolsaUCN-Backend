@@ -1,4 +1,5 @@
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -12,6 +13,7 @@ namespace backend.src.Application.Mappers
         {
             ConfigurePublicationMapping();
             ConfigurePublicationsForOfferor();
+            ConfigurePublicationsForAdmin();
         }
 
         public void ConfigurePublicationMapping()
@@ -173,6 +175,22 @@ namespace backend.src.Application.Mappers
                     dest => dest.Condition,
                     src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
                 );
+        }
+
+        public void ConfigurePublicationsForAdmin()
+        {
+            TypeAdapterConfig<Publication, PublicationForAdminDTO>
+                .NewConfig()
+                .Map(dest => dest.Id, src => src.Id)
+                .Map(dest => dest.AuthorId, src => src.User.Id)
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.AuthorName, src => src.User.UserName)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
+                .Map(dest => dest.AppealsCount, src => src.AppealCount);
         }
     }
 
