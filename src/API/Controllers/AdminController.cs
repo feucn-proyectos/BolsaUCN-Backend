@@ -1,4 +1,5 @@
 using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -94,6 +95,25 @@ namespace backend.src.API.Controllers
         }
         #endregion
         #region Publication Management
+
+        [HttpGet("publications")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetAllPublications(
+            [FromQuery] PublicationsForAdminSearchParamsDTO searchParams
+        )
+        {
+            var adminId = GetUserIdFromToken();
+            var publications = await _publicationService.GetAllPublicationsForAdminAsync(
+                adminId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<PublicationsForAdminDTO>(
+                    "Publicaciones aprobadas obtenidas exitosamente.",
+                    publications
+                )
+            );
+        }
 
         [HttpPatch("publications/{publicationId}/close")]
         [Authorize(Roles = RoleNames.Admin)]

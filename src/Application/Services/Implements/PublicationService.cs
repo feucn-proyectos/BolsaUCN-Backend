@@ -1,6 +1,7 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -474,6 +475,51 @@ namespace backend.src.Application.Services.Implements
                     publication.ApprovalStatus
                 );
             }
+        }
+
+        public async Task<PublicationsForAdminDTO> GetAllPublicationsForAdminAsync(
+            int adminId,
+            PublicationsForAdminSearchParamsDTO searchParamsDTO
+        )
+        {
+            // Validar usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} no tiene permisos de administrador.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para acceder a esta información."
+                );
+            }
+
+            // Obtener publicaciones con filtrado, búsqueda, ordenamiento y paginación
+            var (publications, totalCount) =
+                await _publicationRepository.GetAllPublicationsFilteredForAdminAsync(
+                    searchParamsDTO
+                );
+
+            int currentPage = searchParamsDTO.PageNumber;
+            int pageSize = searchParamsDTO.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            PublicationsForAdminDTO publicationsForAdminDTO = new PublicationsForAdminDTO
+            {
+                Publications = publications.Adapt<List<PublicationForAdminDTO>>(),
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return publicationsForAdminDTO;
         }
 
         public async Task<string> CloseOfferManuallyAsync(int publicationId, int offerorId)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -155,7 +156,7 @@ public class PublicationRepository : IPublicationRepository
     }
 
     public async Task<(IEnumerable<Publication>?, int)> GetAllPendingForApprovalAsync(
-        PendingPublicationSearchParamsDTO searchParamsDTO
+        PendingPublicationSearchParamsDTO searchParams
     )
     {
         IQueryable<Publication> query = _context
@@ -163,17 +164,17 @@ public class PublicationRepository : IPublicationRepository
             .AsQueryable();
 
         // Filtrado
-        if (!string.IsNullOrEmpty(searchParamsDTO.FilterBy))
+        if (!string.IsNullOrEmpty(searchParams.FilterBy))
         {
-            if (searchParamsDTO.FilterBy == "Oferta")
+            if (searchParams.FilterBy == "Oferta")
                 query = query.Where(p => p.PublicationType == PublicationType.Oferta);
-            else if (searchParamsDTO.FilterBy == "CompraVenta")
+            else if (searchParams.FilterBy == "CompraVenta")
                 query = query.Where(p => p.PublicationType == PublicationType.CompraVenta);
         }
         // Busqueda
-        if (!string.IsNullOrEmpty(searchParamsDTO.SearchTerm))
+        if (!string.IsNullOrEmpty(searchParams.SearchTerm))
         {
-            var searchTerm = searchParamsDTO.SearchTerm.ToLower();
+            var searchTerm = searchParams.SearchTerm.ToLower();
             query = query.Where(p =>
                 p.Title.ToLower().Contains(searchTerm)
                 || p.Description.ToLower().Contains(searchTerm)
@@ -181,12 +182,12 @@ public class PublicationRepository : IPublicationRepository
         }
         //Ordenamiento
         bool ascending = true; // Orden por defecto, true = asc, false = desc
-        if (!string.IsNullOrEmpty(searchParamsDTO.SortOrder))
+        if (!string.IsNullOrEmpty(searchParams.SortOrder))
         {
-            ascending = searchParamsDTO.SortOrder == "asc";
+            ascending = searchParams.SortOrder == "asc";
         }
 
-        query = searchParamsDTO.SortBy switch
+        query = searchParams.SortBy switch
         {
             "Title" => ascending
                 ? query.OrderBy(p => p.Title)
@@ -202,9 +203,9 @@ public class PublicationRepository : IPublicationRepository
 
         // Paginacion
         int totalCount = await query.CountAsync();
-        int pageSize = searchParamsDTO.PageSize ?? _defaultPageSize;
+        int pageSize = searchParams.PageSize ?? _defaultPageSize;
         var publications = await query
-            .Skip((searchParamsDTO.PageNumber - 1) * pageSize)
+            .Skip((searchParams.PageNumber - 1) * pageSize)
             .Take(pageSize)
             .AsNoTracking()
             .ToListAsync();
@@ -282,6 +283,56 @@ public class PublicationRepository : IPublicationRepository
         var publications = await query
             .Skip((searchParams.PageNumber - 1) * pageSize)
             .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
+        return (publications, totalCount);
+    }
+
+    public async Task<(IEnumerable<Publication>?, int)> GetAllPublicationsFilteredForAdminAsync(
+        PublicationsForAdminSearchParamsDTO searchParams
+    )
+    {
+        IQueryable<Publication> query = _context.Publications.AsQueryable();
+        // Filtrado por tipo de publicación
+        if (!string.IsNullOrEmpty(searchParams.FilterBy))
+        {
+            if (searchParams.FilterBy == "Oferta")
+                query = query.Where(p => p.PublicationType == PublicationType.Oferta);
+            else if (searchParams.FilterBy == "CompraVenta")
+                query = query.Where(p => p.PublicationType == PublicationType.CompraVenta);
+        }
+        // Busqueda
+        if (!string.IsNullOrEmpty(searchParams.SearchTerm))
+        {
+            var searchTerm = searchParams.SearchTerm.ToLower();
+            query = query.Where(p =>
+                p.Title.ToLower().Contains(searchTerm)
+                || p.Description.ToLower().Contains(searchTerm)
+            );
+        }
+        //Ordenamiento
+        bool ascending = true; // Orden por defecto, true = asc, false = desc
+        if (!string.IsNullOrEmpty(searchParams.SortOrder))
+        {
+            ascending = searchParams.SortOrder == "asc";
+        }
+        query = searchParams.SortBy switch
+        {
+            "Title" => ascending
+                ? query.OrderBy(p => p.Title)
+                : query.OrderByDescending(p => p.Title),
+            "CreatedAt" => ascending
+                ? query.OrderBy(p => p.CreatedAt)
+                : query.OrderByDescending(p => p.CreatedAt),
+            _ => query.OrderBy(p => p.Id),
+        };
+        // Paginacion
+        int totalCount = await query.CountAsync();
+        int pageSize = searchParams.PageSize ?? _defaultPageSize;
+        var publications = await query
+            .Skip((searchParams.PageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Include(p => p.User)
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);

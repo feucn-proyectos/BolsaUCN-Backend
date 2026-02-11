@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -89,6 +90,10 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<(IEnumerable<Publication>?, int)> GetMyPublicationsFilteredByUserIdAsync(
             int offerorId,
             MyPublicationsSeachParamsDTO searchParams
+        );
+
+        Task<(IEnumerable<Publication>?, int)> GetAllPublicationsFilteredForAdminAsync(
+            PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
     }
 }
