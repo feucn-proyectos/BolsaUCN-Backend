@@ -294,12 +294,23 @@ public class PublicationRepository : IPublicationRepository
     {
         IQueryable<Publication> query = _context.Publications.AsQueryable();
         // Filtrado por tipo de publicación
-        if (!string.IsNullOrEmpty(searchParams.FilterBy))
+        if (!string.IsNullOrEmpty(searchParams.FilterByType))
         {
-            if (searchParams.FilterBy == "Oferta")
+            if (searchParams.FilterByType == "Oferta")
                 query = query.Where(p => p.PublicationType == PublicationType.Oferta);
-            else if (searchParams.FilterBy == "CompraVenta")
+            else if (searchParams.FilterByType == "CompraVenta")
                 query = query.Where(p => p.PublicationType == PublicationType.CompraVenta);
+        }
+        if (!string.IsNullOrEmpty(searchParams.FilterByApprovalStatus))
+        {
+            if (searchParams.FilterByApprovalStatus == "Aprobada")
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Aceptada);
+            else if (searchParams.FilterByApprovalStatus == "Rechazada")
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Rechazada);
+            else if (searchParams.FilterByApprovalStatus == "Pendiente")
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Pendiente);
+            else if (searchParams.FilterByApprovalStatus == "Cerrada")
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Cerrada);
         }
         // Busqueda
         if (!string.IsNullOrEmpty(searchParams.SearchTerm))

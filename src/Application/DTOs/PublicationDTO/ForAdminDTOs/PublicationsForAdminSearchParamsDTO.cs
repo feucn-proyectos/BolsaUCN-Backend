@@ -12,9 +12,15 @@ namespace backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs
 
         [RegularExpression(
             "Oferta|CompraVenta|Todos",
-            ErrorMessage = "FilterBy debe ser 'Oferta', 'CompraVenta' o 'Todos'."
+            ErrorMessage = "FilterByType debe ser 'Oferta', 'CompraVenta' o 'Todos'."
         )]
-        public string? FilterBy { get; set; }
+        public string? FilterByType { get; set; }
+
+        [RegularExpression(
+            "Pendiente|Aprobada|Rechazada|Cerrada|Todos",
+            ErrorMessage = "FilterByApprovalStatus debe ser 'Pendiente', 'Aprobada', 'Rechazada', 'Cerrada' o 'Todos'."
+        )]
+        public string? FilterByApprovalStatus { get; set; }
 
         [RegularExpression(
             "Title|CreatedAt",
