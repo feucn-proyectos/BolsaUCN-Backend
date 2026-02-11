@@ -9,38 +9,19 @@ using PendingPublicationSearchParamsDTO = backend.src.Application.DTOs.Publicati
 
 namespace backend.src.API.Controllers
 {
-    [Route("api/publications/")]
+    [Route("api/admin/publications/")]
     public class ValidationController : BaseController
     {
         private readonly IApprovalService _approvalService;
-        private readonly IPublicationService _publicationService;
 
-        public ValidationController(IApprovalService approvalService, IPublicationService publicationService)
+        public ValidationController(IApprovalService approvalService)
         {
             _approvalService = approvalService;
-            _publicationService = publicationService;
         }
 
         #region Validate Publication
 
-        /// <summary>
-        /// Valida o rechaza una publicación (oferta o compra/venta) según la acción indicada
-        /// </summary>
-        /// <param name="publicationId">ID de la publicación a validar</param>
-        /// <param name="type">Tipo de publicación (oferta o compra/venta)</param>
-        /// <param name="action">Acción a realizar (publicar o rechazar)</param>
-        /// <returns>Respuesta indicando si la validación fue exitosa con la ID de la publicación</returns>
-        /**
-        *? TO REPLACE VALIDATION METHODS IN PublicationController
-        *? PATCH PublishBuySell
-        *? PATCH RejectBuySell
-        *? PATCH PublishOffer
-        *? PATCH RejectOffer
-        *DONE Refactor Frontend to use this single endpoint for publication validation as it currently constructs the URL dynamically and passes the action and type by query parameters
-        *? see validationService.tsx for reference
-        *DONE Change return type from generic object to something more specific
-        */
-        [HttpPatch("{publicationId}/validate")]
+        [HttpPatch("/pending/{publicationId}/validate")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> ApprovePublication(
             int publicationId,
