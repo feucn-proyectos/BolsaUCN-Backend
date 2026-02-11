@@ -93,5 +93,22 @@ namespace backend.src.API.Controllers
                 throw new ArgumentException("Tipo de usuario no existe");
             return parsedUserType;
         }
+
+        /// <summary>
+        /// Obtiene el ID del usuario desde el token de autenticación, retornando null si no es válido o no existe.
+        /// Para cuando se quiera obtener el ID de usuario pero no sea estrictamente necesario que exista o sea válido, como en el caso de explorar ofertas sin autenticación, pero mostrando resultados personalizados si el usuario está autenticado
+        /// </summary>
+        /// <returns>ID del usuario o null.</returns>
+        protected int? GetUserIdFromTokenNullable()
+        {
+            if (User.Identity?.IsAuthenticated != true)
+                return null;
+            var userId =
+                User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? null;
+            int.TryParse(userId, out int parsedUserId);
+            if (parsedUserId == 0)
+                return null;
+            return parsedUserId;
+        }
     }
 }

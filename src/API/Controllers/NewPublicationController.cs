@@ -86,7 +86,8 @@ namespace backend.src.API.Controllers
             [FromQuery] ExploreOffersSearchParamsDTO searchParams
         )
         {
-            var result = await _publicationService.GetOffersAsync(searchParams);
+            int? parsedUserId = GetUserIdFromTokenNullable();
+            var result = await _publicationService.GetOffersAsync(searchParams, parsedUserId);
             return Ok(
                 new GenericResponse<OffersForApplicantDTO>(
                     "Ofertas obtenidas exitosamente.",
@@ -108,7 +109,7 @@ namespace backend.src.API.Controllers
         }
 
         [HttpGet("explore/offers/{publicationId}")]
-        [Authorize(Roles = RoleNames.Applicant)]
+        [Authorize]
         public async Task<IActionResult> GetOfferDeatailsForApplicant(int publicationId)
         {
             int parsedUserId = GetUserIdFromToken();
