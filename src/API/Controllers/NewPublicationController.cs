@@ -1,6 +1,7 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Services.Interfaces;
@@ -75,6 +76,49 @@ namespace backend.src.API.Controllers
             return Ok(
                 new GenericResponse<MyPublicationDetailsDTO>(
                     "Detalles de la publicación obtenidos exitosamente.",
+                    result
+                )
+            );
+        }
+
+        [HttpGet("explore/offers")]
+        public async Task<IActionResult> ExploreOffers(
+            [FromQuery] ExploreOffersSearchParamsDTO searchParams
+        )
+        {
+            var result = await _publicationService.GetOffersAsync(searchParams);
+            return Ok(
+                new GenericResponse<OffersForApplicantDTO>(
+                    "Ofertas obtenidas exitosamente.",
+                    result
+                )
+            );
+        }
+
+        [HttpGet("explore/offers/{publicationId}/public")]
+        public async Task<IActionResult> GetOfferDetailsPublic(int publicationId)
+        {
+            var result = await _publicationService.GetOfferDetailsForPublicAsync(publicationId);
+            return Ok(
+                new GenericResponse<OfferDetailsForPublicDTO>(
+                    "Detalles de la oferta obtenidos exitosamente.",
+                    result
+                )
+            );
+        }
+
+        [HttpGet("explore/offers/{publicationId}")]
+        [Authorize(Roles = RoleNames.Applicant)]
+        public async Task<IActionResult> GetOfferDeatailsForApplicant(int publicationId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.GetOfferDetailsForApplicantAsync(
+                publicationId,
+                parsedUserId
+            );
+            return Ok(
+                new GenericResponse<OfferDetailsForApplicantDTO>(
+                    "Detalles de la oferta obtenidos exitosamente.",
                     result
                 )
             );

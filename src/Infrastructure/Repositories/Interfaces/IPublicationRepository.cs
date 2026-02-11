@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -52,11 +53,29 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             where T : Publication;
 
         /// <summary>
+        /// Obtiene publicaciones filtradas por criterios de búsqueda, paginación y ordenamiento.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="searchParams"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        Task<(IEnumerable<Offer>?, int)> GetOffersFilteredAsync(
+            ExploreOffersSearchParamsDTO searchParams
+        );
+
+        Task<(IEnumerable<BuySell>?, int)> GetBuySellsFilteredAsync(
+            //TODO ExploreBuySellSearchParamsDTO searchParams,
+            int pageNumber,
+            int pageSize
+        );
+
+        /// <summary>
         /// Obtiene todas las publicaciones pendientes para validación con paginación y filtros
         /// </summary>
         /// <param name="searchParamsDTO">Parámetros de búsqueda y paginación</param>
         /// <returns></returns>
-        Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
+        Task<(IEnumerable<Publication>?, int)> GetAllPendingForApprovalAsync(
             PendingPublicationSearchParamsDTO searchParamsDTO
         );
 
@@ -66,7 +85,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <param name="offerorId">Id del usuario autenticado</param>
         /// <param name="searchParams">Parámetros de búsqueda y paginación</param>
         /// <returns></returns>
-        Task<(IEnumerable<Publication>, int)> GetMyPublicationsFilteredByUserIdAsync(
+        Task<(IEnumerable<Publication>?, int)> GetMyPublicationsFilteredByUserIdAsync(
             int offerorId,
             MyPublicationsSeachParamsDTO searchParams
         );

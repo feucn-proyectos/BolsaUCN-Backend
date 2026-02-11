@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
@@ -23,6 +24,15 @@ namespace backend.src.Application.Services.Interfaces
             int userId,
             MyPublicationsSeachParamsDTO searchParamsDTO
         );
+
+        Task<OffersForApplicantDTO> GetOffersAsync(ExploreOffersSearchParamsDTO searchParams);
+
+        Task<OfferDetailsForApplicantDTO> GetOfferDetailsForApplicantAsync(
+            int publicationId,
+            int applicantId
+        );
+
+        Task<OfferDetailsForPublicDTO> GetOfferDetailsForPublicAsync(int publicationId);
 
         /// <summary>
         /// Obtiene los detalles de una publicación específica del usuario autenticado

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -74,7 +75,83 @@ public class PublicationRepository : IPublicationRepository
         return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
-    public async Task<(IEnumerable<Publication>, int)> GetAllPendingForApprovalAsync(
+    public async Task<(IEnumerable<Offer>?, int)> GetOffersFilteredAsync(
+        ExploreOffersSearchParamsDTO searchParams
+    )
+    {
+        IQueryable<Offer> query = _context.Offers.AsQueryable();
+
+        // Filtrado
+        if (!string.IsNullOrEmpty(searchParams.FilterBy))
+        {
+            if (searchParams.FilterBy == "Trabajo")
+                query = query.Where(p => p.OfferType == OfferTypes.Trabajo);
+            else if (searchParams.FilterBy == "Voluntariado")
+                query = query.Where(p => p.OfferType == OfferTypes.Voluntariado);
+        }
+        // Busqueda
+        if (!string.IsNullOrEmpty(searchParams.SearchTerm))
+        {
+            var searchTerm = searchParams.SearchTerm.ToLower();
+            query = query.Where(p =>
+                p.Title.ToLower().Contains(searchTerm)
+                || p.Description.ToLower().Contains(searchTerm)
+            );
+        }
+        //Ordenamiento
+        bool ascending = true; // Orden por defecto, true = asc, false = desc
+        if (!string.IsNullOrEmpty(searchParams.SortOrder))
+        {
+            ascending = searchParams.SortOrder == "asc";
+        }
+
+        query = searchParams.SortBy switch
+        {
+            "Title" => ascending
+                ? query.OrderBy(p => p.Title)
+                : query.OrderByDescending(p => p.Title),
+            "CreatedAt" => ascending
+                ? query.OrderBy(p => p.CreatedAt)
+                : query.OrderByDescending(p => p.CreatedAt),
+            "Remuneration" => ascending
+                ? query.OrderBy(p => p.Remuneration)
+                : query.OrderByDescending(p => p.Remuneration),
+            _ => query.OrderBy(p => p.Id),
+        };
+
+        // Paginacion
+        int totalCount = await query.CountAsync();
+        int pageSize = searchParams.PageSize ?? _defaultPageSize;
+        var publications = await query
+            .Skip((searchParams.PageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
+        return (publications, totalCount);
+    }
+
+    public async Task<(IEnumerable<BuySell>?, int)> GetBuySellsFilteredAsync(
+        //TODO ExploreBuySellSearchParamsDTO searchParams,
+        int pageNumber,
+        int pageSize
+    )
+    {
+        IQueryable<BuySell> query = _context.BuySells.AsQueryable();
+
+        //TODO Agregar filtrado, búsqueda y ordenamiento similar a GetOffersFilteredAsync
+
+        // Paginacion
+        int totalCount = await query.CountAsync();
+        pageSize = pageSize == 0 ? _defaultPageSize : pageSize;
+        var publications = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
+        return (publications, totalCount);
+    }
+
+    public async Task<(IEnumerable<Publication>?, int)> GetAllPendingForApprovalAsync(
         PendingPublicationSearchParamsDTO searchParamsDTO
     )
     {
@@ -131,7 +208,7 @@ public class PublicationRepository : IPublicationRepository
         return (publications, totalCount);
     }
 
-    public async Task<(IEnumerable<Publication>, int)> GetMyPublicationsFilteredByUserIdAsync(
+    public async Task<(IEnumerable<Publication>?, int)> GetMyPublicationsFilteredByUserIdAsync(
         int offerorId,
         MyPublicationsSeachParamsDTO searchParams
     )

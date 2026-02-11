@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -257,6 +258,120 @@ namespace backend.src.Application.Services.Implements
                 TotalCount = totalCount,
             };
             return myPublicationsDTO;
+        }
+
+        public async Task<OffersForApplicantDTO> GetOffersAsync(
+            ExploreOffersSearchParamsDTO searchParams
+        )
+        {
+            var (offers, totalCount) = await _publicationRepository.GetOffersFilteredAsync(
+                searchParams
+            );
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            OffersForApplicantDTO offersForApplicantDTO = new OffersForApplicantDTO
+            {
+                Offers = offers.Adapt<List<OfferForApplicantDTO>>(),
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return offersForApplicantDTO;
+        }
+
+        public async Task<OfferDetailsForApplicantDTO> GetOfferDetailsForApplicantAsync(
+            int offerId,
+            int applicantId
+        )
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(applicantId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", applicantId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(
+                applicantId,
+                RoleNames.Applicant
+            );
+            if (!isApplicant)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} no tiene permisos de postulante.",
+                    applicantId
+                );
+            }
+            // Validacion de oferta y estado
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
+            );
+            if (offer == null)
+            {
+                Log.Error("Oferta con ID {OfferId} no encontrada.", offerId);
+                throw new KeyNotFoundException("Oferta no encontrada.");
+            }
+            if (offer.ApprovalStatus != ApprovalStatus.Aceptada)
+            {
+                Log.Warning(
+                    "La oferta con ID {OfferId} no está disponible para postulación. Estado actual: {Status}",
+                    offerId,
+                    offer.ApprovalStatus
+                );
+                throw new InvalidOperationException(
+                    "La oferta no está disponible para postulación."
+                );
+            }
+            // Validacion de postulación previa
+            bool hasApplied = offer.Applications.Any(app => app.StudentId == applicantId);
+            if (hasApplied)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} ya ha postulado a la oferta con ID {OfferId}.",
+                    applicantId,
+                    offerId
+                );
+                throw new InvalidOperationException("Ya has postulado a esta oferta.");
+            }
+
+            OfferDetailsForApplicantDTO offerDetails = offer.Adapt<OfferDetailsForApplicantDTO>();
+            // Asignar campos adicionales de contacto
+            if (isApplicant)
+            {
+                offerDetails.ContactEmail = offer.User.Email!;
+                offerDetails.ContactPhoneNumber = offer.User.PhoneNumber!;
+                offerDetails.AdditionalContactEmail = offer.AdditionalContactEmail;
+                offerDetails.AdditionalContactPhoneNumber = offer.AdditionalContactPhoneNumber;
+                offerDetails.HasApplied = hasApplied;
+            }
+            else
+            {
+                offerDetails.ContactEmail = string.Empty;
+                offerDetails.ContactPhoneNumber = string.Empty;
+                offerDetails.AdditionalContactEmail = null;
+                offerDetails.AdditionalContactPhoneNumber = null;
+            }
+            return offerDetails;
+        }
+
+        public async Task<OfferDetailsForPublicDTO> GetOfferDetailsForPublicAsync(int offerId)
+        {
+            var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { IncludeUser = true }
+            );
+            if (offer == null || offer.ApprovalStatus != ApprovalStatus.Aceptada)
+            {
+                Log.Error("Oferta con ID {OfferId} no encontrada o no está aceptada.", offerId);
+                throw new KeyNotFoundException("Oferta no encontrada.");
+            }
+            OfferDetailsForPublicDTO offerDetails = offer.Adapt<OfferDetailsForPublicDTO>();
+            return offerDetails;
         }
 
         public async Task<MyPublicationDetailsDTO> GetPublicationDetailsForOffererAsync(
