@@ -182,7 +182,6 @@ namespace backend.src.Application.Mappers
             TypeAdapterConfig<Publication, PublicationForAdminDTO>
                 .NewConfig()
                 .Map(dest => dest.Id, src => src.Id)
-                .Map(dest => dest.AuthorId, src => src.User.Id)
                 .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.Description, src => src.Description)
@@ -190,7 +189,19 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Location, src => src.Location)
                 .Map(dest => dest.CreatedAt, src => src.CreatedAt)
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
-                .Map(dest => dest.AppealsCount, src => src.AppealCount);
+                .Map(dest => dest.AppealsCount, src => src.AppealCount)
+                // Informacion del autor
+                .Map(dest => dest.AuthorId, src => src.User.Id)
+                .Map(
+                    dest => dest.AuthorName,
+                    src =>
+                        src.User.UserType == UserType.Empresa
+                            ? src.User.FirstName
+                            : src.User.FirstName + " " + src.User.LastName
+                )
+                .Map(dest => dest.UserType, src => src.User.UserType.ToString())
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
+                .Map(dest => dest.AuthorEmail, src => src.User.Email);
         }
     }
 

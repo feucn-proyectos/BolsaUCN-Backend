@@ -343,7 +343,8 @@ public class PublicationRepository : IPublicationRepository
         var publications = await query
             .Skip((searchParams.PageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Include(p => p.User)
+            .Include(u => u.User)
+            .ThenInclude(p => p.ProfilePhoto)
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);
