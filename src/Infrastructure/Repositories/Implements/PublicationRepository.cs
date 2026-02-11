@@ -125,6 +125,7 @@ public class PublicationRepository : IPublicationRepository
         var publications = await query
             .Skip((searchParams.PageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Include(p => p.User)
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);
@@ -146,6 +147,7 @@ public class PublicationRepository : IPublicationRepository
         var publications = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Include(p => p.User)
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);

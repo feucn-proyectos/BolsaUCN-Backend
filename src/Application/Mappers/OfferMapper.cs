@@ -19,6 +19,7 @@ public class OfferMapper
     public void ConfigureAllMappings()
     {
         ConfigureOfferMapping();
+        ConfigureExploreOffersMappings();
     }
 
     public void ConfigureOfferMapping()
@@ -53,15 +54,28 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.CompanyName, src => src.User.FirstName);
     }
+
     public void ConfigureExploreOffersMappings()
     {
+        TypeAdapterConfig<Offer, OfferForApplicantDTO>
+            .NewConfig()
+            .Map(dest => dest.Id, src => src.Id)
+            .Map(dest => dest.OfferType, src => src.OfferType.ToString())
+            .Map(dest => dest.Title, src => src.Title)
+            .Map(dest => dest.Description, src => src.Description)
+            .Map(dest => dest.AuthorName, src => src.User.UserName)
+            .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+            .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline)
+            .Map(dest => dest.AvailableSlots, src => src.AvailableSlots)
+            .Map(dest => dest.Remuneration, src => src.Remuneration);
+
         TypeAdapterConfig<Offer, OfferDetailsForPublicDTO>
             .NewConfig()
             .Map(dest => dest.Id, src => src.Id)
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.AuthorName, src => src.User.FirstName)
+            .Map(dest => dest.AuthorName, src => src.User.UserName)
             .Map(dest => dest.Location, src => src.Location)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.Remuneration, src => src.Remuneration)
@@ -73,7 +87,7 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.AuthorName, src => src.User.FirstName)
+            .Map(dest => dest.AuthorName, src => src.User.UserName)
             .Map(dest => dest.Location, src => src.Location)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.Remuneration, src => src.Remuneration)
@@ -81,7 +95,7 @@ public class OfferMapper
             .Ignore(dest => dest.HasApplied) // Este campo se establecerá manualmente en el servicio, no se mapea directamente desde la entidad Offer
             .Ignore(dest => dest.ContactEmail) // Estos campos de contacto se establecerán manualmente en el servicio, no se mapean directamente desde la entidad Offer
             .Ignore(dest => dest.ContactPhoneNumber)
-            .Ignore(dest => dest.AdditionalContactEmail)
-            .Ignore(dest => dest.AdditionalContactPhoneNumber);
+            .Ignore(dest => dest.AdditionalContactEmail!)
+            .Ignore(dest => dest.AdditionalContactPhoneNumber!);
     }
 }
