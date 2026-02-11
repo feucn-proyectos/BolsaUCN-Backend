@@ -35,7 +35,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Número de postulantes requeridos para la oferta.
         /// </summary>
-        public int AvailableSlots { get; set; }
+        public int AvailableSlots { get; set; } = 1;
 
         /// <summary>
         /// Categoría de la oferta (e.g., Trabajo, Voluntariado).

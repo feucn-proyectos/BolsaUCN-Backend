@@ -25,7 +25,10 @@ namespace backend.src.Application.Services.Interfaces
             MyPublicationsSeachParamsDTO searchParamsDTO
         );
 
-        Task<OffersForApplicantDTO> GetOffersAsync(ExploreOffersSearchParamsDTO searchParams);
+        Task<OffersForApplicantDTO> GetOffersAsync(
+            ExploreOffersSearchParamsDTO searchParams,
+            int? userId = null
+        );
 
         Task<OfferDetailsForApplicantDTO> GetOfferDetailsForApplicantAsync(
             int publicationId,

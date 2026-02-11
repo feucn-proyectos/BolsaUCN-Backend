@@ -261,11 +261,13 @@ namespace backend.src.Application.Services.Implements
         }
 
         public async Task<OffersForApplicantDTO> GetOffersAsync(
-            ExploreOffersSearchParamsDTO searchParams
+            ExploreOffersSearchParamsDTO searchParams,
+            int? userId = null
         )
         {
             var (offers, totalCount) = await _publicationRepository.GetOffersFilteredAsync(
-                searchParams
+                searchParams,
+                userId
             );
 
             int currentPage = searchParams.PageNumber;
@@ -336,7 +338,7 @@ namespace backend.src.Application.Services.Implements
                     applicantId,
                     offerId
                 );
-                throw new InvalidOperationException("Ya has postulado a esta oferta.");
+                //throw new InvalidOperationException("Ya has postulado a esta oferta.");
             }
 
             OfferDetailsForApplicantDTO offerDetails = offer.Adapt<OfferDetailsForApplicantDTO>();

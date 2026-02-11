@@ -61,7 +61,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <param name="pageSize"></param>
         /// <returns></returns>
         Task<(IEnumerable<Offer>?, int)> GetOffersFilteredAsync(
-            ExploreOffersSearchParamsDTO searchParams
+            ExploreOffersSearchParamsDTO searchParams,
+            int? userId = null
         );
 
         Task<(IEnumerable<BuySell>?, int)> GetBuySellsFilteredAsync(

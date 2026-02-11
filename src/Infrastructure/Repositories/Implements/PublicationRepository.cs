@@ -76,10 +76,11 @@ public class PublicationRepository : IPublicationRepository
     }
 
     public async Task<(IEnumerable<Offer>?, int)> GetOffersFilteredAsync(
-        ExploreOffersSearchParamsDTO searchParams
+        ExploreOffersSearchParamsDTO searchParams,
+        int? userId = null
     )
     {
-        IQueryable<Offer> query = _context.Offers.AsQueryable();
+        IQueryable<Offer> query = _context.Offers.Where(u => u.UserId != userId).AsQueryable();
 
         // Filtrado
         if (!string.IsNullOrEmpty(searchParams.FilterBy))
