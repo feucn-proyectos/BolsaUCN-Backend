@@ -124,6 +124,42 @@ namespace backend.src.API.Controllers
             );
         }
 
+        [HttpGet("explore/buysells")]
+        public async Task<IActionResult> ExploreBuySells(
+        //TODO [FromQuery] ExploreBuySellSearchParamsDTO searchParams
+        )
+        {
+            return Ok(
+                new GenericResponse<string>(
+                    "Funcionalidad de exploración de Compra/Venta aún no implementada.",
+                    null
+                )
+            );
+        }
+
+        [HttpGet("explore/buysells/{publicationId}/public")]
+        public async Task<IActionResult> GetBuySellDetailsPublic(int publicationId)
+        {
+            return Ok(
+                new GenericResponse<string>(
+                    "Funcionalidad de detalles de Compra/Venta aún no implementada.",
+                    null
+                )
+            );
+        }
+
+        [HttpGet("explore/buysells/{publicationId}")]
+        [Authorize(Roles = RoleNames.Applicant)]
+        public async Task<IActionResult> GetBuySellDetailsForApplicant(int publicationId)
+        {
+            return Ok(
+                new GenericResponse<string>(
+                    "Funcionalidad de detalles de Compra/Venta para usuario aún no implementada.",
+                    null
+                )
+            );
+        }
+
         [HttpGet("my-publications/{offerId}/applications")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> GetAllApplicationsByOfferId(
