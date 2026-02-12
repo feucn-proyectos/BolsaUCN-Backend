@@ -85,7 +85,12 @@ namespace backend.src.Domain.Models
         /// Razón de rechazo proporcionada por el administrador.
         /// Esta retroalimentación permite al usuario corregir su publicación.
         /// </summary>
-        public string? AdminRejectionReason { get; set; }
+        public string? RejectedByAdminReason { get; set; }
+
+        /// <summary>
+        /// Razón de cierre proporcionada por el administrador. Usada para registrar el motivo por el cual una publicación fue cerrada.
+        /// </summary>
+        public string? ClosedByAdminReason { get; set; }
 
         /// <summary>
         /// Contador del número de intentos de apelación realizados por el usuario.

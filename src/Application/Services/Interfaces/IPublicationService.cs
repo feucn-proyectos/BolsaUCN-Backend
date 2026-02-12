@@ -59,7 +59,16 @@ namespace backend.src.Application.Services.Interfaces
             PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
 
-        Task<string> CloseOfferManuallyAsync(int publicationId, int requestingUserId);
+        Task<PublicationDetailsForAdminDTO> GetPublicationDetailsForAdminByIdAsync(
+            int publicationId,
+            int adminId
+        );
+
+        Task<string> ClosePublicationManuallyAsync(
+            int publicationId,
+            int requestingUserId,
+            ClosePublicationRequestDTO? requestDTO = null
+        );
         #endregion
     }
 }

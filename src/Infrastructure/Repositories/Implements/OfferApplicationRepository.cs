@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Domain.Models;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
@@ -50,7 +51,8 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var query = _context
                 .JobApplications.Include(ja => ja.JobOffer)
                 .Include(ja => ja.Student)
-                .Where(ja => ja.StudentId == applicantId);
+                .Where(ja => ja.StudentId == applicantId)
+                .AsQueryable();
 
             // Aplicar filtros de búsqueda si es necesario
             if (!string.IsNullOrEmpty(searchParams.SearchTerm))
@@ -197,6 +199,64 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context.JobApplications.AnyAsync(ja =>
                 ja.StudentId == applicantId && ja.JobOfferId == offerId
             );
+        }
+
+        public async Task<(IEnumerable<JobApplication>, int)> GetAllByOfferIdForAdminAsync(
+            int offerId,
+            ApplicationsForAdminSearchParamsDTO searchParams
+        )
+        {
+            var query = _context
+                .JobApplications.Include(ja => ja.Student)
+                .ThenInclude(p => p!.ProfilePhoto)
+                .Include(ja => ja.Student)
+                .ThenInclude(c => c!.CV)
+                .Include(ja => ja.JobOffer)
+                .Where(ja => ja.JobOfferId == offerId)
+                .AsQueryable();
+
+            // Aplicar ordenamiento
+            if (!string.IsNullOrEmpty(searchParams.SortBy))
+            {
+                bool ascending = searchParams.SortOrder?.ToLower() == "asc";
+                switch (searchParams.SortBy)
+                {
+                    case "FirstName":
+                        query = ascending
+                            ? query
+                                .OrderBy(ja => ja.Student!.FirstName)
+                                .ThenBy(ja => ja.Student!.LastName)
+                            : query
+                                .OrderByDescending(ja => ja.Student!.FirstName)
+                                .ThenByDescending(ja => ja.Student!.LastName);
+                        break;
+                    case "ApplicationDate":
+                        query = ascending
+                            ? query.OrderBy(ja => ja.CreatedAt)
+                            : query.OrderByDescending(ja => ja.CreatedAt);
+                        break;
+                    case "Status":
+                        query = ascending
+                            ? query.OrderBy(ja => ja.Status)
+                            : query.OrderByDescending(ja => ja.Status);
+                        break;
+                }
+            }
+            else // Orden por defecto
+            {
+                query = query.OrderByDescending(ja => ja.CreatedAt);
+            }
+
+            int totalCount = await query.CountAsync();
+            int pageNumber = searchParams.PageNumber > 0 ? searchParams.PageNumber : 1;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+
+            var applications = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (applications, totalCount);
         }
     }
 }

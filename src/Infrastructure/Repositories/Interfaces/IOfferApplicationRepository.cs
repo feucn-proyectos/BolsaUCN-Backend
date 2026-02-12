@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Domain.Models;
 
 namespace backend.src.Infrastructure.Repositories.Interfaces
@@ -16,6 +17,10 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<(IEnumerable<JobApplication>, int)> GetAllByOfferIdAsync(
             int offerId,
             ApplicationsForOfferorSearchParamsDTO searchParams
+        );
+        Task<(IEnumerable<JobApplication>, int)> GetAllByOfferIdForAdminAsync(
+            int offerId,
+            ApplicationsForAdminSearchParamsDTO searchParams
         );
         Task<IEnumerable<JobApplication>> GetByStudentIdAsync(int studentId);
         Task<IEnumerable<JobApplication>> GetByOfferIdAsync(int offerId);

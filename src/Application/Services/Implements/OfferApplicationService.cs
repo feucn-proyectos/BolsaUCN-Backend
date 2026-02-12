@@ -2,6 +2,7 @@ using System.Security;
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
 using backend.src.Application.Services.Interfaces;
@@ -246,6 +247,59 @@ namespace backend.src.Application.Services.Implements
                 PageSize = pageSize,
                 CurrentPage = currentPage,
             };
+        }
+
+        public async Task<ApplicationsForAdminDTO> GetApplicationsByOfferIdForAdminAsync(
+            int offerId,
+            int adminId,
+            ApplicationsForAdminSearchParamsDTO searchParams
+        )
+        {
+            // Validar usuario
+            bool adminExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!adminExists)
+            {
+                Log.Error(
+                    "Usuario ID: {AdminId} no encontrado al obtener postulaciones de oferta ID: {OfferId} para admin",
+                    adminId,
+                    offerId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            // Validar que la oferta existe
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta ID: {OfferId} no encontrada al intentar obtener postulaciones para admin",
+                    offerId
+                );
+                throw new KeyNotFoundException("La oferta no existe");
+            }
+            // Obtener postulaciones
+            var (applications, totalCount) =
+                await _applicationRepository.GetAllByOfferIdForAdminAsync(offerId, searchParams);
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+            int currentPage = searchParams.PageNumber;
+            if (currentPage < 1 || currentPage > totalPages)
+            {
+                Log.Warning(
+                    "Página solicitada {currentPage} fuera de rango. Total de páginas: {totalPages}. Se ajusta a la página 1.",
+                    currentPage,
+                    totalPages
+                );
+                currentPage = 1;
+            }
+            ApplicationsForAdminDTO applicationsDTO = new ApplicationsForAdminDTO
+            {
+                Applications = applications.Adapt<List<ApplicationForAdminDTO>>(),
+                TotalCount = totalCount,
+                TotalPages = totalPages,
+                PageSize = pageSize,
+                CurrentPage = currentPage,
+            };
+            return applicationsDTO;
         }
 
         public async Task<GetApplicationDetailsDTO> GetApplicationDetailsForApplicantAsync(

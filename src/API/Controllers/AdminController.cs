@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -13,11 +14,17 @@ namespace backend.src.API.Controllers
     {
         private readonly IAdminService _adminService;
         private readonly IPublicationService _publicationService;
+        private readonly IOfferApplicationService _applicationService;
 
-        public AdminController(IAdminService adminService, IPublicationService publicationService)
+        public AdminController(
+            IAdminService adminService,
+            IPublicationService publicationService,
+            IOfferApplicationService applicationService
+        )
         {
             _adminService = adminService;
             _publicationService = publicationService;
+            _applicationService = applicationService;
         }
 
         #region User Management
@@ -102,9 +109,9 @@ namespace backend.src.API.Controllers
             [FromQuery] PublicationsForAdminSearchParamsDTO searchParams
         )
         {
-            var adminId = GetUserIdFromToken();
+            var parsedAdminId = GetUserIdFromToken();
             var publications = await _publicationService.GetAllPublicationsForAdminAsync(
-                adminId,
+                parsedAdminId,
                 searchParams
             );
             return Ok(
@@ -115,14 +122,57 @@ namespace backend.src.API.Controllers
             );
         }
 
+        [HttpGet("publications/{publicationId}")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetPublicationDetailsById(int publicationId)
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var publicationDetails =
+                await _publicationService.GetPublicationDetailsForAdminByIdAsync(
+                    publicationId,
+                    parsedAdminId
+                );
+            return Ok(
+                new GenericResponse<PublicationDetailsForAdminDTO>(
+                    "Detalles de la publicación obtenidos exitosamente.",
+                    publicationDetails
+                )
+            );
+        }
+
+        [HttpGet("publications/{offerId}/applications")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetApplicantsByOfferIdForAdmin(
+            int offerId,
+            [FromQuery] ApplicationsForAdminSearchParamsDTO searchParams
+        )
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var applicants = await _applicationService.GetApplicationsByOfferIdForAdminAsync(
+                offerId,
+                parsedAdminId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<ApplicationsForAdminDTO>(
+                    "Aplicantes obtenidos exitosamente.",
+                    applicants
+                )
+            );
+        }
+
         [HttpPatch("publications/{publicationId}/close")]
         [Authorize(Roles = RoleNames.Admin)]
-        public async Task<IActionResult> CloseOfferManually(int publicationId)
+        public async Task<IActionResult> ClosePublicationManually(
+            int publicationId,
+            [FromBody] ClosePublicationRequestDTO requestDTO
+        )
         {
             int parsedAdminId = GetUserIdFromToken();
-            var result = await _publicationService.CloseOfferManuallyAsync(
+            var result = await _publicationService.ClosePublicationManuallyAsync(
                 publicationId,
-                parsedAdminId
+                parsedAdminId,
+                requestDTO
             );
             return Ok(new GenericResponse<string>("Oferta cerrada exitosamente.", result));
         }

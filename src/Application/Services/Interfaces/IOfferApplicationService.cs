@@ -1,6 +1,7 @@
 using backend.src.Application.DTOs.JobAplicationDTO;
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Domain.Models;
 
@@ -27,6 +28,12 @@ namespace backend.src.Application.Services.Interfaces
         Task<GetApplicationDetailsDTO> GetApplicationDetailsForApplicantAsync(
             int userId,
             int applicationId
+        );
+
+        Task<ApplicationsForAdminDTO> GetApplicationsByOfferIdForAdminAsync(
+            int offerId,
+            int adminId,
+            ApplicationsForAdminSearchParamsDTO searchParams
         );
 
         Task<string> UpdateApplicationDetailsAsync(

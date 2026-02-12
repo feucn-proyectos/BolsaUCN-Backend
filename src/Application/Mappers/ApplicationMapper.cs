@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Domain.Models;
 using Mapster;
 
@@ -50,6 +51,24 @@ namespace backend.src.Application.Mappers
                     src => src.Student!.CV != null ? src.Student!.CV!.Url : null
                 )
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null);
+            TypeAdapterConfig<JobApplication, ApplicationForAdminDTO>
+                .NewConfig()
+                .Map(dest => dest.ApplicationId, src => src.Id)
+                .Map(dest => dest.ApplicantId, src => src.StudentId)
+                .Map(
+                    dest => dest.ApplicantPhotoUrl,
+                    src => src.Student!.ProfilePhoto != null ? src.Student!.ProfilePhoto!.Url : null
+                )
+                .Map(dest => dest.ApplicantFirstName, src => src.Student!.FirstName)
+                .Map(dest => dest.ApplicantLastName, src => src.Student!.LastName)
+                .Map(dest => dest.ApplicantEmail, src => src.Student!.Email)
+                .Map(dest => dest.ApplicationDate, src => src.CreatedAt)
+                .Map(
+                    dest => dest.CVUrl,
+                    src => src.Student!.CV != null ? src.Student!.CV!.Url : null
+                )
+                .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null)
+                .Map(dest => dest.Status, src => src.Status.ToString());
         }
     }
 }

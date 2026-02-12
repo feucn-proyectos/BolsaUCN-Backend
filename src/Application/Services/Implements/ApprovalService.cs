@@ -76,7 +76,15 @@ namespace backend.src.Application.Services.Implements
             }
             else if (actionDTO.Action == "reject")
             {
+                if (string.IsNullOrWhiteSpace(actionDTO.RejectionReason))
+                {
+                    Log.Error("La razón de rechazo es requerida para la acción de rechazo.");
+                    throw new ArgumentException(
+                        "La razón de rechazo es requerida para la acción de rechazo."
+                    );
+                }
                 newStatus = ApprovalStatus.Rechazada;
+                publication.RejectedByAdminReason = actionDTO.RejectionReason;
             }
             else
             {

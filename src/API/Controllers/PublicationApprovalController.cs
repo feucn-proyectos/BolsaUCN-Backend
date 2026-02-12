@@ -9,6 +9,7 @@ using PendingPublicationSearchParamsDTO = backend.src.Application.DTOs.Publicati
 
 namespace backend.src.API.Controllers
 {
+    [ApiController]
     [Route("api/admin/publications/")]
     public class ValidationController : BaseController
     {
@@ -21,7 +22,7 @@ namespace backend.src.API.Controllers
 
         #region Validate Publication
 
-        [HttpPatch("/pending/{publicationId}/validate")]
+        [HttpPatch("pending/{publicationId}/validate")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> ApprovePublication(
             int publicationId,

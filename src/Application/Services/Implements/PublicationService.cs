@@ -456,7 +456,7 @@ namespace backend.src.Application.Services.Implements
             }
             publication.ApprovalStatus = newStatus;
             if (newStatus == ApprovalStatus.Rechazada)
-                publication.AdminRejectionReason =
+                publication.RejectedByAdminReason =
                     rejectionReason ?? "No se proporcionó una razón de rechazo.";
             await _publicationRepository.UpdateAsync(publication);
             if (publication.ApprovalStatus == oldStatus)
@@ -522,7 +522,64 @@ namespace backend.src.Application.Services.Implements
             return publicationsForAdminDTO;
         }
 
-        public async Task<string> CloseOfferManuallyAsync(int publicationId, int offerorId)
+        public async Task<PublicationDetailsForAdminDTO> GetPublicationDetailsForAdminByIdAsync(
+            int publicationId,
+            int adminId
+        )
+        {
+            // Validar usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} no tiene permisos de administrador.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para acceder a esta información."
+                );
+            }
+
+            bool? isOffer = await _publicationRepository.CheckType(
+                publicationId,
+                PublicationType.Oferta
+            );
+            if (isOffer == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+
+            Publication? publication = (bool)isOffer
+                ? await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                    publicationId,
+                    new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
+                )
+                : await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                    publicationId,
+                    new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+                );
+            if (publication == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+            PublicationDetailsForAdminDTO publicationDetails =
+                publication.Adapt<PublicationDetailsForAdminDTO>();
+            return publicationDetails;
+        }
+
+        public async Task<string> ClosePublicationManuallyAsync(
+            int publicationId,
+            int offerorId,
+            ClosePublicationRequestDTO? requestDTO = null
+        )
         {
             // Validacion de usuario
             bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
@@ -532,7 +589,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
             // Validacion de publicacion y propiedad
-            var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+            var publication = await _publicationRepository.GetPublicationByIdAsync<Publication>(
                 publicationId,
                 new PublicationQueryOptions { IncludeUser = true }
             );
@@ -568,6 +625,8 @@ namespace backend.src.Application.Services.Implements
             }
             // Cierre de la oferta
             publication.ApprovalStatus = ApprovalStatus.Cerrada;
+            if (isAdmin && !string.IsNullOrEmpty(requestDTO!.ClosedByAdminReason))
+                publication.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {

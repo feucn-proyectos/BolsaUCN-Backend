@@ -22,6 +22,9 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public required string PublicationType { get; set; }
         public required string ApprovalStatus { get; set; }
         public required DateTime CreatedAt { get; set; }
+        public required string? ReasonForClosure { get; set; }
+        public required string? ReasonForRejection { get; set; }
+        public required int AppealCount { get; set; }
 
         // === OFERTAS DE TRABAJO ===
         public string? OfferType { get; set; }

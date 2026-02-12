@@ -128,6 +128,9 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
                 .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.ReasonForClosure, src => src.ClosedByAdminReason)
+                .Map(dest => dest.ReasonForRejection, src => src.RejectedByAdminReason)
+                .Map(dest => dest.AppealCount, src => src.AppealCount)
                 // === OFERTAS DE TRABAJO ===
                 .Map(
                     dest => dest.OfferType,
@@ -202,6 +205,78 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.UserType, src => src.User.UserType.ToString())
                 .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
                 .Map(dest => dest.AuthorEmail, src => src.User.Email);
+
+            TypeAdapterConfig<Publication, PublicationDetailsForAdminDTO>
+                .NewConfig()
+                // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(
+                    dest => dest.AdditionalContactEmail,
+                    src => src.AdditionalContactEmail ?? string.Empty
+                )
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber ?? string.Empty
+                )
+                // === INFORMACION DEL AUTOR ===
+                .Map(dest => dest.UserId, src => src.User.Id)
+                .Map(dest => dest.UserEmail, src => src.User.Email)
+                .Map(dest => dest.UserPhoneNumber, src => src.User.PhoneNumber)
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
+                .Map(
+                    dest => dest.UserName,
+                    src =>
+                        src.User.UserType == UserType.Empresa
+                            ? src.User.FirstName
+                            : src.User.FirstName + " " + src.User.LastName
+                )
+                .Map(dest => dest.UserType, src => src.User.UserType.ToString())
+                .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
+                .Map(dest => dest.Rating, src => src.User.Rating)
+                // === ATRIBUTOS DE OFERTA ===
+                .Map(
+                    dest => dest.EndDate,
+                    src => src is Offer ? ((Offer)src).EndDate.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.DeadlineDate,
+                    src => src is Offer ? ((Offer)src).ApplicationDeadline.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.Remuneration,
+                    src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                )
+                .Map(
+                    dest => dest.OfferType,
+                    src => src is Offer ? ((Offer)src).OfferType.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.ApplicantsCount,
+                    src => src is Offer ? ((Offer)src).Applications.Count : (int?)null
+                )
+                .Map(
+                    dest => dest.IsCvRequired,
+                    src => src is Offer ? ((Offer)src).IsCvRequired : (bool?)null
+                )
+                // === ATRIBUTOS DE COMPRA/VENTA ===
+                .Map(
+                    dest => dest.Images,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
+                            : new List<string>()
+                )
+                .Map(
+                    dest => dest.Category,
+                    src => src is BuySell ? ((BuySell)src).Category : string.Empty
+                )
+                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null);
         }
     }
 
