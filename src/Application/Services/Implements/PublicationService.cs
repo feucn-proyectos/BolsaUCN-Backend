@@ -721,6 +721,7 @@ namespace backend.src.Application.Services.Implements
             }
             appealDTO.Adapt(publication);
             publication.ApprovalStatus = ApprovalStatus.Pendiente;
+            publication.AppealCount++;
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {
