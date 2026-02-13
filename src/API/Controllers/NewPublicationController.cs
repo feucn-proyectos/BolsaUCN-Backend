@@ -4,6 +4,7 @@ using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -219,10 +220,17 @@ namespace backend.src.API.Controllers
 
         [HttpPost("my-publications/{publicationId}/appeal")]
         [Authorize(Roles = RoleNames.Offeror)]
-        public async Task<IActionResult> AppealPublication(int publicationId)
+        public async Task<IActionResult> AppealPublication(
+            int publicationId,
+            [FromForm] AppealRejectionDTO appealDTO
+        )
         {
             int parsedOfferorId = GetUserIdFromToken();
-            var result = "Se mando una apelacion a los administradores"; //await _publicationService.AppealRejectedPublicationAsync(publicationId, parsedOfferorId);
+            var result = await _publicationService.AppealRejectedPublicationAsync(
+                publicationId,
+                parsedOfferorId,
+                appealDTO
+            );
             return Ok(new GenericResponse<string>("Publicación apelada exitosamente.", result));
         }
         #endregion

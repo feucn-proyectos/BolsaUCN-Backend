@@ -3,6 +3,7 @@ using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -575,6 +576,57 @@ namespace backend.src.Application.Services.Implements
             return publicationDetails;
         }
 
+        public async Task<string> AppealRejectedPublicationAsync(
+            int publicationId,
+            int offerorId,
+            AppealRejectionDTO appealDTO
+        )
+        {
+            // Validacion de usuario
+            bool offerorExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!offerorExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            // Validacion de publicacion y propiedad
+            bool isOffer =
+                await _publicationRepository.CheckType(publicationId, PublicationType.Oferta)
+                ?? false;
+            string result;
+            if (isOffer)
+            {
+                bool appealResult = await EditPublicationForAppealAsync<Offer>(publicationId, appealDTO);
+                if (!appealResult)
+                {
+                    Log.Error("Error al apelar la oferta con ID {PublicationId}.", publicationId);
+                    throw new Exception("No se pudo apelar la oferta. Inténtalo de nuevo.");
+                }
+                result = appealResult
+                    ? "La apelación de la oferta ha sido enviada exitosamente."
+                    : "No se pudo enviar la apelación de la oferta. Inténtalo de nuevo.";
+            }
+            else
+            {
+                bool appealResult = await EditPublicationForAppealAsync<BuySell>(publicationId, appealDTO);
+                if (!appealResult)
+                {
+                    Log.Error(
+                        "Error al apelar la publicación de compra/venta con ID {PublicationId}.",
+                        publicationId
+                    );
+                    throw new Exception(
+                        "No se pudo apelar la publicación de compra/venta. Inténtalo de nuevo."
+                    );
+                }
+                result = appealResult
+                    ? "La apelación de la publicación de compra/venta ha sido enviada exitosamente."
+                    : "No se pudo enviar la apelación de la publicación de compra/venta. Inténtalo de nuevo.";
+            }
+            //TODO: Enviar notification al admin para revisar la apelación
+            return result;
+        }
+
         public async Task<string> ClosePublicationManuallyAsync(
             int publicationId,
             int offerorId,
@@ -639,5 +691,46 @@ namespace backend.src.Application.Services.Implements
             return "Publicación cerrada exitosamente.";
         }
         #endregion
+
+        private async Task<bool> EditPublicationForAppealAsync<T>(
+            int publicationId,
+            AppealRejectionDTO appealDTO
+        )
+            where T : Publication
+        {
+            // Validar que la publicación exista y sea del tipo correcto
+            var publication = await _publicationRepository.GetPublicationByIdAsync<T>(
+                publicationId
+            );
+            if (publication == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+            // Validar flujo de estados
+            if (publication.ApprovalStatus != ApprovalStatus.Rechazada)
+            {
+                Log.Error(
+                    "No se puede apelar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
+                    publicationId,
+                    publication.ApprovalStatus
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden apelar publicaciones que están en estado 'Rechazada'."
+                );
+            }
+            appealDTO.Adapt(publication);
+            publication.ApprovalStatus = ApprovalStatus.Pendiente;
+            bool updateResult = await _publicationRepository.UpdateAsync(publication);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al actualizar la publicación con ID {PublicationId}.",
+                    publicationId
+                );
+                throw new Exception("No se pudo actualizar la publicación. Inténtalo de nuevo.");
+            }
+            return true;
+        }
     }
 }

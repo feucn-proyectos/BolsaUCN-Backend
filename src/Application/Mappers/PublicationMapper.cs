@@ -102,6 +102,7 @@ namespace backend.src.Application.Mappers
 
         public void ConfigurePublicationsForOfferor()
         {
+            // Mapeo para listar publicaciones del offerente
             TypeAdapterConfig<Publication, PublicationForOfferorDTO>
                 .NewConfig()
                 .Map(dest => dest.PublicationId, src => src.Id)
@@ -111,6 +112,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
                 .Map(dest => dest.HasAppealed, src => src.AppealCount > 0);
 
+            // Mapeo para detalles de publicación del offerente
             TypeAdapterConfig<Publication, MyPublicationDetailsDTO>
                 .NewConfig()
                 // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
@@ -178,6 +180,39 @@ namespace backend.src.Application.Mappers
                     dest => dest.Condition,
                     src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
                 );
+
+            // Mapeos para actualizar publicaciones a partir de una apelación de rechazo
+            TypeAdapterConfig<AppealRejectionDTO, Offer>
+                .NewConfig()
+                .Map(dest => dest.Title, src => src.Tittle)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
+                .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline)
+                .Map(dest => dest.EndDate, src => src.EndDate)
+                .Map(dest => dest.Remuneration, src => src.Remuneration)
+                .Map(dest => dest.AvailableSlots, src => src.RequiredApplicants)
+                .Map(dest => dest.OfferType, src => src.OfferType)
+                .Map(dest => dest.IsCvRequired, src => src.IsCvRequired);
+            TypeAdapterConfig<AppealRejectionDTO, BuySell>
+                .NewConfig()
+                .Map(dest => dest.Title, src => src.Tittle)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
+                .Map(dest => dest.Category, src => src.Category)
+                .Map(dest => dest.Price, src => src.Price)
+                .Map(dest => dest.Quantity, src => src.Quantity)
+                .Map(dest => dest.Availability, src => src.Availability)
+                .Map(dest => dest.Condition, src => src.Condition);
         }
 
         public void ConfigurePublicationsForAdmin()

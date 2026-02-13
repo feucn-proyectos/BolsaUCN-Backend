@@ -3,6 +3,7 @@ using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 
@@ -62,6 +63,12 @@ namespace backend.src.Application.Services.Interfaces
         Task<PublicationDetailsForAdminDTO> GetPublicationDetailsForAdminByIdAsync(
             int publicationId,
             int adminId
+        );
+
+        Task<string> AppealRejectedPublicationAsync(
+            int publicationId,
+            int offerorId,
+            AppealRejectionDTO appealDTO
         );
 
         Task<string> ClosePublicationManuallyAsync(
