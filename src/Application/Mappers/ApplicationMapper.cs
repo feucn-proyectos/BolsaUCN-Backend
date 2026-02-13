@@ -24,14 +24,34 @@ namespace backend.src.Application.Mappers
 
             TypeAdapterConfig<JobApplication, GetApplicationDetailsDTO>
                 .NewConfig()
-                .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.OfferTitle, src => src.JobOffer!.Title)
+                .Map(dest => dest.Description, src => src.JobOffer!.Description)
                 .Map(dest => dest.ApplicationDeadline, src => src.JobOffer!.ApplicationDeadline)
                 .Map(dest => dest.CreatedAt, src => src.JobOffer!.CreatedAt)
                 .Map(dest => dest.EndDate, src => src.JobOffer!.EndDate)
                 .Map(dest => dest.Remuneration, src => src.JobOffer!.Remuneration)
-                .Map(dest => dest.Description, src => src.JobOffer!.Description)
-                .Map(dest => dest.ContactInfo, src => src.JobOffer!.AdditionalContactEmail)
+                // Oferente
+                .Map(dest => dest.OfferorUserType, src => src.JobOffer!.User!.UserType.ToString())
+                .Map(
+                    dest => dest.ProfilePhotoUrl,
+                    src =>
+                        src.JobOffer!.User!.ProfilePhoto != null
+                            ? src.JobOffer!.User!.ProfilePhoto!.Url
+                            : null
+                )
+                // Contacto
+                .Map(dest => dest.ContactEmail, src => src.JobOffer!.User!.Email)
+                .Map(dest => dest.ContactPhoneNumber, src => src.JobOffer!.User!.PhoneNumber)
+                .Map(
+                    dest => dest.AdditionalContactEmail,
+                    src => src.JobOffer!.AdditionalContactEmail
+                )
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.JobOffer!.AdditionalContactPhoneNumber
+                )
+                // Datos de la postulación
+                .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter)
                 .Map(dest => dest.Status, src => src.Status.ToString());
             TypeAdapterConfig<JobApplication, ApplicationForOfferorDTO>

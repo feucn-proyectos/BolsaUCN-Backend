@@ -2,27 +2,29 @@ namespace backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs
 {
     public class GetApplicationDetailsDTO
     {
-        // Encabezado
+        // Oferta
         public required string OfferTitle { get; set; }
-        public required string CompanyName { get; set; }
+        public required string Description { get; set; }
+        public required DateTime ApplicationDeadline { get; set; }
+        public required DateTime CreatedAt { get; set; }
+        public required DateTime EndDate { get; set; }
+        public required int Remuneration { get; set; }
 
-        // Información de fechas y remuneración
-        public DateTime ApplicationDeadline { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? EndDate { get; set; }
-        public int Remuneration { get; set; }
-
-        // Descripción y requisitos
-        public string? Description { get; set; }
-        public string? Requirements { get; set; }
+        // Oferente
+        public required string OfferorName { get; set; }
+        public required string OfferorUserType { get; set; }
+        public required string ProfilePhotoUrl { get; set; }
 
         // Contacto
-        public string? ContactInfo { get; set; }
+        public required string ContactEmail { get; set; }
+        public required string ContactPhoneNumber { get; set; }
+        public string? AdditionalContactEmail { get; set; }
+        public string? AdditionalContactPhoneNumber { get; set; }
 
         // Datos de la postulación
         public required int Id { get; set; }
         public string? CoverLetter { get; set; }
         public required string Status { get; set; }
-        public string? StatusMessage { get; set; }
+        public required string StatusMessage { get; set; }
     }
 }

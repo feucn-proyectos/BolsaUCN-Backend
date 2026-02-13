@@ -32,6 +32,8 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context
                 .JobApplications.Include(ja => ja.Student)
                 .Include(ja => ja.JobOffer)
+                .ThenInclude(jo => jo!.User)
+                .ThenInclude(jo => jo.ProfilePhoto)
                 .FirstOrDefaultAsync(ja => ja.Id == applicationId);
         }
 
@@ -40,6 +42,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context
                 .JobApplications.Include(ja => ja.Student)
                 .Include(ja => ja.JobOffer)
+                .ThenInclude(jo => jo!.User)
                 .FirstOrDefaultAsync(ja => ja.StudentId == studentId && ja.JobOfferId == offerId);
         }
 
@@ -50,6 +53,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             var query = _context
                 .JobApplications.Include(ja => ja.JobOffer)
+                .ThenInclude(jo => jo!.User)
                 .Include(ja => ja.Student)
                 .Where(ja => ja.StudentId == applicantId)
                 .AsQueryable();

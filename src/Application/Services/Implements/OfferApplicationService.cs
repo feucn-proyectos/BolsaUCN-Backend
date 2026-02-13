@@ -9,6 +9,7 @@ using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Models.Options;
+using backend.src.Domain.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
@@ -347,7 +348,8 @@ namespace backend.src.Application.Services.Implements
             );
             // Obtener detalles de la oferta asociada
             var offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
-                application.JobOfferId
+                application.JobOfferId,
+                new PublicationQueryOptions { IncludeUser = true }
             );
             if (offer == null)
             {
@@ -361,13 +363,11 @@ namespace backend.src.Application.Services.Implements
 
             // Obtener detalles del autor de la oferta
             User user = offer.User;
-            var authorName = user.UserType switch
+            var offerorName = user.UserType switch
             {
                 UserType.Empresa => user.FirstName ?? "Empresa desconocida",
-                UserType.Particular or UserType.Estudiante =>
-                    $"{(user.FirstName ?? "").Trim()} {(user.LastName ?? "").Trim()}".Trim(),
                 UserType.Administrador => "Administrador",
-                _ => user.UserName ?? "Nombre desconocido",
+                _ => (user.FirstName + " " + user.LastName) ?? "Nombre desconocido",
             };
 
             var statusMessage = application.Status switch
@@ -381,7 +381,7 @@ namespace backend.src.Application.Services.Implements
 
             // Mapear a DTO y agregar información configurada
             var detailsDTO = application.Adapt<GetApplicationDetailsDTO>();
-            detailsDTO.CompanyName = authorName;
+            detailsDTO.OfferorName = offerorName;
             detailsDTO.StatusMessage = statusMessage;
 
             return detailsDTO;
