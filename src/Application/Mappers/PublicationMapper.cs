@@ -192,8 +192,20 @@ namespace backend.src.Application.Mappers
                     dest => dest.AdditionalContactPhoneNumber,
                     src => src.AdditionalContactPhoneNumber
                 )
-                .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline)
-                .Map(dest => dest.EndDate, src => src.EndDate)
+                .Map(
+                    dest => dest.ApplicationDeadline,
+                    src =>
+                        src.ApplicationDeadline.HasValue
+                            ? ((DateTime)src.ApplicationDeadline).ToUniversalTime()
+                            : (DateTime?)null
+                )
+                .Map(
+                    dest => dest.EndDate,
+                    src =>
+                        src.EndDate.HasValue
+                            ? ((DateTime)src.EndDate).ToUniversalTime()
+                            : (DateTime?)null
+                )
                 .Map(dest => dest.Remuneration, src => src.Remuneration)
                 .Map(dest => dest.AvailableSlots, src => src.RequiredApplicants)
                 .Map(dest => dest.OfferType, src => src.OfferType)
