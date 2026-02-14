@@ -81,7 +81,10 @@ public class PublicationRepository : IPublicationRepository
         int? userId = null
     )
     {
-        IQueryable<Offer> query = _context.Offers.Where(u => u.UserId != userId).AsQueryable();
+        IQueryable<Offer> query = _context
+            .Offers.Where(u => u.UserId != userId)
+            .Where(p => p.ApprovalStatus == ApprovalStatus.Aceptada)
+            .AsQueryable();
 
         // Filtrado
         if (!string.IsNullOrEmpty(searchParams.FilterBy))

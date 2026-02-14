@@ -508,10 +508,8 @@ namespace backend.src.Application.Services.Implements
                 throw new InvalidOperationException("No hay espacios disponibles en la oferta");
             }
             application.Status = parsedStatus;
-            offer.AvailableSlots =
-                parsedStatus == ApplicationStatus.Aceptada
-                    ? offer.AvailableSlots - 1
-                    : offer.AvailableSlots;
+            if (parsedStatus == ApplicationStatus.Aceptada)
+                offer.AvailableSlots -= 1; // Reducir espacios disponibles si se acepta la postulación
             bool applicationUpdateResult = await _applicationRepository.UpdateAsync(application);
             bool offerUpdateResult = await _publicationRepository.UpdateAsync(offer);
             if (!applicationUpdateResult || !offerUpdateResult)
@@ -522,6 +520,15 @@ namespace backend.src.Application.Services.Implements
                     offerorId
                 );
                 throw new Exception("No se pudo actualizar el estado de la postulación");
+            }
+            // Enviar notificación al postulante
+            //TODO: Personalizar el mensaje de la notificación según el nuevo estado
+
+            // TODO:Cerrar publicacion si no quedan espacios.
+            if (offer.AvailableSlots <= 0)
+            {
+                offer.ApprovalStatus = ApprovalStatus.Cerrada;
+                await _publicationRepository.UpdateAsync(offer);
             }
             return "El estado de la postulación ha sido actualizado con éxito.";
         }
