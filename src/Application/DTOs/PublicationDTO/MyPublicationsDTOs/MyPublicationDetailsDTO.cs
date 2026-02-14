@@ -32,6 +32,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public DateTime? ApplicationDeadline { get; set; }
         public int? Remuneration { get; set; }
         public bool? IsCvRequired { get; set; }
+        public int? RemainingSlots { get; set; }
         public int? ApplicationsCount { get; set; }
 
         // === COMPRA / VENTAS ===

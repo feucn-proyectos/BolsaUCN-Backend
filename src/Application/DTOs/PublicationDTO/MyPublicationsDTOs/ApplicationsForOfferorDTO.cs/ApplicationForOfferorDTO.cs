@@ -11,5 +11,6 @@ namespace backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs
         public required DateTime ApplicationDate { get; set; }
         public string? CVUrl { get; set; }
         public string? CoverLetter { get; set; }
+        public required string Status { get; set; }
     }
 }
