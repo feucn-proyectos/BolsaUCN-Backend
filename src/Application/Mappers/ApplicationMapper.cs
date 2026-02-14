@@ -54,6 +54,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter)
                 .Map(dest => dest.Status, src => src.Status.ToString());
+
             TypeAdapterConfig<JobApplication, ApplicationForOfferorDTO>
                 .NewConfig()
                 .Map(dest => dest.ApplicationId, src => src.Id)
@@ -70,7 +71,9 @@ namespace backend.src.Application.Mappers
                     dest => dest.CVUrl,
                     src => src.Student!.CV != null ? src.Student!.CV!.Url : null
                 )
-                .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null);
+                .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null)
+                .Map(dest => dest.Status, src => src.Status.ToString());
+
             TypeAdapterConfig<JobApplication, ApplicationForAdminDTO>
                 .NewConfig()
                 .Map(dest => dest.ApplicationId, src => src.Id)

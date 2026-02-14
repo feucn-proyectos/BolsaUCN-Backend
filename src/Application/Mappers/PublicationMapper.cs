@@ -158,6 +158,10 @@ namespace backend.src.Application.Mappers
                     dest => dest.ApplicationsCount,
                     src => src is Offer ? ((Offer)src).Applications.Count : (int?)null
                 )
+                .Map(
+                    dest => dest.RemainingSlots,
+                    src => src is Offer ? ((Offer)src).AvailableSlots : (int?)null
+                )
                 // === COMPRA / VENTAS ===
                 .Map(
                     dest => dest.ImageUrls,
