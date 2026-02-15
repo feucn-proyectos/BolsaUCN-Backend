@@ -34,7 +34,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.AboutMe, src => src.AboutMe)
                 .Map(dest => dest.Rating, src => src.Rating)
-                .Map(dest => dest.CurriculumVitae, src => src.CV != null ? src.CV.Url : null)
                 .Map(
                     dest => dest.Disability,
                     src => src.Disability != null ? src.Disability.ToString() : null
@@ -50,8 +49,6 @@ namespace backend.src.Application.Mappers
                 );
             TypeAdapterConfig<User, GetCVDTO>
                 .NewConfig()
-                .Map(dest => dest.Url, src => src.CV!.Url)
-                .Map(dest => dest.OriginalFileName, src => src.CV!.OriginalFileName)
                 .Map(dest => dest.FileSizeBytes, src => src.CV!.FileSizeBytes)
                 .Map(dest => dest.UploadDate, src => src.CV!.CreatedAt);
         }
@@ -73,8 +70,6 @@ namespace backend.src.Application.Mappers
         {
             TypeAdapterConfig<User, GetCVDTO>
                 .NewConfig()
-                .Map(dest => dest.OriginalFileName, src => src.CV!.OriginalFileName)
-                .Map(dest => dest.Url, src => src.CV!.Url)
                 .Map(dest => dest.FileSizeBytes, src => src.CV!.FileSizeBytes)
                 .Map(dest => dest.UploadDate, src => src.CV!.UpdatedAt);
         }
@@ -110,7 +105,6 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.CreatedAt, src => src.CreatedAt)
                 .Map(dest => dest.UpdatedAt, src => src.UpdatedAt)
                 .Map(dest => dest.LastLoginAt, src => src.LastLoginAt)
-                .Map(dest => dest.CVUrl, src => src.CV != null ? src.CV.Url : null)
                 .Map(
                     dest => dest.Disability,
                     src => src.Disability != null ? src.Disability.ToString() : null
