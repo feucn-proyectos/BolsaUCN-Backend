@@ -1,12 +1,14 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface IAdminService
     {
         Task<bool> ToggleUserBlockedStatusAsync(int adminId, int userId);
-        Task<UsersForAdminDTO> GetAllUsersAsync(int adminId, SearchParamsDTO searchParams);
+        Task<UsersForAdminDTO> GetAllUsersAsync(
+            int adminId,
+            UsersForAdminSearchParamsDTO searchParams
+        );
         Task<UserProfileForAdminDTO> GetUserProfileByIdAsync(int adminId, int userId);
-        Task<string> DeleteAdminByIdAsync(int superAdminId, int adminId);
     }
 }

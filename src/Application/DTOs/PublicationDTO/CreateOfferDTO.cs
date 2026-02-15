@@ -1,12 +1,13 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.Validators;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
     /// <summary>
     /// DTO para la creación de ofertas laborales o de voluntariado
     /// </summary>
-    public class CreateOfferDTO : IValidatableObject
+    public class CreateOfferDTO
     {
         [Required(ErrorMessage = "El título es obligatorio")]
         [StringLength(
@@ -25,75 +26,48 @@ namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
         public string Description { get; set; } = null!;
 
         [Required(ErrorMessage = "La fecha de finalización del trabajo es obligatoria")]
+        [FutureDate(ErrorMessage = "La fecha de finalización debe ser en el futuro")]
         public DateTime EndDate { get; set; }
 
         [Required(ErrorMessage = "La fecha Inicial de trabajo es obligatoria")]
-        public DateTime DeadlineDate { get; set; }
+        [FutureDate(ErrorMessage = "La fecha límite debe ser en el futuro")]
+        [CompareDate(
+            "EndDate",
+            ErrorMessage = "La fecha límite debe ser anterior a la fecha de termino de postulacion"
+        )]
+        public DateTime ApplicationDeadline { get; set; }
 
         [Required(ErrorMessage = "La remuneración es obligatoria")]
-        [Range(0, 100000000, ErrorMessage = "La remuneración debe estar entre $0 y $100.000.000")]
-        public decimal Remuneration { get; set; }
+        [Range(0, 1000000, ErrorMessage = "La remuneración debe estar entre $0 y $1.000.000")]
+        public int? Remuneration { get; set; }
 
         [Required(ErrorMessage = "El tipo de oferta es obligatorio")]
-        [Range(0, 1, ErrorMessage = "El Tipo debe ser 1 (Voluntario) o 0 (Oferta)")]
-        public OfferTypes OfferType { get; set; }
+        [RegularExpression(
+            "^(Trabajo|Voluntariado)$",
+            ErrorMessage = "El tipo de oferta debe ser 'Trabajo' o 'Voluntariado'"
+        )]
+        public required string OfferType { get; set; }
 
         [StringLength(200, ErrorMessage = "La ubicación no puede exceder 200 caracteres")]
         public string? Location { get; set; }
 
         [StringLength(1000, ErrorMessage = "Los requisitos no pueden exceder 1000 caracteres")]
-        public string? Requirements { get; set; }
+        public int RequiredApplicants { get; set; }
 
         [StringLength(
             200,
             ErrorMessage = "La información de contacto no puede exceder 200 caracteres"
         )]
-        public string? ContactInfo { get; set; }
+        [RegularExpression(
+            @"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$",
+            ErrorMessage = "El correo electrónico no es válido"
+        )]
+        public string? AdditionalContactEmail { get; set; }
 
-        [MaxLength(10, ErrorMessage = "Máximo 10 imágenes permitidas")]
-        public List<string> ImagesURL { get; set; } = new();
+        [StringLength(15, ErrorMessage = "El número de teléfono no puede exceder 15 caracteres")]
+        public string? AdditionalContactPhoneNumber { get; set; }
 
-        /// <summary>
-        /// Indica si el CV es obligatorio para postular a esta oferta
-        /// Por defecto es true (obligatorio)
-        /// </summary>
-        public bool IsCvRequired { get; set; } = true;
-
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            var now = DateTime.UtcNow;
-
-            if (DeadlineDate <= now)
-            {
-                yield return new ValidationResult(
-                    "La fecha límite debe ser posterior a la fecha actual",
-                    new[] { nameof(DeadlineDate) }
-                );
-            }
-
-            if (EndDate <= now)
-            {
-                yield return new ValidationResult(
-                    "La fecha de finalización debe ser posterior a la fecha actual",
-                    new[] { nameof(EndDate) }
-                );
-            }
-
-            if (EndDate <= DeadlineDate)
-            {
-                yield return new ValidationResult(
-                    "La fecha de finalización debe ser posterior a la fecha límite de postulación",
-                    new[] { nameof(EndDate) }
-                );
-            }
-
-            if (OfferType == OfferTypes.Voluntariado && Remuneration > 0)
-            {
-                yield return new ValidationResult(
-                    "Un voluntariado no puede tener remuneración mayor a 0",
-                    new[] { nameof(Remuneration) }
-                );
-            }
-        }
+        [Required(ErrorMessage = "Debe especificar si el CV es obligatorio")]
+        public bool IsCvRequired { get; set; }
     }
 }

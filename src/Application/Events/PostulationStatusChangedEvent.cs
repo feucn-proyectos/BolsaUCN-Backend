@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Events
+namespace backend.src.Application.Events
 {
     /// <summary>
     /// Event payload used when a postulation (application) status changes.

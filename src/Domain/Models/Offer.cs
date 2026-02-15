@@ -1,7 +1,9 @@
-namespace bolsafeucn_back.src.Domain.Models
+using Hangfire.Common;
+
+namespace backend.src.Domain.Models
 {
     /// <summary>
-    /// Enum that defines available offer categories in the system.
+    /// Tipos de oferta (trabajo o voluntariado).
     /// </summary>
     public enum OfferTypes
     {
@@ -10,50 +12,45 @@ namespace bolsafeucn_back.src.Domain.Models
     }
 
     /// <summary>
-    /// Represents a job or volunteer offer published in the system.
-    /// Inherits common publication properties from <see cref="Publication"/>.
+    /// Representa una oferta de trabajo o voluntariado publicada en el sistema.
+    /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
     /// </summary>
     public class Offer : Publication
     {
         /// <summary>
-        /// End date of the offer (when the position or opportunity ends).
+        /// Fecha de finalización de la oferta (cuando termina la posición o oportunidad).
         /// </summary>
-        public DateTime EndDate { get; set; }
+        public required DateTime EndDate { get; set; }
 
         /// <summary>
-        /// Application deadline date for the offer.
+        /// Fecha límite de postulación para la oferta.
         /// </summary>
-        public DateTime DeadlineDate { get; set; }
+        public required DateTime ApplicationDeadline { get; set; }
 
         /// <summary>
-        /// Offered remuneration in Chilean pesos. Use 0 for volunteer positions.
+        /// Remuneración ofrecida en pesos chilenos. No aplica para posiciones voluntarias.
         /// </summary>
-        public required int Remuneration { get; set; }
+        public int? Remuneration { get; set; }
 
         /// <summary>
-        /// Offer category (e.g., Trabajo, Voluntariado).
+        /// Número de postulantes requeridos para la oferta.
+        /// </summary>
+        public int AvailableSlots { get; set; } = 1;
+
+        /// <summary>
+        /// Categoría de la oferta (e.g., Trabajo, Voluntariado).
         /// </summary>
         public required OfferTypes OfferType { get; set; }
 
         /// <summary>
-        /// Job location (city, region, remote, etc.). Optional.
+        /// Colección de postulaciones realizadas a esta oferta.
         /// </summary>
-        public string? Location { get; set; }
+        public ICollection<JobApplication> Applications { get; set; } = [];
 
         /// <summary>
-        /// Specific requirements for the offer (skills, education, experience).
-        /// </summary>
-        public string? Requirements { get; set; }
-
-        /// <summary>
-        /// Contact information (email or phone) for the offer.
-        /// </summary>
-        public string? ContactInfo { get; set; }
-
-        /// <summary>
-        /// Indicates whether uploading a CV is required to apply.
-        /// true = CV required; false = CV optional.
-        /// Default is true.
+        /// Indica si es obligatorio subir un CV para postular.
+        /// true = CV obligatorio; false = CV opcional.
+        /// Por defecto es true.
         /// </summary>
         public bool IsCvRequired { get; set; } = true;
     }

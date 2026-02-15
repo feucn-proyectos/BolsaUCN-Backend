@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
     /// <summary>
     /// DTO para la creación de publicaciones de compra/venta
@@ -31,8 +31,9 @@ namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
         [Range(0, 100000000, ErrorMessage = "El precio debe estar entre $0 y $100.000.000")]
         public required decimal Price { get; set; }
 
-        [MaxLength(10, ErrorMessage = "Máximo 10 imágenes permitidas")]
-        public required List<string> ImagesURL { get; set; } = new List<string>();
+        /* === IMAGENES (NO USADO POR AHORA) ===
+        public required List<IFormFile> Images { get; set; } = new List<IFormFile>();
+        */
 
         [StringLength(200, ErrorMessage = "La ubicación no puede exceder 200 caracteres")]
         public string? Location { get; set; }
@@ -41,6 +42,25 @@ namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
             200,
             ErrorMessage = "La información de contacto no puede exceder 200 caracteres"
         )]
-        public string? ContactInfo { get; set; }
+        public string? AdditionalContactEmail { get; set; }
+
+        [StringLength(15, ErrorMessage = "El número de contacto no puede exceder 200 caracteres")]
+        public string? AdditionalContactPhoneNumber { get; set; }
+
+        public int Quantity { get; set; }
+
+        [Required(ErrorMessage = "La disponibilidad es obligatoria")]
+        [RegularExpression(
+            @"^(Disponible|Vendido)$",
+            ErrorMessage = "El tipo de discapacidad no es válido."
+        )]
+        public required string Availability { get; set; }
+
+        [Required(ErrorMessage = "La condición es obligatoria")]
+        [RegularExpression(
+            @"^(Nuevo|ComoNuevo|Usado|NoAplica)$",
+            ErrorMessage = "La condición no es válida."
+        )]
+        public required string Condition { get; set; }
     }
 }

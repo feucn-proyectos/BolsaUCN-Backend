@@ -1,11 +1,11 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs
+namespace backend.src.Application.DTOs.UserDTOs.AdminDTOs
 {
     public class UserProfileForAdminDTO
     {
         public int Id { get; set; }
-        public required string Username { get; set; }
+        public required string UserName { get; set; }
         public required string Email { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
@@ -23,6 +23,7 @@ namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs
         // Student specific fields
         public string? CVUrl { get; set; }
         public string? Disability { get; set; }
+
         // Admin specific fields
         public bool? SuperAdmin { get; set; }
     }

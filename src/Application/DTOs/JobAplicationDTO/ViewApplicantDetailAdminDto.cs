@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace bolsafeucn_back.src.Application.DTOs.JobAplicationDTO
+namespace backend.src.Application.DTOs.JobAplicationDTO
 {
     /// <summary>
     /// Obtiene los detalles para que el admin vea al postulante

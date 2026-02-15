@@ -1,8 +1,10 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Domain.Models;
+using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     /// <summary>
     /// Mapper para transformar entre entidades de dominio Review y sus DTOs correspondientes.
@@ -138,7 +140,7 @@ namespace bolsafeucn_back.src.Application.Mappers
         )
         {
             var reviewDto = ShowReviewDTO(review);
-            var publicationDto = PublicationMapper.ToDTO(publication);
+            var publicationDto = publication.Adapt<PublicationsDTO>();
             // Ocultar datos según el tipo de usuario y el estado de la review
             var bool1 = !reviewDto.IsClosed && userType != UserType.Administrador;
             var bool2 =

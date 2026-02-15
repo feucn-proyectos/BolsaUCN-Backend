@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.AuthDTOs;
+using backend.src.Domain.Models;
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     public class UserMapper
     {
@@ -29,7 +29,7 @@ namespace bolsafeucn_back.src.Application.Mappers
                 .Map(dest => dest.Rut, src => src.Rut)
                 .Map(dest => dest.UserType, src => UserType.Estudiante)
                 .Map(dest => dest.Disability, src => src.Disability)
-                .Map(dest => dest.Banned, src => false)
+                .Map(dest => dest.IsBlocked, src => false)
                 .Map(dest => dest.EmailConfirmed, src => false);
 
             TypeAdapterConfig<RegisterIndividualDTO, User>
@@ -47,7 +47,7 @@ namespace bolsafeucn_back.src.Application.Mappers
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.Rut, src => src.Rut)
                 .Map(dest => dest.UserType, src => UserType.Particular)
-                .Map(dest => dest.Banned, src => false)
+                .Map(dest => dest.IsBlocked, src => false)
                 .Map(dest => dest.EmailConfirmed, src => false);
 
             TypeAdapterConfig<RegisterCompanyDTO, User>
@@ -65,7 +65,7 @@ namespace bolsafeucn_back.src.Application.Mappers
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.Rut, src => src.Rut)
                 .Map(dest => dest.UserType, src => UserType.Empresa)
-                .Map(dest => dest.Banned, src => false)
+                .Map(dest => dest.IsBlocked, src => false)
                 .Map(dest => dest.EmailConfirmed, src => false);
 
             TypeAdapterConfig<RegisterAdminDTO, User>
@@ -83,7 +83,7 @@ namespace bolsafeucn_back.src.Application.Mappers
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.Rut, src => src.Rut)
                 .Map(dest => dest.UserType, src => UserType.Administrador)
-                .Map(dest => dest.Banned, src => false)
+                .Map(dest => dest.IsBlocked, src => false)
                 .Map(dest => dest.EmailConfirmed, src => false);
         }
     }

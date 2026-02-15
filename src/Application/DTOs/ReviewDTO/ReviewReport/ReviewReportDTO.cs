@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO.ReviewReport
+namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
 {
     /// <summary>
     /// DTO que contiene toda la información necesaria para generar un reporte PDF de reviews de un usuario

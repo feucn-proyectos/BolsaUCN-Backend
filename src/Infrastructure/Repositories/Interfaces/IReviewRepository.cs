@@ -1,7 +1,7 @@
 using System;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     /// <summary>
     /// Interfaz que define las operaciones de acceso a datos para las reseñas.
@@ -70,6 +70,14 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<Review>> GetAllAsync();
+
+        /// <summary>
+        /// Obtiene el conteo de reseñas pendientes para un usuario específico, con opción de filtrar por rol.
+        /// </summary>
+        /// <param name="userId">El identificador del usuario.</param>
+        /// <param name="role">El rol del usuario (opcional). Si <c>null</c>, se ignora y se buscan reseñas pendientes para todos los roles.</param>
+        /// <returns>El número de reseñas pendientes.</returns>
+        Task<int> GetPendingCountOfReviewsByUserIdAsync(int userId, string? role = null);
         Task<IEnumerable<Publication>> GetPublicationInformationAsync(int publicationId);
     }
 }

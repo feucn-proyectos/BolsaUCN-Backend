@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
+namespace backend.src.Application.DTOs.OfferDTOs
 {
     /// <summary>
     /// <summary>
@@ -40,7 +40,7 @@ namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
         /// <summary>
         /// Publication type (Offer, BuySell).
         /// </summary>
-        public Types Type { get; set; }
+        public PublicationType Type { get; set; }
 
         /// <summary>
         /// Whether the offer is currently active.
@@ -50,7 +50,7 @@ namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
         /// <summary>
         /// Administrative validation status for the offer.
         /// </summary>
-        public StatusValidation statusValidation { get; set; }
+        public ApprovalStatus statusValidation { get; set; }
         public DateTime EndDate { get; set; }
         public DateTime DeadlineDate { get; set; }
         public int Remuneration { get; set; }
@@ -64,6 +64,5 @@ namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
         public string ContactInfo { get; set; }
         public string AboutMe { get; set; }
         public double Rating { get; set; }
-
     }
 }

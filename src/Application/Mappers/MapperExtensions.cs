@@ -1,6 +1,6 @@
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     public class MapperExtensions
     {
@@ -8,10 +8,14 @@ namespace bolsafeucn_back.src.Application.Mappers
         {
             var userMapper = serviceProvider.GetService<UserMapper>();
             userMapper?.ConfigureAllMappings();
+            var publicationMapper = serviceProvider.GetService<PublicationMapper>();
+            publicationMapper?.ConfigureAllMappings();
             var offerMapper = serviceProvider.GetService<OfferMapper>();
             offerMapper?.ConfigureAllMappings();
             var buySellMapper = serviceProvider.GetService<BuySellMapper>();
             buySellMapper?.ConfigureAllMappings();
+            var applicationMapper = serviceProvider.GetService<ApplicationMapper>();
+            applicationMapper?.ConfigureAllMappings();
             var profileMapper = serviceProvider.GetService<ProfileMapper>();
             profileMapper?.ConfigureAllMappings();
 

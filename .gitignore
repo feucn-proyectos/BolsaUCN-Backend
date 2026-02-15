@@ -71,4 +71,4 @@ docker-compose.override.yml
 
 
 .config/dotnet-tools.json
-bolsafeucn_back/appsettings.json
+backend/appsettings.json

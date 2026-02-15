@@ -1,11 +1,12 @@
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
 using Bogus;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Infrastructure.Data
+namespace backend.src.Application.Infrastructure.Data
 {
     public class DataSeeder
     {
@@ -29,11 +30,28 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information("DataSeeder: No se encontraron roles, creando roles...");
                     var roles = new List<Role>
                     {
-                        new Role { Name = "Admin", NormalizedName = "ADMIN" },
-                        new Role { Name = "Applicant", NormalizedName = "APPLICANT" },
-                        new Role { Name = "Offerent", NormalizedName = "OFFERENT" },
-                        new Role { Name = "SuperAdmin", NormalizedName = "SUPERADMIN" },
+                        new Role
+                        {
+                            Name = RoleNames.Admin,
+                            NormalizedName = RoleNames.Admin.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.Applicant,
+                            NormalizedName = RoleNames.Applicant.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.Offeror,
+                            NormalizedName = RoleNames.Offeror.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.SuperAdmin,
+                            NormalizedName = RoleNames.SuperAdmin.ToUpper(),
+                        },
                     };
+
                     foreach (var role in roles)
                     {
                         await roleManager.CreateAsync(role);
@@ -55,7 +73,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information(
                         "DataSeeder: No se encontraron ofertas, creando ofertas de prueba..."
                     );
-                    await SeedOffers(context);
+                    await SeedOffers(context, userManager);
                     Log.Information("DataSeeder: Ofertas de prueba creadas exitosamente.");
                 }
                 if (!await context.BuySells.AnyAsync())
@@ -63,7 +81,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information(
                         "DataSeeder: No hay avisos de compra/venta, creando datos de prueba..."
                     );
-                    await SeedBuySells(context);
+                    await SeedBuySells(context, userManager);
                     Log.Information("DataSeeder: Compra/venta de prueba creados.");
                 }
                 if (!await context.JobApplications.AnyAsync())
@@ -71,7 +89,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information(
                         "DataSeeder: No se encontraron postulaciones, creando postulaciones de prueba..."
                     );
-                    await SeedJobApplications(context);
+                    await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
                 if (!await context.Reviews.AnyAsync())
@@ -79,7 +97,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
                     );
-                    await SeedReviews(context);
+                    await SeedReviews(context, userManager);
                     Log.Information("DataSeeder: Reviews de prueba creadas exitosamente.");
                 }
             }
@@ -113,7 +131,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 UserType = UserType.Estudiante,
                 Rut = "12345678-9",
                 EmailConfirmed = true,
-                Banned = false,
+                IsBlocked = false,
                 Rating = 3.3,
                 FirstName = "Juan",
                 LastName = "Pérez Estudiante",
@@ -136,7 +154,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var studentResult1 = await userManager.CreateAsync(testStudentUser1, "Test123!");
             if (studentResult1.Succeeded)
             {
-                await userManager.AddToRoleAsync(testStudentUser1, "Applicant");
+                await userManager.AddToRolesAsync(
+                    testStudentUser1,
+                    [RoleNames.Applicant, RoleNames.Offeror]
+                );
                 Log.Information(
                     "✅ Usuario estudiante creado: estudiante@alumnos.ucn.cl / Test123!"
                 );
@@ -152,7 +173,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Estudiante con varias evaluaciones pendientes",
                 Rut = "22334455-6",
                 EmailConfirmed = true,
-                Banned = false,
+                IsBlocked = false,
                 Rating = 0.0,
                 FirstName = "Pedro",
                 LastName = "López Morales",
@@ -175,7 +196,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var studentResult2 = await userManager.CreateAsync(testStudentUser2, "Test123!");
             if (studentResult2.Succeeded)
             {
-                await userManager.AddToRoleAsync(testStudentUser2, "Applicant");
+                await userManager.AddToRolesAsync(
+                    testStudentUser2,
+                    [RoleNames.Applicant, RoleNames.Offeror]
+                );
                 Log.Information(
                     "✅ Usuario estudiante creado: estudiante2@alumnos.ucn.cl / Test123!"
                 );
@@ -192,7 +216,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Rut = "76543210-K",
                 EmailConfirmed = true,
                 Rating = 5.4,
-                Banned = false,
+                IsBlocked = false,
                 FirstName = "Tech Corp SpA",
                 LastName = "Tecnología Corporativa SpA",
                 ProfilePhoto = new UserImage
@@ -212,7 +236,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var companyResult = await userManager.CreateAsync(testCompanyUser, "Test123!");
             if (companyResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testCompanyUser, "Offerent");
+                await userManager.AddToRoleAsync(testCompanyUser, RoleNames.Offeror);
                 Log.Information("✅ Usuario empresa creado: empresa@techcorp.cl / Test123!");
             }
 
@@ -227,7 +251,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Rut = "11222333-4",
                 EmailConfirmed = true,
                 Rating = 6.0,
-                Banned = false,
+                IsBlocked = false,
                 FirstName = "María",
                 LastName = "González Particular",
                 ProfilePhoto = new UserImage
@@ -247,7 +271,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var individualResult = await userManager.CreateAsync(testIndividualUser, "Test123!");
             if (individualResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testIndividualUser, "Offerent");
+                await userManager.AddToRoleAsync(testIndividualUser, RoleNames.Offeror);
                 Log.Information("✅ Usuario particular creado: particular@ucn.cl / Test123!");
             }
 
@@ -261,7 +285,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Administrador del sistema BolsaUcn",
                 Rut = "99888777-6",
                 EmailConfirmed = true,
-                Banned = false,
+                IsBlocked = false,
                 FirstName = "Administrador",
                 LastName = "Sistema",
                 ProfilePhoto = new UserImage
@@ -281,7 +305,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var adminResult = await userManager.CreateAsync(testAdminUser, "Test123!");
             if (adminResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testAdminUser, "SuperAdmin");
+                await userManager.AddToRolesAsync(
+                    testAdminUser,
+                    [RoleNames.Admin, RoleNames.SuperAdmin, RoleNames.Offeror]
+                );
                 Log.Information("✅ Usuario admin creado: admin@ucn.cl / Test123!");
             }
 
@@ -328,7 +355,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
                     Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                    Banned = faker.Random.Bool(0.3f),
+                    IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Name.FirstName(),
                     LastName = faker.Name.LastName(),
                     Disability = faker.PickRandom<Disability>(),
@@ -349,7 +376,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 var result = await userManager.CreateAsync(studentUser, "Password123!");
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(studentUser, "Applicant");
+                    await userManager.AddToRolesAsync(
+                        studentUser,
+                        [RoleNames.Applicant, RoleNames.Offeror]
+                    );
                 }
             }
 
@@ -365,7 +395,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
                     Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                    Banned = faker.Random.Bool(0.3f),
+                    IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Company.CompanyName(),
                     LastName = faker.Company.CompanyName() + " S.A.",
                     ProfilePhoto = new UserImage
@@ -385,7 +415,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 var result = await userManager.CreateAsync(companyUser, "Password123!");
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(companyUser, "Offerent");
+                    await userManager.AddToRoleAsync(companyUser, RoleNames.Offeror);
                 }
             }
 
@@ -399,7 +429,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = faker.Random.Replace("################"),
                 EmailConfirmed = true,
                 Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                Banned = faker.Random.Bool(0.9f),
+                IsBlocked = faker.Random.Bool(0.9f),
                 FirstName = faker.Name.FirstName(),
                 LastName = faker.Name.LastName(),
                 ProfilePhoto = new UserImage
@@ -422,20 +452,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             );
             if (randomIndividualResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(randomIndividualUser, "Offerent");
+                await userManager.AddToRoleAsync(randomIndividualUser, RoleNames.Offeror);
             }
 
             await context.SaveChangesAsync();
             Log.Information("DataSeeder: Todos los usuarios creados exitosamente.");
         }
 
-        private static async Task SeedOffers(AppDbContext context)
+        private static async Task SeedOffers(AppDbContext context, UserManager<User> userManager)
         {
-            var offerents = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
 
             if (offerents.Count == 0)
                 return;
@@ -540,18 +566,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
                     Title = s.Title,
                     Description = s.Desc,
-                    PublicationDate = now.AddDays(-i % 3), // algunas “recientes”
-                    Type = Types.Offer,
-                    IsActive = true,
-                    statusValidation = StatusValidation.Published,
+                    CreatedAt = now.AddDays(-i % 3), // algunas “recientes”
+                    PublicationType = PublicationType.Oferta,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
                     EndDate = s.End,
-                    DeadlineDate = s.Deadline,
+                    ApplicationDeadline = s.Deadline,
                     Remuneration = s.Rem,
                     OfferType = s.Type,
                     Location = s.Loc,
-                    Requirements = s.Req,
-                    ContactInfo = s.Contact,
+                    AdditionalContactEmail = s.Contact,
                     IsCvRequired = s.IsCv,
                 };
 
@@ -568,19 +592,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Title = "Práctica Desarrollo .NET (En Revisión)",
                 Description =
                     "Se busca estudiante para práctica de 3 meses en desarrollo backend con .NET y Azure. El postulante debe estar en último año. Esta oferta está pendiente de aprobación por la DGE.",
-                PublicationDate = now.AddDays(-1),
-                Type = Types.Offer,
-                IsActive = true,
-                statusValidation = StatusValidation.InProcess, // <- Estado solicitado
+                CreatedAt = now.AddDays(-1),
+                PublicationType = PublicationType.Oferta,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
                 EndDate = now.AddMonths(3),
-                DeadlineDate = now.AddDays(14),
+                ApplicationDeadline = now.AddDays(14),
                 Remuneration = 400000, // Remuneración de práctica
                 OfferType = OfferTypes.Trabajo, // Asumiendo que Práctica es un tipo de Trabajo
                 Location = "Remoto (Chile)",
-                Requirements =
-                    "Cursando último año. Conocimiento en C# y SQL Server. Deseable Azure.",
-                ContactInfo = "rrhh.pending@techcorp.cl",
+                AdditionalContactEmail = "rrhh.pending@techcorp.cl",
                 IsCvRequired = true,
             };
             context.Offers.Add(inProcessOffer);
@@ -623,16 +644,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 var publicationDate = nowForFaker.AddDays(-daysSincePost);
 
                 var isActive = true;
-                var status = StatusValidation.Published;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.InProcess;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rejected;
+                    status = ApprovalStatus.Rechazada;
                     isActive = false;
                 }
 
@@ -641,7 +662,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     endDate = nowForFaker.AddDays(-faker.Random.Int(1, 5)); // Finalizada
                     isActive = false;
-                    status = StatusValidation.Closed;
+                    status = ApprovalStatus.Cerrada;
                 }
 
                 var offer = new Offer
@@ -651,18 +672,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
                     Title = faker.Name.JobTitle(),
                     Description = faker.Lorem.Paragraph(3),
-                    PublicationDate = publicationDate,
-                    Type = Types.Offer,
-                    IsActive = isActive,
-                    statusValidation = status,
+                    CreatedAt = publicationDate,
+                    PublicationType = PublicationType.Oferta,
+                    ApprovalStatus = status,
 
                     EndDate = endDate,
-                    DeadlineDate = deadlineDate,
+                    ApplicationDeadline = deadlineDate,
                     Remuneration = remuneration,
                     OfferType = offerType,
                     Location = location,
-                    Requirements = faker.Lorem.Sentence(5),
-                    ContactInfo = faker.Internet.Email(),
+                    AdditionalContactEmail = faker.Internet.Email(),
                     IsCvRequired = isCvRequired,
                 };
 
@@ -670,16 +689,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             } // +1 por la nueva
         }
 
-        private static async Task SeedBuySells(AppDbContext context)
+        private static async Task SeedBuySells(AppDbContext context, UserManager<User> userManager)
         {
             var now = DateTime.UtcNow;
 
             // Buscamos oferentes (empresa o particular) para asociar publicaciones
-            var sellers = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var sellers = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
             if (sellers.Count == 0)
                 return;
 
@@ -694,7 +709,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Venta libro Cálculo I (Stewart 7ma)",
                     Desc = "En buen estado, pocas marcas.",
-                    Price = 12000m,
+                    Price = 12000,
                     Category = "Libros",
                     Loc = "Antofagasta",
                     Contact = "ignacio@ucn.cl",
@@ -703,7 +718,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Teclado mecánico Redragon K552",
                     Desc = "Switch blue, 1 año de uso.",
-                    Price = 18000m,
+                    Price = 18000,
                     Category = "Tecnología",
                     Loc = "Coquimbo",
                     Contact = "+56987654321",
@@ -712,7 +727,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Bata laboratorio talla M",
                     Desc = "Lavada y desinfectada, casi nueva.",
-                    Price = 8000m,
+                    Price = 8000,
                     Category = "Laboratorio",
                     Loc = "Antofagasta",
                     Contact = "c.labs@ucn.cl",
@@ -721,7 +736,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Calculadora científica Casio fx-82",
                     Desc = "Funciona perfecto, con pilas nuevas.",
-                    Price = 9000m,
+                    Price = 9000,
                     Category = "Accesorios",
                     Loc = "Remoto",
                     Contact = "ventas@ucn.cl",
@@ -730,7 +745,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Pack cuadernos + destacadores",
                     Desc = "5 cuadernos college + 6 destacadores.",
-                    Price = 6000m,
+                    Price = 6000,
                     Category = "Útiles",
                     Loc = "Coquimbo",
                     Contact = "j.vende@ucn.cl",
@@ -748,15 +763,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     User = owner,
                     Title = it.Title,
                     Description = it.Desc,
-                    PublicationDate = now.AddDays(-(i % 3)),
-                    Type = Types.BuySell,
-                    IsActive = true,
-                    statusValidation = StatusValidation.Published,
+                    CreatedAt = now.AddDays(-(i % 3)),
+                    PublicationType = PublicationType.CompraVenta,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
                     Price = it.Price,
+                    Quantity = 1,
+                    Availability = Availability.Disponible,
+                    Condition = Condition.Nuevo,
                     Category = it.Category,
                     Location = it.Loc,
-                    ContactInfo = it.Contact,
+                    AdditionalContactEmail = it.Contact,
                 };
 
                 context.BuySells.Add(bs);
@@ -771,15 +788,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Title = "Venta de apuntes",
                 Description =
                     "Vendo todos mis apuntes de primer año de ing. civil. Están en PDF. El admin debe revisar que no sea material con copyright.",
-                PublicationDate = now.AddDays(-1),
-                Type = Types.BuySell,
-                IsActive = true,
-                statusValidation = StatusValidation.InProcess, // <- Estado solicitado
+                CreatedAt = now.AddDays(-1),
+                PublicationType = PublicationType.CompraVenta,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
-                Price = 15000m,
+                Price = 15000,
+                Quantity = 1,
+                Availability = Availability.Disponible,
+                Condition = Condition.Nuevo,
                 Category = "Útiles",
                 Location = "Digital (PDF)",
-                ContactInfo = "apuntes.pendientes@ucn.cl",
+                AdditionalContactEmail = "apuntes.pendientes@ucn.cl",
             };
             context.BuySells.Add(inProcessBuySell);
 
@@ -822,16 +841,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         : $"{category}: {faker.Commerce.ProductName()}";
 
                 var isActive = true;
-                var status = StatusValidation.Published;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.InProcess;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rejected;
+                    status = ApprovalStatus.Rechazada;
                     isActive = false;
                 }
 
@@ -842,15 +861,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = title,
                     Description =
                         faker.Commerce.ProductDescription() + ". " + faker.Lorem.Sentence(5),
-                    PublicationDate = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
-                    Type = Types.BuySell,
-                    IsActive = isActive,
-                    statusValidation = status,
+                    CreatedAt = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
+                    PublicationType = PublicationType.CompraVenta,
+                    ApprovalStatus = status,
 
-                    Price = faker.Random.Decimal(5000, 100000),
+                    Price = faker.Random.Int(5000, 100000),
+                    Quantity = 1,
+                    Availability = Availability.Disponible,
+                    Condition = Condition.Nuevo,
                     Category = category,
                     Location = faker.PickRandom(locations),
-                    ContactInfo = faker.Random.Bool(0.7f)
+                    AdditionalContactEmail = faker.Random.Bool(0.7f)
                         ? faker.Phone.PhoneNumber("+569########")
                         : faker.Internet.Email(),
                 };
@@ -859,7 +880,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             }
         }
 
-        private static async Task SeedJobApplications(AppDbContext context)
+        private static async Task SeedJobApplications(
+            AppDbContext context,
+            UserManager<User> userManager
+        )
         {
             var studentUser = await context.Users.FirstOrDefaultAsync(u =>
                 u.Email == "estudiante@alumnos.ucn.cl"
@@ -869,17 +893,14 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var offers = await context
                 .Offers.Include(o => o.User)
                 .Where(o =>
-                    o.statusValidation == StatusValidation.Published
-                    && o.IsActive == true
-                    && o.DeadlineDate > DateTime.UtcNow
-                    && o.Type == Types.Offer
+                    o.ApprovalStatus == ApprovalStatus.Aceptada
+                    && o.ApplicationDeadline > DateTime.UtcNow
+                    && o.PublicationType == PublicationType.Oferta
                 )
                 .ToListAsync();
 
             // Obtener todos los estudiantes para postular aleatoriamente
-            var allStudents = await context
-                .Users.Where(u => u.UserType == UserType.Estudiante)
-                .ToListAsync();
+            var allStudents = await userManager.GetUsersInRoleAsync(RoleNames.Applicant);
 
             if (offers.Count < 5 || allStudents.Count == 0 || studentUser == null)
             {
@@ -909,7 +930,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[4].Id, // offers[4]
                         JobOffer = offersForTestStudent[4],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-2),
+                        CreatedAt = DateTime.UtcNow.AddDays(-2),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -918,7 +940,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[3].Id, // offers[3]
                         JobOffer = offersForTestStudent[3],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-7),
+                        CreatedAt = DateTime.UtcNow.AddDays(-7),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -927,7 +950,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[0].Id, // offers[0]
                         JobOffer = offersForTestStudent[0],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-5),
+                        CreatedAt = DateTime.UtcNow.AddDays(-5),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -936,7 +960,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[1].Id, // offers[1]
                         JobOffer = offersForTestStudent[1],
                         Status = ApplicationStatus.Aceptada,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-3),
+                        CreatedAt = DateTime.UtcNow.AddDays(-3),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -945,7 +970,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[2].Id, // offers[2]
                         JobOffer = offersForTestStudent[2],
                         Status = ApplicationStatus.Rechazada,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-1),
+                        CreatedAt = DateTime.UtcNow.AddDays(-1),
+                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                 }
             );
@@ -977,7 +1003,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                             JobOfferId = offerToApply.Id,
                             JobOffer = offerToApply,
                             Status = faker.PickRandom<ApplicationStatus>(),
-                            ApplicationDate = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
+                            CreatedAt = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
+                            ReviewStatus = ReviewStatus.NoDisponible,
                         }
                     );
                 }
@@ -1003,16 +1030,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
         /// ADMIN: ID 4 (admin@ucn.cl - NO usar en reviews)
         /// PUBLICACIONES: Offers con IDs secuenciales desde 1
         /// </summary>
-        private static async Task SeedReviews(AppDbContext context)
+        private static async Task SeedReviews(AppDbContext context, UserManager<User> userManager)
         {
-            var students = await context
-                .Users.Where(u => u.UserType == UserType.Estudiante)
-                .ToListAsync();
-            var offerents = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var students = await userManager.GetUsersInRoleAsync(RoleNames.Applicant);
+            var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
             var publications = await context.Offers.ToListAsync();
 
             if (students.Count == 0 || offerents.Count == 0 || publications.Count == 0)
@@ -1034,7 +1055,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             {
                 Log.Information($"   ID {s.Id}: {s.Email}");
             }
-            Log.Information("🏢 OFERENTES (Offerent):");
+            Log.Information("🏢 OFERENTES (Offeror):");
             foreach (var o in offerents)
             {
                 var type = o.UserType == UserType.Empresa ? "Empresa" : "Particular";

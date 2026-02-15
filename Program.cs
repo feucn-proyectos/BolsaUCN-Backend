@@ -1,19 +1,17 @@
-using bolsafeucn_back.src.Application.Infrastructure.Data;
-using bolsafeucn_back.src.Application.Mappers;
-using bolsafeucn_back.src.Application.Services.Implements;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Extensions;
-using bolsafeucn_back.src.Infrastructure.Repositories.Implements;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.Infrastructure.Data;
+using backend.src.Application.Mappers;
+using backend.src.Application.Services.Implements;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Implements;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Net.Http.Headers; // <<-- para CORS (HeaderNames)
 using Resend;
 using Serilog;
@@ -154,14 +152,15 @@ try
     // 6) DI (repos/services/mappers)
     // =========================
     builder.Services.AddScoped<UserMapper>();
+    builder.Services.AddScoped<PublicationMapper>();
     builder.Services.AddScoped<OfferMapper>();
+    builder.Services.AddScoped<BuySellMapper>();
+    builder.Services.AddScoped<ApplicationMapper>();
     builder.Services.AddScoped<ProfileMapper>();
 
     builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IOfferRepository, OfferRepository>();
-    builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
-    builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+    builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
     builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
     builder.Services.AddScoped<IAdminNotificationRepository, AdminNotificationRepository>();
     builder.Services.AddScoped<IFileRepository, FileRepository>();
@@ -173,15 +172,13 @@ try
     builder.Services.AddScoped<IAdminService, AdminService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
-    builder.Services.AddScoped<IOfferService, OfferService>();
-    builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
+    builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
     builder.Services.AddScoped<IPublicationService, PublicationService>();
-    builder.Services.AddScoped<IBuySellService, BuySellService>();
     builder.Services.AddScoped<IReviewService, ReviewService>();
     builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
-    builder.Services.AddDocumentStorageProvider(builder.Configuration);
+    builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
     builder.Services.AddMapster();
 
@@ -213,7 +210,7 @@ try
     #endregion
     #region Middleware
     // Middleware global de errores (antes de todo)
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
+    app.UseMiddleware<backend.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
     #endregion
 
     // Seed DB + Mapster (al inicio)
@@ -234,26 +231,8 @@ try
 
     // Muy importante: primero autenticación, luego autorización
     app.UseAuthentication();
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
+    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
     app.UseAuthorization();
-
-    // Configuración para servir archivos estáticos desde la carpeta "uploads"
-    var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
-    if (!Directory.Exists(uploadsPath))
-        Directory.CreateDirectory(uploadsPath);
-    app.UseStaticFiles(
-        new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(
-                Path.Combine(builder.Environment.ContentRootPath, "uploads")
-            ),
-            RequestPath = "/uploads",
-            OnPrepareResponse = ctx =>
-            {
-                ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=3600");
-            },
-        }
-    );
 
     app.MapControllers();
 

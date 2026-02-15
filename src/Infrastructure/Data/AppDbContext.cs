@@ -1,9 +1,9 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Infrastructure.Data
+namespace backend.src.Infrastructure.Data
 {
     /// <summary>
     /// Contexto de base de datos principal de la aplicación
@@ -30,7 +30,6 @@ namespace bolsafeucn_back.src.Infrastructure.Data
         public DbSet<ReviewChecklistValues> ReviewChecklistValues { get; set; }
         public DbSet<AdminNotification> AdminNotifications { get; set; }
 
-
         // public DbSet<Review> Reviews { get; set; } // Desactivado temporalmente
 
         /// <summary>
@@ -52,7 +51,7 @@ namespace bolsafeucn_back.src.Infrastructure.Data
             builder
                 .Entity<JobApplication>()
                 .HasOne(ja => ja.JobOffer)
-                .WithMany()
+                .WithMany(o => o.Applications)
                 .HasForeignKey(ja => ja.JobOfferId);
 
             // Relaciones de Publication (clase base para ofertas y compra/venta)
@@ -95,9 +94,7 @@ namespace bolsafeucn_back.src.Infrastructure.Data
 
             // Review - ReviewChecklistValues (1:1)
             // Cada review tiene exactamente un conjunto de valores de checklist
-            builder
-                .Entity<Review>()
-                .OwnsOne(r => r.ReviewChecklistValues);
+            builder.Entity<Review>().OwnsOne(r => r.ReviewChecklistValues);
 
             // Relaciones de UserImage (Imágenes de usuario)
             // Relación uno a uno entre GeneralUser y sus imágenes de perfil y banner
@@ -116,10 +113,7 @@ namespace bolsafeucn_back.src.Infrastructure.Data
                 .OnDelete(DeleteBehavior.SetNull);
 
             // --- Fix: almacenar ApplicationStatus como string en la base de datos ---
-            builder
-                .Entity<JobApplication>()
-                .Property(j => j.Status)
-                .HasConversion<string>();
+            builder.Entity<JobApplication>().Property(j => j.Status).HasConversion<string>();
         }
 
         #region Override de SaveChangesAsync
@@ -170,20 +164,20 @@ namespace bolsafeucn_back.src.Infrastructure.Data
         }
 
         /// <summary>
-        /// Detecta publicaciones que están siendo cerradas (IsActive: true -> false).
+        /// Detecta publicaciones que están siendo cerradas (IsOpen: true -> false).
         /// </summary>
         /// <returns>Lista de publicaciones cerradas</returns>
         private List<Publication> DetectClosedPublications()
         {
-            return [.. ChangeTracker
-                .Entries<Publication>()
-                .Where(e =>
-                    e.State == EntityState.Modified
-                    && e.Property(p => p.IsActive).IsModified
-                    && e.Property(p => p.IsActive).CurrentValue == false
-                    && e.Property(p => p.IsActive).OriginalValue == true
-                )
-                .Select(e => e.Entity)];
+            return
+            [
+                .. ChangeTracker
+                    .Entries<Publication>()
+                    .Where(e =>
+                        e.State == EntityState.Modified
+                    )
+                    .Select(e => e.Entity),
+            ];
         }
 
         /// <summary>
@@ -197,10 +191,7 @@ namespace bolsafeucn_back.src.Infrastructure.Data
         {
             if (closedPublications.Count == 0)
                 return;
-            await CreateReviewsForClosedPublicationsAsync(
-                closedPublications,
-                cancellationToken
-            );
+            await CreateReviewsForClosedPublicationsAsync(closedPublications, cancellationToken);
         }
         #endregion
 
@@ -214,9 +205,11 @@ namespace bolsafeucn_back.src.Infrastructure.Data
             CancellationToken cancellationToken
         )
         {
-            Log.Information(closedPublications.Count == 0
-                ? "No hay publicaciones cerradas para procesar reviews"
-                : $"Procesando {closedPublications.Count} publicaciones cerradas para crear reviews");
+            Log.Information(
+                closedPublications.Count == 0
+                    ? "No hay publicaciones cerradas para procesar reviews"
+                    : $"Procesando {closedPublications.Count} publicaciones cerradas para crear reviews"
+            );
             foreach (var publication in closedPublications)
             {
                 try

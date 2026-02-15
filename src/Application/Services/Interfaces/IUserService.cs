@@ -1,10 +1,12 @@
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs;
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.AuthDTOs;
+using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface IUserService
     {
@@ -14,95 +16,92 @@ namespace bolsafeucn_back.src.Application.Services.Interfaces
         /// Funcion de registro de estudiante
         /// </summary>
         /// <param name="registerStudentDTO">Datos para registrar un estudiante</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del registro</returns>
-        Task<string> RegisterStudentAsync(
-            RegisterStudentDTO registerStudentDTO,
-            HttpContext httpContext
-        );
+        Task<string> RegisterStudentAsync(RegisterStudentDTO registerStudentDTO);
 
         /// <summary>
         /// Funcion de registro de persona particular
         /// </summary>
         /// <param name="registerIndividualDTO">Datos para registrar una persona particular</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del registro</returns>
-        Task<string> RegisterIndividualAsync(
-            RegisterIndividualDTO registerIndividualDTO,
-            HttpContext httpContext
-        );
+        Task<string> RegisterIndividualAsync(RegisterIndividualDTO registerIndividualDTO);
 
         /// <summary>
         /// Funcion de registro de empresa
         /// </summary>
         /// <param name="registerCompanyDTO">Datos para registrar una empresa</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del registro</returns>
-        Task<string> RegisterCompanyAsync(
-            RegisterCompanyDTO registerCompanyDTO,
-            HttpContext httpContext
-        );
+        Task<string> RegisterCompanyAsync(RegisterCompanyDTO registerCompanyDTO);
 
         /// <summary>
         /// Funcion de registro de administrador
         /// </summary>
         /// <param name="registerAdminDTO">Datos para registrar un administrador</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del registro</returns>
-        Task<string> RegisterAdminAsync(
-            int adminId,
-            RegisterAdminDTO registerAdminDTO,
-            HttpContext httpContext
-        );
+        Task<string> RegisterAdminAsync(int adminId, RegisterAdminDTO registerAdminDTO);
 
         /// <summary>
         /// Verifica el correo electrónico de un usuario.
         /// </summary>
         /// <param name="verifyEmailDTO">Datos para verificar el correo electrónico</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado de la verificación</returns>
-        Task<string> VerifyEmailAsync(VerifyEmailDTO verifyEmailDTO, HttpContext httpContext);
+        Task<string> VerifyEmailAsync(VerifyEmailDTO verifyEmailDTO);
 
         /// <summary>
         /// Reenvía el correo de verificación a un usuario.
         /// </summary>
         /// <param name="resendVerificationDTO">Datos para reenviar el correo de verificación</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del reenvío</returns>
-        Task<string> ResendVerificationEmailAsync(
-            ResendVerificationDTO resendVerificationDTO,
-            HttpContext httpContext
-        );
+        Task<string> ResendVerificationEmailAsync(ResendVerificationDTO resendVerificationDTO);
+
+        /// <summary>
+        /// Cambia el correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="changeUserEmailDTO">Datos para cambiar el correo electrónico del usuario</param>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado del cambio de correo electrónico</returns>
+        Task<string> ChangeUserEmailByIdAsync(ChangeUserEmailDTO changeUserEmailDTO, int userId);
+
+        /// <summary>
+        /// Reenvía el correo de verificación del nuevo correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado del reenvío</returns>
+        Task<string> ResendChangeEmailVerificationByIdAsync(int userId);
+
+        /// <summary>
+        /// Verifica el nuevo correo electrónico de un usuario por su ID.
+        /// </summary>
+        /// <param name="verifyNewEmailDTO">Datos para verificar el nuevo correo electrónico del usuario</param>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado de la verificación</returns>
+        Task<string> VerifyNewEmailByIdAsync(VerifyNewEmailDTO verifyNewEmailDTO, int userId);
         #endregion
+
         #region Login and Password Management
         /// <summary>
         /// Inicia sesión de un usuario.
         /// </summary>
         /// <param name="loginDTO">Datos para iniciar sesión</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del inicio de sesión</returns>
-        Task<string> LoginAsync(LoginDTO loginDTO, HttpContext httpContext);
+        Task<string> LoginAsync(LoginDTO loginDTO);
 
         /// <summary>
         /// Envía un correo electrónico con un código de verificación para restablecer la contraseña.
         /// </summary>
         /// <param name="requestResetPasswordCodeDTO">Datos para solicitar el código de verificación</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado del envío</returns>
         Task<string> SendResetPasswordVerificationCodeEmailAsync(
-            RequestResetPasswordCodeDTO requestResetPasswordCodeDTO,
-            HttpContext httpContext
+            RequestResetPasswordCodeDTO requestResetPasswordCodeDTO
         );
 
         /// <summary>
         /// Verifica el código de restablecimiento de contraseña.
         /// </summary>
         /// <param name="verifyResetPasswordCodeDTO">Datos para verificar el código de restablecimiento</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de resultado de la verificación</returns>
         Task<string> VerifyResetPasswordCodeAsync(
-            VerifyResetPasswordCodeDTO verifyResetPasswordCodeDTO,
-            HttpContext httpContext
+            VerifyResetPasswordCodeDTO verifyResetPasswordCodeDTO
         );
 
         /// <summary>
@@ -167,7 +166,7 @@ namespace bolsafeucn_back.src.Application.Services.Interfaces
         /// </summary>
         /// <param name="userId">ID del usuario</param>
         /// <returns>Archivo del CV</returns>
-        Task<GetCVDTO> DownloadCVByIdAsync(int userId);
+        Task<GetCVDTO> DownloadCVByIdAsync(int parsedUserId, int userId);
 
         /// <summary>
         /// Elimina el CV de un usuario por su ID.

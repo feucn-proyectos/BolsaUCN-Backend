@@ -1,8 +1,8 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Domain.Models;
 using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
     public class DocumentMapper
     {

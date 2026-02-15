@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
+namespace backend.src.Application.DTOs.OfferDTOs
 {
     /// <summary>
     /// DTO for basic offer information used when sensitive contact details should be hidden.

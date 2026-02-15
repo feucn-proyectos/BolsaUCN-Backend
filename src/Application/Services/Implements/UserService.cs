@@ -1,15 +1,19 @@
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs;
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Exceptions;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using System.Security;
+using backend.src.Application.DTOs.AuthDTOs;
+using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
+using backend.src.Infrastructure.Exceptions;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     public class UserService : IUserService
     {
@@ -19,7 +23,6 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
-        private readonly IDocumentStorageProvider _documentService;
         private readonly IVerificationCodeRepository _verificationCodeRepository;
 
         public UserService(
@@ -29,8 +32,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             IVerificationCodeRepository verificationCodeRepository,
             IEmailService emailService,
             ITokenService tokenService,
-            IFileService fileService,
-            IDocumentStorageProvider documentService
+            IFileService fileService
         )
         {
             _configuration = configuration;
@@ -40,34 +42,33 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
             _fileService = fileService;
-            _documentService = documentService;
         }
 
         /// <summary>
         /// Registra un nuevo estudiante en el sistema.
         /// </summary>
         /// <param name="registerStudentDTO">DTO con la información del estudiante</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de éxito o error</returns>
-        public async Task<string> RegisterStudentAsync(
-            RegisterStudentDTO registerStudentDTO,
-            HttpContext httpContext
-        )
+        public async Task<string> RegisterStudentAsync(RegisterStudentDTO registerStudentDTO)
         {
             Log.Information(
-                $"Iniciando registro de estudiante con email: {registerStudentDTO.Email}"
+                "Iniciando registro de estudiante con email: {Email}",
+                registerStudentDTO.Email
             );
 
             bool registrado = await _userRepository.ExistsByEmailAsync(registerStudentDTO.Email);
             if (registrado)
             {
-                Log.Warning($"Intento de registro con email duplicado: {registerStudentDTO.Email}");
+                Log.Warning(
+                    "Intento de registro con email duplicado: {Email}",
+                    registerStudentDTO.Email
+                );
                 throw new InvalidOperationException("El correo electrónico ya está en uso.");
             }
             registrado = await _userRepository.ExistsByRutAsync(registerStudentDTO.Rut);
             if (registrado)
             {
-                Log.Warning($"Intento de registro con RUT duplicado: {registerStudentDTO.Rut}");
+                Log.Warning("Intento de registro con RUT duplicado: {Rut}", registerStudentDTO.Rut);
                 throw new InvalidOperationException("El RUT ya está en uso.");
             }
 
@@ -86,7 +87,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerStudentDTO.Password,
-                "Applicant"
+                RoleNames.Applicant
             );
             if (result == false)
             {
@@ -137,11 +138,9 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Registra un nuevo usuario particular en el sistema.
         /// </summary>
         /// <param name="registerIndividualDTO">Dto de registro del usuario particular</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de éxito o error</returns>
         public async Task<string> RegisterIndividualAsync(
-            RegisterIndividualDTO registerIndividualDTO,
-            HttpContext httpContext
+            RegisterIndividualDTO registerIndividualDTO
         )
         {
             Log.Information(
@@ -174,18 +173,13 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 Url = _configuration.GetValue<string>("Images:DefaultUserImageUrl")!,
                 PublicId = _configuration.GetValue<string>("Images:DefaultUserImagePublicId")!,
             };
-            var banner = new UserImage()
-            {
-                Url = _configuration.GetValue<string>("Images:DefaultBannerImageUrl")!,
-                PublicId = _configuration.GetValue<string>("Images:DefaultBannerImagePublicId")!,
-            };
             await _fileRepository.CreateUserImageAsync(profile);
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerIndividualDTO.Password,
-                "Offerent"
+                RoleNames.Offeror
             );
             if (!result)
             {
@@ -235,12 +229,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Registra una nueva empresa en el sistema.
         /// </summary>
         /// <param name="registerCompanyDTO">Dto de registro de la empresa</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de éxito o error</returns>
-        public async Task<string> RegisterCompanyAsync(
-            RegisterCompanyDTO registerCompanyDTO,
-            HttpContext httpContext
-        )
+        public async Task<string> RegisterCompanyAsync(RegisterCompanyDTO registerCompanyDTO)
         {
             Log.Information(
                 "Iniciando registro de empresa con email: {Email}",
@@ -272,18 +262,13 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 Url = _configuration.GetValue<string>("Images:DefaultUserImageUrl")!,
                 PublicId = _configuration.GetValue<string>("Images:DefaultUserImagePublicId")!,
             };
-            var banner = new UserImage()
-            {
-                Url = _configuration.GetValue<string>("Images:DefaultBannerImageUrl")!,
-                PublicId = _configuration.GetValue<string>("Images:DefaultBannerImagePublicId")!,
-            };
             await _fileRepository.CreateUserImageAsync(profile);
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerCompanyDTO.Password,
-                "Offerent"
+                RoleNames.Offeror
             );
             if (!result)
             {
@@ -333,48 +318,54 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Registra un nuevo administrador en el sistema.
         /// </summary>
         /// <param name="registerAdminDTO">Dto de registro del administrador</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de éxito o error</returns>
-        public async Task<string> RegisterAdminAsync(
-            int adminId,
-            RegisterAdminDTO registerAdminDTO,
-            HttpContext httpContext
-        )
+        public async Task<string> RegisterAdminAsync(int adminId, RegisterAdminDTO registerAdminDTO)
         {
-            Log.Information($"Verificando permisos del admin con ID: {adminId}");
-            var requestingAdmin = await _userRepository.GetUserByIdAsync(adminId);
+            Log.Information("Verificando permisos del admin con ID: {AdminId}", adminId);
+            var requestingAdmin = await _userRepository.GetByIdAsync(adminId);
             if (requestingAdmin == null)
             {
-                Log.Error($"No se encontro usuario con ID: {adminId}");
+                Log.Error("No se encontro usuario con ID: {AdminId}", adminId);
                 throw new UnauthorizedAccessException("No se encontro usuario.");
             }
-            var requestingAdminRole = await _userRepository.GetRoleAsync(requestingAdmin);
-            if (requestingAdminRole != "SuperAdmin")
+            var requestingAdminRoleResult = await _userRepository.CheckRoleAsync(
+                requestingAdmin.Id,
+                RoleNames.SuperAdmin
+            );
+            if (!requestingAdminRoleResult)
             {
                 Log.Error(
-                    $"El usuario con ID: {adminId} no tiene permisos para registrar administradores."
+                    "El usuario con ID: {AdminId} no tiene permisos para registrar administradores.",
+                    adminId
                 );
                 throw new UnauthorizedAccessException("El usuario no es superadmin.");
             }
-            var existingAdminsCount = await _userRepository.GetNumberOfAdmins();
+            var existingAdminsCount = await _userRepository.GetCountByTypeAsync(
+                UserType.Administrador
+            );
             var maxAdminsAllowed = _configuration.GetValue<int>("AdminSettings:MaxAdminsAllowed");
             if (existingAdminsCount >= maxAdminsAllowed)
             {
                 Log.Error(
-                    $"Se ha alcanzado el número máximo de administradores permitidos: {maxAdminsAllowed}."
+                    "Se ha alcanzado el número máximo de administradores permitidos: {MaxAdminsAllowed}.",
+                    maxAdminsAllowed
                 );
                 throw new InvalidOperationException(
                     "No se pueden registrar más administradores. Se ha alcanzado el límite."
                 );
             }
 
-            Log.Information($"Iniciando registro de admin con email: {registerAdminDTO.Email}");
+            Log.Information(
+                "Iniciando registro de admin con email: {Email}",
+                registerAdminDTO.Email
+            );
 
             bool registrado = await _userRepository.ExistsByEmailAsync(registerAdminDTO.Email);
             if (registrado)
             {
                 Log.Warning(
-                    $"Intento de registro de admin con email duplicado: {registerAdminDTO.Email}"
+                    "Intento de registro de admin con email duplicado: {Email}",
+                    registerAdminDTO.Email
                 );
                 throw new InvalidOperationException("El correo electrónico ya está en uso.");
             }
@@ -382,7 +373,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (registrado)
             {
                 Log.Warning(
-                    $"Intento de registro de admin con RUT duplicado: {registerAdminDTO.Rut}"
+                    "Intento de registro de admin con RUT duplicado: {Rut}",
+                    registerAdminDTO.Rut
                 );
                 throw new InvalidOperationException("El RUT ya está en uso.");
             }
@@ -398,7 +390,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
 
-            string role = "Admin";
+            string role = RoleNames.Admin;
 
             var result = await _userRepository.CreateUserAsync(
                 user,
@@ -454,12 +446,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Verifica el correo electrónico de un usuario.
         /// </summary>
         /// <param name="verifyEmailDTO">Dto de verificación del correo electrónico</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje de éxito o error</returns>
-        public async Task<string> VerifyEmailAsync(
-            VerifyEmailDTO verifyEmailDTO,
-            HttpContext httpContext
-        )
+        public async Task<string> VerifyEmailAsync(VerifyEmailDTO verifyEmailDTO)
         {
             Log.Information("Intentando verificar email: {Email}", verifyEmailDTO.Email);
             var user = await _userRepository.GetByEmailAsync(verifyEmailDTO.Email);
@@ -587,14 +575,12 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Reenvia el mensaje de con el codigo de verificacion.
         /// </summary>
         /// <param name="resendVerificationDTO">Dto con los datos del usuatio</param>
-        /// <param name="httpContext">Contecto Http</param>
         /// <returns>Mensaje de exito o error</returns>
         /// <exception cref="KeyNotFoundException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="Exception"></exception>
         public async Task<string> ResendVerificationEmailAsync(
-            ResendVerificationDTO resendVerificationDTO,
-            HttpContext httpContext
+            ResendVerificationDTO resendVerificationDTO
         )
         {
             Log.Information(
@@ -685,22 +671,23 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Inicia sesión en el sistema.
         /// </summary>
         /// <param name="loginDTO">Dto de inicio de sesión</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Token de acceso</returns>
-        public async Task<string> LoginAsync(LoginDTO loginDTO, HttpContext httpContext)
+        public async Task<string> LoginAsync(LoginDTO loginDTO)
         {
-            Log.Information($"Intento de login para email: {loginDTO.Email}");
+            Log.Information("Intento de login para email: {Email}", loginDTO.Email);
 
-            var user = await _userRepository.GetByEmailAsync(loginDTO.Email);
+            User? user = await _userRepository.GetByEmailAsync(loginDTO.Email);
             if (user == null)
             {
-                Log.Warning($"Intento de login con email no registrado: {loginDTO.Email}");
+                Log.Warning("Intento de login con email no registrado: {Email}", loginDTO.Email);
                 throw new UnauthorizedAccessException("Credenciales inválidas.");
             }
             if (!user.EmailConfirmed)
             {
                 Log.Warning(
-                    $"Intento de login con email no verificado: {user.Email}, UserId: {user.Id}"
+                    "Intento de login con email no verificado: {Email}, UserId: {UserId}",
+                    user.Email,
+                    user.Id
                 );
                 throw new EmailNotVerifiedException(user.Email!);
             }
@@ -708,24 +695,31 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (!result)
             {
                 Log.Warning(
-                    $"Intento de login con contraseña incorrecta para usuario: {user.Email}, UserId: {user.Id}"
+                    "Intento de login con contraseña incorrecta para usuario: {Email}, UserId: {UserId}",
+                    user.Email,
+                    user.Id
                 );
                 throw new UnauthorizedAccessException("Credenciales inválidas.");
             }
-            if (user.Banned)
+            if (user.IsBlocked)
             {
                 Log.Warning(
-                    $"Intento de login para usuario bloqueado: {user.Email}, UserId: {user.Id}"
+                    "Intento de login para usuario bloqueado: {Email}, UserId: {UserId}",
+                    user.Email,
+                    user.Id
                 );
                 throw new UnauthorizedAccessException(
                     "Tu cuenta ha sido bloqueada. Por favor, contacta al soporte para más información."
                 );
             }
-            var role = await _userRepository.GetRoleAsync(user);
+            var roles = await _userRepository.GetRolesAsync(user);
             Log.Information(
-                $"Login exitoso para usuario: {user.Email}, UserId: {user.Id}, Role: {role}"
+                "Login exitoso para usuario: {Email}, UserId: {UserId}, Roles: {Roles}",
+                user.Email,
+                user.Id,
+                roles
             );
-            var newToken = _tokenService.CreateToken(user, role, loginDTO.RememberMe);
+            var newToken = _tokenService.CreateToken(user, roles, loginDTO.RememberMe);
             var whitelist = new Whitelist
             {
                 UserId = user.Id,
@@ -740,7 +734,9 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (!whitelistResult)
             {
                 Log.Error(
-                    $"Error al agregar token a la whitelist para usuario: {user.Email}, UserId: {user.Id}"
+                    "Error al agregar token a la whitelist para usuario: {Email}, UserId: {UserId}",
+                    user.Email,
+                    user.Id
                 );
                 throw new Exception("Error al iniciar sesión.");
             }
@@ -748,7 +744,9 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (!updateLoginTimeResult)
             {
                 Log.Error(
-                    $"Error al actualizar la última hora de login para usuario: {user.Email}, UserId: {user.Id}"
+                    "Error al actualizar la última hora de login para usuario: {Email}, UserId: {UserId}",
+                    user.Email,
+                    user.Id
                 );
                 throw new Exception("Error al iniciar sesión.");
             }
@@ -759,13 +757,11 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Envía un código de verificación para el reseteo de contraseña al correo electrónico del usuario.
         /// </summary>
         /// <param name="requestResetPasswordCodeDTO">Dto que contiene el email para enviar el código de verificación</param>
-        /// <param name="httpContext">Contexto HTTP</param>
         /// <returns>Mensaje indicando el resultado del envío del código de verificación</returns>
         /// <exception cref="KeyNotFoundException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
         public async Task<string> SendResetPasswordVerificationCodeEmailAsync(
-            RequestResetPasswordCodeDTO requestResetPasswordCodeDTO,
-            HttpContext httpContext
+            RequestResetPasswordCodeDTO requestResetPasswordCodeDTO
         )
         {
             Log.Information(
@@ -831,14 +827,12 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Verifica el codigo de reseteo de contraseña ingresado.
         /// </summary>
         /// <param name="verifyResetPasswordCodeDTO">Dto con los el codigo y contraseña</param>
-        /// <param name="httpContext">Contexto Http</param>
         /// <returns>Mensaje de exito o error</returns>
         /// <exception cref="KeyNotFoundException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="Exception"></exception>
         public async Task<string> VerifyResetPasswordCodeAsync(
-            VerifyResetPasswordCodeDTO verifyResetPasswordCodeDTO,
-            HttpContext httpContext
+            VerifyResetPasswordCodeDTO verifyResetPasswordCodeDTO
         )
         {
             Log.Information(
@@ -952,12 +946,20 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// <exception cref="KeyNotFoundException"></exception>
         public async Task<GetUserProfileDTO> GetUserProfileByIdAsync(int userId)
         {
-            Log.Information($"Buscando usuario con la ID: {userId}");
-            User? user = await _userRepository.GetUserByIdAsync(userId, false, true, true);
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions
+                {
+                    IncludePhoto = true,
+                    IncludeCV = true,
+                    TrackChanges = false,
+                }
+            );
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
 
             Log.Information("Buscando detalles relevantes");
@@ -979,7 +981,10 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             UserType userType
         )
         {
-            Log.Information($"Validando parametros de actualización para usuario ID: {userId}");
+            Log.Information(
+                "Validando parametros de actualización para usuario ID: {UserId}",
+                userId
+            );
             // Validar Email
             if (updateParamsDTO.Email != null)
             {
@@ -987,7 +992,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 if (emailExists)
                 {
                     Log.Error(
-                        $"El email proporcionado ya está en uso por otro usuario: {updateParamsDTO.Email}"
+                        "El email proporcionado ya está en uso por otro usuario: {Email}",
+                        updateParamsDTO.Email
                     );
                     throw new InvalidOperationException("El correo electrónico ya está en uso.");
                 }
@@ -1000,7 +1006,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 )
                 {
                     Log.Error(
-                        $"El email proporcionado no es válido para un estudiante: {updateParamsDTO.Email}"
+                        "El email proporcionado no es válido para un estudiante: {Email}",
+                        updateParamsDTO.Email
                     );
                     throw new InvalidOperationException(
                         "El email proporcionado no es válido para un estudiante."
@@ -1014,19 +1021,28 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 )
                 {
                     Log.Error(
-                        $"El email proporcionado no es válido para un administrador: {updateParamsDTO.Email}"
+                        "El email proporcionado no es válido para un administrador: {Email}",
+                        updateParamsDTO.Email
                     );
                     throw new InvalidOperationException(
                         "El email proporcionado no es válido para un administrador."
                     );
                 }
             }
-            Log.Information($"Buscando usuario con la ID: {userId}");
-            User? user = await _userRepository.GetUserByIdAsync(userId, true, true, true);
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions
+                {
+                    IncludePhoto = true,
+                    IncludeCV = true,
+                    TrackChanges = true,
+                }
+            );
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
 
             updateParamsDTO.Adapt(user);
@@ -1035,30 +1051,37 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.Rut))
             {
                 Log.Error(
-                    $"El usuario actualizado no tiene todos los campos requeridos. Id: {userId}"
+                    "El usuario actualizado no tiene todos los campos requeridos. Id: {UserId}",
+                    userId
                 );
                 throw new ArgumentNullException(
                     "El usuario actualizado no tiene todos los campos requeridos."
                 );
             }
 
-            var result = await _userRepository.UpdateAsync(user);
-            if (!result)
-            {
-                Log.Error($"Error al actualizar los datos del usuario con ID: {userId}");
-                throw new Exception("Error al actualizar los datos del usuario");
-            }
+            await _userRepository.UpdateAsync(user);
+
             return "Datos del usuario actualizados correctamente";
         }
 
+        /// <summary>
+        /// Obtiene la foto de perfil de un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Foto de perfil del usuario</returns>
+        /// <exception cref="KeyNotFoundException"></exception>
         public async Task<GetPhotoDTO> GetUserProfilePhotoByIdAsync(int userId)
         {
-            Log.Information($"Buscando usuario con la ID: {userId}");
-            User? user = await _userRepository.GetUserByIdAsync(userId, false, true, false);
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludePhoto = true }
+            );
+
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
 
             return user.Adapt<GetPhotoDTO>();
@@ -1078,25 +1101,242 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         )
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(userId, true, true, false);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludePhoto = true, TrackChanges = true }
+            );
+
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
 
             await _fileService.UploadUserImageAsync(updatePhotoDTO.Photo, user);
 
-            var result = await _userRepository.UpdateAsync(user);
+            await _userRepository.UpdateAsync(user);
+
+            return "Foto de perfil del usuario actualizada correctamente";
+        }
+
+        public async Task<string> ChangeUserEmailByIdAsync(
+            ChangeUserEmailDTO changeUserEmailDTO,
+            int userId
+        )
+        {
+            // Validar disponibilidad del nuevo correo
+            bool emailExists = await _userRepository.ExistsByEmailAsync(
+                changeUserEmailDTO.NewEmail
+            );
+            if (emailExists)
+            {
+                Log.Error(
+                    "El email proporcionado ya está en uso por otro usuario: {Email}",
+                    changeUserEmailDTO.NewEmail
+                );
+                throw new InvalidOperationException("El correo electrónico ya está en uso.");
+            }
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            Log.Information("Validando contraseña actual para usuario ID: {UserId}", userId);
+            bool isPasswordValid = await _userRepository.CheckPasswordAsync(
+                user,
+                changeUserEmailDTO.CurrentPassword
+            );
+            if (!isPasswordValid)
+            {
+                Log.Warning(
+                    "Intento de cambio de correo fallido para usuario ID: {UserId} debido a contraseña incorrecta",
+                    userId
+                );
+                throw new SecurityException("La contraseña actual es incorrecta.");
+            }
+            Log.Information(
+                "Actualizando correo electrónico para usuario ID: {UserId}, Correo: {NewEmail}",
+                userId,
+                changeUserEmailDTO.NewEmail
+            );
+            int expirationTimer = 24; // Horas
+            user.PendingEmail = changeUserEmailDTO.NewEmail;
+            user.PendingEmailExpiration = DateTime.UtcNow.AddHours(expirationTimer);
+            bool result = await _userRepository.UpdateAsync(user);
             if (!result)
             {
                 Log.Error(
-                    "Error al actualizar la foto de perfil del usuario con ID: {UserId}",
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
                     userId
                 );
-                throw new Exception("Error al actualizar la foto de perfil del usuario");
+                throw new Exception("Error al actualizar el correo electrónico.");
             }
-            return "Foto de perfil del usuario actualizada correctamente";
+            // Enviar correo de verificación al nuevo email
+            string verificationCode = new Random().Next(100000, 999999).ToString();
+            VerificationCode newVerificationCode = new VerificationCode
+            {
+                Code = verificationCode,
+                CodeType = CodeType.EmailChange,
+                UserId = user.Id,
+                Expiration = DateTime.UtcNow.AddHours(expirationTimer), // Un día desde la petición
+            };
+            var createdCode = await _verificationCodeRepository.CreateCodeAsync(
+                newVerificationCode
+            );
+            if (createdCode == null)
+            {
+                Log.Error(
+                    "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new InvalidOperationException("Error al crear el código de verificación.");
+            }
+            Log.Information("Enviando email de verificación a: {Email}", user.PendingEmail);
+            var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
+                user.PendingEmail!,
+                createdCode.Code
+            );
+            if (!emailResult)
+            {
+                Log.Error(
+                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                throw new Exception("Error al enviar el correo de verificación.");
+            }
+            return "Correo de verificación enviado al nuevo correo electrónico.";
+        }
+
+        public async Task<string> ResendChangeEmailVerificationByIdAsync(int userId)
+        {
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            if (user.PendingEmail == null || DateTime.UtcNow > user.PendingEmailExpiration)
+            {
+                Log.Error(
+                    "Intento de reenvío de verificación de cambio de correo sin una solicitud previa o con solicitud expirada. Usuario ID: {UserId}",
+                    userId
+                );
+                throw new InvalidOperationException(
+                    "No hay una solicitud de cambio de correo pendiente o la solicitud ha expirado."
+                );
+            }
+
+            //Validar codigo de verificacion existente
+            VerificationCode? existingCode =
+                await _verificationCodeRepository.GetByLatestUserIdAsync(
+                    user.Id,
+                    CodeType.EmailChange
+                );
+            bool stillValid = false;
+            if (existingCode != null && DateTime.UtcNow < existingCode.Expiration)
+            {
+                Log.Information(
+                    "Código de verificación aún válido para usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                stillValid = true;
+            }
+
+            VerificationCode newCode = new VerificationCode
+            {
+                Code = new Random().Next(100000, 999999).ToString(),
+                CodeType = CodeType.EmailChange,
+                UserId = user.Id,
+                Expiration = DateTime.UtcNow.AddHours(48),
+            };
+            if (!stillValid)
+            {
+                var createdCode = await _verificationCodeRepository.CreateCodeAsync(newCode);
+                if (createdCode == null)
+                {
+                    Log.Error(
+                        "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
+                        user.Id
+                    );
+                    throw new InvalidOperationException(
+                        "Error al crear el código de verificación."
+                    );
+                }
+            }
+
+            bool emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
+                user.PendingEmail!,
+                stillValid ? existingCode!.Code : newCode.Code
+            );
+            if (!emailResult)
+            {
+                Log.Error(
+                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                throw new Exception("Error al enviar el correo de verificación.");
+            }
+            return "Código de verificación reenviado exitosamente al nuevo correo electrónico.";
+        }
+
+        public async Task<string> VerifyNewEmailByIdAsync(
+            VerifyNewEmailDTO verifyNewEmailDTO,
+            int userId
+        )
+        {
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isEmailAvailable = !await _userRepository.ExistsByEmailAsync(user.PendingEmail!);
+            if (!isEmailAvailable)
+            {
+                Log.Error(
+                    "El email pendiente ya está en uso por otro usuario: {Email}",
+                    user.PendingEmail
+                );
+                throw new InvalidOperationException("El correo electrónico ya está en uso.");
+            }
+            var verificationCode = await _verificationCodeRepository.GetByLatestUserIdAsync(
+                user.Id,
+                CodeType.EmailChange
+            );
+            if (
+                verificationCode == null
+                || verificationCode.Code != verifyNewEmailDTO.VerificationCode
+                || DateTime.UtcNow >= verificationCode.Expiration
+            )
+            {
+                Log.Warning(
+                    "Código de verificación inválido o expirado para usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new Exception("El código de verificación es incorrecto o ha expirado.");
+            }
+            user.Email = user.PendingEmail;
+            user.PendingEmail = null;
+            user.PendingEmailExpiration = null;
+            bool updateResult = await _userRepository.UpdateAsync(user);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception("Error al actualizar el correo electrónico.");
+            }
+            return "Correo electrónico actualizado correctamente.";
         }
 
         /// <summary>
@@ -1113,12 +1353,15 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             int userId
         )
         {
-            Log.Information("Buscando usuario con la Id: {UserId}", userId.ToString());
-            User? user = await _userRepository.GetUserByIdAsync(userId, true, false, false);
+            Log.Information("Buscando usuario con la Id: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { TrackChanges = true }
+            );
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
 
             var isPasswordValid = await _userRepository.CheckPasswordAsync(
@@ -1128,7 +1371,8 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             if (!isPasswordValid)
             {
                 Log.Warning(
-                    $"Intento de cambio de contraseña fallido para usuario ID: {userId} debido a contraseña actual incorrecta"
+                    "Intento de cambio de contraseña fallido para usuario ID: {UserId} debido a contraseña actual incorrecta",
+                    userId
                 );
                 throw new UnauthorizedAccessException("La contraseña actual es incorrecta.");
             }
@@ -1138,10 +1382,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             );
             if (!result)
             {
-                Log.Error(
-                    "Error al actualizar la contraseña para usuario ID: {UserId}",
-                    userId.ToString()
-                );
+                Log.Error("Error al actualizar la contraseña para usuario ID: {UserId}", userId);
                 throw new Exception("Error al actualizar la contraseña.");
             }
             return "Contraseña actualizada exitosamente.";
@@ -1149,21 +1390,33 @@ namespace bolsafeucn_back.src.Application.Services.Implements
 
         #endregion
         #region Documents Management
+
+        /// <summary>
+        /// Sube el CV de un usuario por su ID.
+        /// </summary>
+        /// <param name="uploadCVDTO">Datos para subir el CV.</param>
+        /// <param name="userId">ID del usuario.</param>
+        /// <returns>Mensaje de éxito.</returns>
+        /// <exception cref="Exception"></exception>
         public async Task<string> UploadCVByIdAsync(UploadCVDTO uploadCVDTO, int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(userId, true, false, true);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true, TrackChanges = true }
+            );
             if (user == null)
             {
-                Log.Error($"No existe usuario con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe usuario con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
             if (user.CV != null && user.UserType == UserType.Estudiante)
             {
                 Log.Information(
-                    $"El usuario con ID: {user.Id} ya tiene un CV, se reemplazará el existente."
+                    "El usuario con ID: {UserId} ya tiene un CV, se reemplazará el existente.",
+                    user.Id
                 );
-                var deleteResult = await _documentService.DeleteCVAsync(user);
+                var deleteResult = await _fileRepository.DeleteCVAsync(user.CV.PublicId);
                 if (!deleteResult)
                 {
                     Log.Error(
@@ -1173,64 +1426,102 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                     throw new Exception("Error al eliminar el CV existente del estudiante");
                 }
             }
-            var uploadResult = await _documentService.UploadCVAsync(uploadCVDTO.CVFile, user);
+            var uploadResult = await _fileService.UploadPDFAsync(uploadCVDTO.CVFile, user);
             if (!uploadResult)
             {
-                Log.Error($"Error al subir el CV del estudiante con ID: {user.Id}");
+                Log.Error("Error al subir el CV del estudiante con ID: {UserId}", user.Id);
                 throw new Exception("Error al subir el CV del estudiante");
             }
 
             return "CV del usuario actualizado correctamente";
         }
 
-        public async Task<GetCVDTO> DownloadCVByIdAsync(int userId)
+        /// <summary>
+        /// Descarga el CV de un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">ID del usuario.</param>
+        /// <returns>Datos del CV.</returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public async Task<GetCVDTO> DownloadCVByIdAsync(int parsedUserId, int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetUserByIdAsync(userId, false, false, true);
+
+            // Validacion de usuarios
+            bool requestingUserExists = await _userRepository.ExistsByIdAsync(parsedUserId);
+            if (!requestingUserExists)
+            {
+                Log.Error("Usuario solicitante no encontrado con la ID: {UserId}", parsedUserId);
+                throw new KeyNotFoundException("Usuario solicitante no encontrado.");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(
+                parsedUserId,
+                RoleNames.Applicant
+            );
+            if (isApplicant && parsedUserId != userId)
+            {
+                Log.Warning(
+                    "El usuario solicitante con ID: {RequestingUserId} no tiene permiso para descargar el CV del usuario con ID: {UserId}",
+                    parsedUserId,
+                    userId
+                );
+                throw new UnauthorizedAccessException("No tienes permiso para descargar este CV.");
+            }
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true }
+            );
             if (user == null)
             {
-                Log.Error($"No existe estudiante con ese ID: {userId}");
-                throw new KeyNotFoundException("No existe estudiante con ese ID");
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
+
             if (user.CV == null || user.UserType != UserType.Estudiante)
             {
-                Log.Warning($"El usuario con ID: {userId} no tiene un CV para descargar.");
+                Log.Warning("El usuario con ID: {UserId} no tiene un CV para descargar.", userId);
                 throw new KeyNotFoundException("El usuario no tiene un CV para descargar");
             }
-            return new GetCVDTO
-            {
-                Url = user.CV.Url,
-                OriginalFileName = user.CV.OriginalFileName,
-                FileSizeBytes = user.CV.FileSizeBytes,
-                UploadDate = user.CV.CreatedAt,
-            };
+            return user.Adapt<GetCVDTO>();
         }
 
         public async Task<string> DeleteCVByIdAsync(int userId)
         {
-            throw new NotImplementedException();
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true, TrackChanges = true }
+            );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            if (user.CV == null || user.UserType != UserType.Estudiante)
+            {
+                Log.Warning("El usuario con ID: {UserId} no tiene un CV para eliminar.", userId);
+                throw new KeyNotFoundException("El usuario no tiene un CV para eliminar");
+            }
+            // Eliminar CV
+            var deleteResult = await _fileRepository.DeleteCVAsync(user.CV.PublicId);
+            if (!deleteResult)
+            {
+                Log.Error("Error al eliminar el CV del estudiante con ID: {UserId}", user.Id);
+                throw new Exception("Error al eliminar el CV del estudiante");
+            }
+            user.CVId = null;
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar el usuario después de eliminar el CV. ID: {UserId}",
+                    user.Id
+                );
+                throw new Exception("Error al actualizar el usuario después de eliminar el CV");
+            }
+            return "CV eliminado exitosamente";
         }
         #endregion
-
-        /*public async Task<IEnumerable<GeneralUser>> GetUsuariosAsync()
-        {
-            return await _repo.GetAllAsync();
-        }
-
-        public async Task<GeneralUser?> GetUsuarioAsync(int id)
-        {
-            return await _repo.GetByIdAsync(id);
-        }
-
-        public async Task<GeneralUser> CrearUsuarioAsync(UsuarioDto dto)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<bool> EliminarUsuarioAsync(int id)
-        {
-            return await _repo.DeleteAsync(id);
-        }*/
 
         #region Helper Functions
         /// <summary>

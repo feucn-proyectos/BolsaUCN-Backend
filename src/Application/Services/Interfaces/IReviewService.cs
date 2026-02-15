@@ -1,8 +1,9 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     /// <summary>
     /// Interfaz que define la lógica de negocio para la gestión de reseñas.
@@ -132,6 +133,6 @@ namespace bolsafeucn_back.src.Application.Services.Interfaces
         /// <param name="userId">El identificador del usuario (estudiante u oferente).</param>
         /// <returns>El número de reseñas pendientes del usuario.</returns>
         /// <exception cref="KeyNotFoundException">Lanzada si no se encuentra el usuario.</exception>
-        Task<int> GetPendingReviewsCountAsync(int userId);
+        Task<int> GetPendingReviewsCountAsync(User user, string? role = null);
     }
 }

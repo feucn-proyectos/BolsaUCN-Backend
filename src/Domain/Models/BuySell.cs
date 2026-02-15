@@ -1,29 +1,59 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     /// <summary>
-    /// Represents a buy/sell publication for products or services.
-    /// Inherits common publication properties from <see cref="Publication"/>.
+    /// Disponibilidad del producto (disponible o vendido).
+    /// </summary>
+    public enum Availability
+    {
+        Disponible,
+        Vendido,
+    }
+
+    /// <summary>
+    /// Estado del producto (nuevo o usado).
+    /// </summary>
+    public enum Condition
+    {
+        Nuevo,
+        ComoNuevo,
+        Usado,
+        NoAplica,
+    }
+
+    /// <summary>
+    /// Representa una publicación de compra/venta en el sistema.
+    /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
     /// </summary>
     public class BuySell : Publication
     {
         /// <summary>
-        /// Price of the product or service in Chilean pesos.
+        /// Coleccion de imágenes asociadas a la publicación.
         /// </summary>
-        public decimal Price { get; set; }
+        public ICollection<Image> Images { get; set; } = [];
 
         /// <summary>
-        /// Category of the product or service.
+        /// Precio del producto o servicio en pesos chilenos.
+        /// </summary>
+        public int Price { get; set; }
+
+        /// <summary>
+        /// Categoría del producto o servicio.
         /// </summary>
         public required string Category { get; set; }
 
         /// <summary>
-        /// Location where the product or service is available.
+        /// Cantidad disponible del producto.
         /// </summary>
-        public string? Location { get; set; }
+        public required int Quantity { get; set; }
 
         /// <summary>
-        /// Contact information for the listing.
+        /// Disponibilidad del producto (disponible o vendido).
         /// </summary>
-        public string? ContactInfo { get; set; }
+        public required Availability Availability { get; set; }
+
+        /// <summary>
+        /// Estado del producto (nuevo o usado).
+        /// </summary>
+        public required Condition Condition { get; set; }
     }
 }

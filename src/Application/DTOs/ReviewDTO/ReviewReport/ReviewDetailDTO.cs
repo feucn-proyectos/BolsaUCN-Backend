@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.ReviewDTO.ReviewReport
+namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
 {
     /// <summary>
     /// DTO con el detalle de una review individual para el reporte

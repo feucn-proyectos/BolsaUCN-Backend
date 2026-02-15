@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
+namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
 {
     public class GetUserProfileDTO
     {
@@ -13,5 +13,6 @@ namespace bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs
         public string? CurriculumVitae { get; set; }
         public string? Disability { get; set; }
         public string? ProfilePhoto { get; set; }
+        public string? PendingEmail { get; set; }
     }
 }

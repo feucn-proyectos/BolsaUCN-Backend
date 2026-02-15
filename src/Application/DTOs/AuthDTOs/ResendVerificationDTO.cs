@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
+namespace backend.src.Application.DTOs.AuthDTOs
 {
     public class ResendVerificationDTO
     {

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
+namespace backend.src.Application.DTOs.OfferDTOs
 {
     /// <summary>
     /// <summary>
@@ -56,6 +56,5 @@ namespace bolsafeucn_back.src.Application.DTOs.OfferDTOs
         public string ContactInfo { get; set; }
         public string AboutMe { get; set; }
         public double Rating { get; set; }
-
     }
 }
