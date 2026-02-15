@@ -339,8 +339,7 @@ namespace backend.src.Application.Services.Implements
             {
                 Folder = folder,
                 File = new FileDescription(file.FileName, stream),
-                UseFilename = true,
-                UniqueFilename = true,
+                Type = "authenticated",
             };
             Log.Information("Subiendo PDF: {FileName} a Cloudinary", file.FileName);
             uploadParams.Transformation = new Transformation()
@@ -363,8 +362,6 @@ namespace backend.src.Application.Services.Implements
             Curriculum cv = new Curriculum()
             {
                 PublicId = uploadResult.PublicId,
-                OriginalFileName = file.FileName,
-                Url = uploadResult.SecureUrl.ToString(),
                 FileSizeBytes = file.Length,
             };
             bool result = await _fileRepository.CreateCVAsync(cv);
