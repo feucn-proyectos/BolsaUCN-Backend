@@ -150,14 +150,14 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("CV actualizado", result));
         }
 
-        //? MOVE TO OFFER CONTROLLER
-        [HttpGet("cv/{userId}")]
+        //! MOVE TO OFFER APPLICATION
+        [HttpGet("cv")]
         [Authorize]
-        public async Task<IActionResult> GetCV(int userId)
+        public async Task<IActionResult> HasCV()
         {
             int parsedUserId = GetUserIdFromToken();
-            var result = await _userService.DownloadCVByIdAsync(parsedUserId, userId);
-            return Ok(new GenericResponse<GetCVDTO>("CV obtenido", result));
+            var result = await _userService.CheckCVExistsByIdAsync(parsedUserId);
+            return Ok(new GenericResponse<HasCVDTO>("CV obtenido", result));
         }
 
         /// <summary>

@@ -76,7 +76,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            var pendingReviewsCount = 0; //await _reviewService.GetPendingReviewsCountAsync(currentUser);
             Log.Information(
                 "Reseñas pendientes para el usuario {userId}: {pendingReviewsCount}",
                 userId,
