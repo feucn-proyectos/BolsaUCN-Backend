@@ -10,7 +10,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsFor
         public required string ApplicantEmail { get; set; }
         public required string ApplicationDate { get; set; }
         public required string Status { get; set; } // Pendiente, Aceptada, Rechazada
-        public string? CVUrl { get; set; }
+        public required bool HasCV { get; set; }
         public string? CoverLetter { get; set; }
     }
 }

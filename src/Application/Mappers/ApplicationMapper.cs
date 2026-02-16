@@ -67,7 +67,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.ApplicantLastName, src => src.Student!.LastName)
                 .Map(dest => dest.ApplicantEmail, src => src.Student!.Email)
                 .Map(dest => dest.ApplicationDate, src => src.CreatedAt)
-                .Map(dest => dest.CVUrl, src => src.Student!.CV != null ? "true" : null) // temp fix
+                .Map(dest => dest.HasCV, src => src.Student!.CV != null)
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null)
                 .Map(dest => dest.Status, src => src.Status.ToString());
 
@@ -83,7 +83,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.ApplicantLastName, src => src.Student!.LastName)
                 .Map(dest => dest.ApplicantEmail, src => src.Student!.Email)
                 .Map(dest => dest.ApplicationDate, src => src.CreatedAt)
-                .Map(dest => dest.CVUrl, src => src.Student!.CV != null ? "true" : null) // temp fix
+                .Map(dest => dest.HasCV, src => src.Student!.CV != null)
                 .Map(dest => dest.CoverLetter, src => src.CoverLetter ?? null)
                 .Map(dest => dest.Status, src => src.Status.ToString());
         }
