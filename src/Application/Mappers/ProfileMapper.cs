@@ -47,10 +47,9 @@ namespace backend.src.Application.Mappers
                     dest => dest.PhotoUrl,
                     src => src.ProfilePhoto != null ? src.ProfilePhoto.Url : string.Empty
                 );
-            TypeAdapterConfig<User, GetCVDTO>
+            TypeAdapterConfig<User, HasCVDTO>
                 .NewConfig()
-                .Map(dest => dest.FileSizeBytes, src => src.CV!.FileSizeBytes)
-                .Map(dest => dest.UploadDate, src => src.CV!.CreatedAt);
+                .Map(dest => dest.HasCV, src => src.CV != null);
         }
 
         public void ConfigureUpdateProfileMappings()
@@ -68,10 +67,9 @@ namespace backend.src.Application.Mappers
 
         public void ConfigureCVMappings()
         {
-            TypeAdapterConfig<User, GetCVDTO>
+            TypeAdapterConfig<User, HasCVDTO>
                 .NewConfig()
-                .Map(dest => dest.FileSizeBytes, src => src.CV!.FileSizeBytes)
-                .Map(dest => dest.UploadDate, src => src.CV!.UpdatedAt);
+                .Map(dest => dest.HasCV, src => src.CV != null);
         }
 
         public void ConfigureAdminMappings()

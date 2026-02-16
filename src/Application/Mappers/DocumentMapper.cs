@@ -15,7 +15,6 @@ namespace backend.src.Application.Mappers
         {
             TypeAdapterConfig<UploadCVDTO, Curriculum>
                 .NewConfig()
-                .Map(dest => dest.OriginalFileName, src => src.CVFile.FileName)
                 .Map(dest => dest.FileSizeBytes, src => src.CVFile.Length);
         }
     }

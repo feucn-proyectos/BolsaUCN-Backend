@@ -10,6 +10,7 @@ using backend.src.Domain.Models;
 using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Exceptions;
 using backend.src.Infrastructure.Repositories.Interfaces;
+using CloudinaryDotNet;
 using Mapster;
 using Serilog;
 
@@ -1436,36 +1437,11 @@ namespace backend.src.Application.Services.Implements
             return "CV del usuario actualizado correctamente";
         }
 
-        /// <summary>
-        /// Descarga el CV de un usuario por su ID.
-        /// </summary>
-        /// <param name="userId">ID del usuario.</param>
-        /// <returns>Datos del CV.</returns>
-        /// <exception cref="KeyNotFoundException"></exception>
-        public async Task<GetCVDTO> DownloadCVByIdAsync(int parsedUserId, int userId)
+        public async Task<HasCVDTO> CheckCVExistsByIdAsync(int userId)
         {
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
 
             // Validacion de usuarios
-            bool requestingUserExists = await _userRepository.ExistsByIdAsync(parsedUserId);
-            if (!requestingUserExists)
-            {
-                Log.Error("Usuario solicitante no encontrado con la ID: {UserId}", parsedUserId);
-                throw new KeyNotFoundException("Usuario solicitante no encontrado.");
-            }
-            bool isApplicant = await _userRepository.CheckRoleAsync(
-                parsedUserId,
-                RoleNames.Applicant
-            );
-            if (isApplicant && parsedUserId != userId)
-            {
-                Log.Warning(
-                    "El usuario solicitante con ID: {RequestingUserId} no tiene permiso para descargar el CV del usuario con ID: {UserId}",
-                    parsedUserId,
-                    userId
-                );
-                throw new UnauthorizedAccessException("No tienes permiso para descargar este CV.");
-            }
             User? user = await _userRepository.GetByIdAsync(
                 userId,
                 new UserQueryOptions { IncludeCV = true }
@@ -1475,13 +1451,17 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
-
-            if (user.CV == null || user.UserType != UserType.Estudiante)
+            if (user.CV == null)
             {
                 Log.Warning("El usuario con ID: {UserId} no tiene un CV para descargar.", userId);
                 throw new KeyNotFoundException("El usuario no tiene un CV para descargar");
             }
-            return user.Adapt<GetCVDTO>();
+            Log.Information(
+                "CV encontrado para usuario ID: {UserId}, CV ID: {CVId}",
+                userId,
+                user.CV.Id
+            );
+            return user.CV.Adapt<HasCVDTO>();
         }
 
         public async Task<string> DeleteCVByIdAsync(int userId)
