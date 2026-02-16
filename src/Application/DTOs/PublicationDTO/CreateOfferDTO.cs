@@ -51,7 +51,11 @@ namespace backend.src.Application.DTOs.PublicationDTO
         [StringLength(200, ErrorMessage = "La ubicación no puede exceder 200 caracteres")]
         public string? Location { get; set; }
 
-        [StringLength(1000, ErrorMessage = "Los requisitos no pueden exceder 1000 caracteres")]
+        [Range(
+            1,
+            int.MaxValue,
+            ErrorMessage = "El número de postulantes requeridos debe ser al menos 1"
+        )]
         public int RequiredApplicants { get; set; }
 
         [StringLength(
