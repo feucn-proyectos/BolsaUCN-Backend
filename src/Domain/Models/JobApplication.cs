@@ -8,6 +8,7 @@ namespace backend.src.Domain.Models
         Pendiente,
         Aceptada,
         Rechazada,
+        CanceladaPorPostulante,
     }
 
     public enum ReviewStatus
@@ -53,6 +54,8 @@ namespace backend.src.Domain.Models
         /// Estado actual de la postulación (Pendiente, Aceptada, Rechazada).
         /// </summary>
         public required ApplicationStatus Status { get; set; }
+
+        public bool IsCVInvalid { get; set; } = false;
 
         /// <summary>
         /// Indica el estado de revision de la postulación.

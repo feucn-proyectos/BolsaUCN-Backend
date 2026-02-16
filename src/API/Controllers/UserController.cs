@@ -150,7 +150,6 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("CV actualizado", result));
         }
 
-        //! MOVE TO OFFER APPLICATION
         [HttpGet("cv")]
         [Authorize]
         public async Task<IActionResult> HasCV()
@@ -158,6 +157,24 @@ namespace backend.src.API.Controllers
             int parsedUserId = GetUserIdFromToken();
             var result = await _userService.CheckCVExistsByIdAsync(parsedUserId);
             return Ok(new GenericResponse<HasCVDTO>("CV obtenido", result));
+        }
+
+        /// <summary>
+        /// Permite a un usuario autenticado descargar su CV en formato PDF, si existe.
+        /// </summary>
+        /// <param name="userId">ID del usuario cuyo CV se desea descargar.</param>
+        /// <returns>Respuesta genérica con el archivo del CV o un mensaje de error si no existe.</returns>
+        [HttpGet("cv/download")]
+        [Authorize]
+        public async Task<IActionResult> DownloadCV()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.DownloadCVByIdAsync(parsedUserId);
+            Response.Headers.Append(
+                "Content-Disposition",
+                $"attachment; filename={result.FileName}"
+            );
+            return File(result.FileStream, result.ContentType);
         }
 
         /// <summary>

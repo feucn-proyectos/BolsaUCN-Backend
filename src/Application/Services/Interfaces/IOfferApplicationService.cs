@@ -14,6 +14,8 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateApplicationAsync(int studentId, int offerId, CoverLetterDTO coverLetter);
 
+        Task<string> CancelApplicationAsync(int studentId, int applicationId);
+
         Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(
             int userId,
             SearchParamsDTO searchParams

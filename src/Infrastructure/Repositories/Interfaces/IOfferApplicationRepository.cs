@@ -26,5 +26,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<IEnumerable<JobApplication>> GetByOfferIdAsync(int offerId);
         Task<bool> UpdateAsync(JobApplication application);
         Task<bool> ExistsByApplicantIdAndOfferId(int applicantId, int offerId);
+        Task<bool> HasPendingCvRequiredApplication(int applicantId);
+        Task<bool> MarkCvAsInvalidAsync(int applicantId);
     }
 }

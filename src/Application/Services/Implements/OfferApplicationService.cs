@@ -44,7 +44,6 @@ namespace backend.src.Application.Services.Implements
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        //! COMPLETE
         public async Task<string> CreateApplicationAsync(
             int applicantId,
             int offerId,
@@ -192,6 +191,76 @@ namespace backend.src.Application.Services.Implements
             }
 
             return "Tu postulación ha sido creada exitosamente.";
+        }
+
+        public async Task<string> CancelApplicationAsync(int userId, int applicationId)
+        {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} no encontrado al intentar cancelar postulación ID: {ApplicationId}",
+                    userId,
+                    applicationId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            // Obtener la postulación
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al intentar cancelar",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            // Verificar que la postulación pertenezca al usuario
+            if (application.StudentId != userId)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó cancelar postulación ID: {ApplicationId} que no le pertenece",
+                    userId,
+                    applicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para cancelar esta postulación"
+                );
+            }
+            // Validar estado de postulacion
+            if (application.Status != ApplicationStatus.Pendiente)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó cancelar postulación ID: {ApplicationId} con estado {Status}",
+                    userId,
+                    applicationId,
+                    application.Status
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden cancelar las postulaciones en estado Pendiente"
+                );
+            }
+
+            application.Status = ApplicationStatus.CanceladaPorPostulante;
+            bool updateResult = await _applicationRepository.UpdateAsync(application);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al cancelar postulación ID: {ApplicationId} para usuario ID: {UserId}",
+                    applicationId,
+                    userId
+                );
+                throw new Exception("No se pudo cancelar la postulación");
+            }
+
+            Log.Information(
+                "Usuario ID: {UserId} canceló postulación ID: {ApplicationId}",
+                userId,
+                applicationId
+            );
+
+            return "Tu postulación ha sido cancelada exitosamente.";
         }
 
         public async Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(

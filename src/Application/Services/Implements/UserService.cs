@@ -21,6 +21,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IConfiguration _configuration;
         private readonly IUserRepository _userRepository;
         private readonly IFileRepository _fileRepository;
+        private readonly IOfferApplicationRepository _applicationRepository;
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
@@ -30,6 +31,7 @@ namespace backend.src.Application.Services.Implements
             IConfiguration configuration,
             IUserRepository userRepository,
             IFileRepository fileRepository,
+            IOfferApplicationRepository applicationRepository,
             IVerificationCodeRepository verificationCodeRepository,
             IEmailService emailService,
             ITokenService tokenService,
@@ -39,6 +41,7 @@ namespace backend.src.Application.Services.Implements
             _configuration = configuration;
             _userRepository = userRepository;
             _fileRepository = fileRepository;
+            _applicationRepository = applicationRepository;
             _emailService = emailService;
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
@@ -1401,6 +1404,7 @@ namespace backend.src.Application.Services.Implements
         /// <exception cref="Exception"></exception>
         public async Task<string> UploadCVByIdAsync(UploadCVDTO uploadCVDTO, int userId)
         {
+            // Validar usuario
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
             User? user = await _userRepository.GetByIdAsync(
                 userId,
@@ -1410,6 +1414,20 @@ namespace backend.src.Application.Services.Implements
             {
                 Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            // Validar que el CV pueda ser actualizado
+            bool hasApplicationsPending =
+                await _applicationRepository.HasPendingCvRequiredApplication(user.Id);
+            if (hasApplicationsPending)
+            {
+                Log.Error(
+                    "El usuario con ID: {UserId} tiene postulaciones pendientes que requieren CV. No se puede actualizar el CV.",
+                    userId
+                );
+                throw new InvalidOperationException(
+                    "No se puede actualizar el CV porque tienes postulaciones pendientes que requieren un CV."
+                );
             }
             if (user.CV != null && user.UserType == UserType.Estudiante)
             {
@@ -1426,6 +1444,7 @@ namespace backend.src.Application.Services.Implements
                     );
                     throw new Exception("Error al eliminar el CV existente del estudiante");
                 }
+                await _applicationRepository.MarkCvAsInvalidAsync(user.Id);
             }
             var uploadResult = await _fileService.UploadPDFAsync(uploadCVDTO.CVFile, user);
             if (!uploadResult)
@@ -1435,6 +1454,66 @@ namespace backend.src.Application.Services.Implements
             }
 
             return "CV del usuario actualizado correctamente";
+        }
+
+        public async Task<(
+            MemoryStream FileStream,
+            string FileName,
+            string ContentType
+        )> DownloadCVByIdAsync(int userId)
+        {
+            // Validacion de usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true }
+            );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            if (user.CV == null)
+            {
+                Log.Warning("El usuario con ID: {UserId} no tiene un CV para descargar.", userId);
+                throw new KeyNotFoundException("El usuario no tiene un CV para descargar");
+            }
+
+            // Acceso a el archivo por url firmada
+            string signedUrl = await _fileService.BuildSignedUrlForCVAsync(user.CV.PublicId);
+
+            // Descarga del archivo desde el servidor de hosting
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(signedUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Error(
+                    "Error al descargar el CV del estudiante con ID: {UserId} desde el servidor de hosting. StatusCode: {StatusCode}",
+                    user.Id,
+                    response.StatusCode
+                );
+                throw new Exception(
+                    "Error al descargar el CV del estudiante desde el servidor de hosting"
+                );
+            }
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            string fileName = $"CV_{user.FirstName}_{user.LastName}.pdf"
+                .Replace(" ", "_")
+                .Replace("á", "a")
+                .Replace("é", "e")
+                .Replace("í", "i")
+                .Replace("ó", "o")
+                .Replace("ú", "u")
+                .Replace("ñ", "n");
+
+            Log.Information(
+                "CV del estudiante con ID: {UserId} descargado exitosamente desde el servidor de hosting",
+                user.Id
+            );
+            return (memoryStream, fileName, "application/pdf");
         }
 
         public async Task<HasCVDTO> CheckCVExistsByIdAsync(int userId)
@@ -1454,14 +1533,10 @@ namespace backend.src.Application.Services.Implements
             if (user.CV == null)
             {
                 Log.Warning("El usuario con ID: {UserId} no tiene un CV para descargar.", userId);
-                throw new KeyNotFoundException("El usuario no tiene un CV para descargar");
             }
-            Log.Information(
-                "CV encontrado para usuario ID: {UserId}, CV ID: {CVId}",
-                userId,
-                user.CV.Id
-            );
-            return user.CV.Adapt<HasCVDTO>();
+            Log.Information("CV encontrado para el usuario con ID: {UserId}", userId);
+            HasCVDTO hasCVDTO = new() { HasCV = user.CV != null };
+            return hasCVDTO;
         }
 
         public async Task<string> DeleteCVByIdAsync(int userId)
@@ -1482,6 +1557,19 @@ namespace backend.src.Application.Services.Implements
                 Log.Warning("El usuario con ID: {UserId} no tiene un CV para eliminar.", userId);
                 throw new KeyNotFoundException("El usuario no tiene un CV para eliminar");
             }
+            // Validar capacidad de eliminar el CV
+            bool hasApplicationsPending =
+                await _applicationRepository.HasPendingCvRequiredApplication(user.Id);
+            if (hasApplicationsPending)
+            {
+                Log.Warning(
+                    "El usuario con ID: {UserId} tiene postulaciones pendientes que requieren CV. No se puede eliminar el CV.",
+                    userId
+                );
+                throw new InvalidOperationException(
+                    "No se puede eliminar el CV porque tiene postulaciones pendientes que requieren CV."
+                );
+            }
             // Eliminar CV
             var deleteResult = await _fileRepository.DeleteCVAsync(user.CV.PublicId);
             if (!deleteResult)
@@ -1499,6 +1587,9 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("Error al actualizar el usuario después de eliminar el CV");
             }
+            // Update closed applications with the outdated cv flag.
+            await _applicationRepository.MarkCvAsInvalidAsync(user.Id);
+
             return "CV eliminado exitosamente";
         }
         #endregion

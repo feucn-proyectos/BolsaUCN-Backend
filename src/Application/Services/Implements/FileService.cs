@@ -1,5 +1,6 @@
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
@@ -399,6 +400,78 @@ namespace backend.src.Application.Services.Implements
 
             Log.Information("PDF subido exitosamente: {SecureUrl}", uploadResult.SecureUrl);
             return true;
+        }
+
+        public async Task<(Stream fileStream, string fileName, string contentType)> DownloadCVAsync(
+            int userId
+        )
+        {
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true }
+            );
+            if (user == null || user.CV == null)
+            {
+                Log.Warning("Usuario o CV no encontrado para el ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario o CV no encontrado");
+            }
+
+            string signedUrl = _cloudinary
+                .Api.UrlImgUp.Signed(true)
+                .Action("authenticated")
+                .Secure(true)
+                .ResourceType("image")
+                .BuildUrl($"{user.CV.PublicId}.pdf");
+            Log.Information(
+                "URL firmada generada para el CV del usuario {UserId}: {SignedUrl}",
+                userId,
+                signedUrl
+            );
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(signedUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Error(
+                    "Error al descargar el CV desde Cloudinary para el usuario {UserId}: {StatusCode}",
+                    userId,
+                    response.StatusCode
+                );
+                throw new Exception("Error al descargar el CV desde Cloudinary");
+            }
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0; // Reiniciar la posición del stream para su lectura posterior
+
+            string fileName = $"CV_{user.FirstName}_{user.LastName}.pdf"
+                .Replace(" ", "_")
+                .Replace("á", "a")
+                .Replace("é", "e")
+                .Replace("í", "i")
+                .Replace("ó", "o")
+                .Replace("ú", "u")
+                .Replace("ñ", "n");
+            Log.Information(
+                "CV descargado exitosamente para el usuario {UserId}: {FileName}",
+                userId,
+                fileName
+            );
+            return (memoryStream, fileName, "application/pdf");
+        }
+
+        public async Task<string> BuildSignedUrlForCVAsync(string publicId)
+        {
+            string signedUrl = _cloudinary
+                .Api.UrlImgUp.Signed(true)
+                .Action("authenticated")
+                .Secure(true)
+                .ResourceType("image")
+                .BuildUrl($"{publicId}.pdf");
+            Log.Information(
+                "URL firmada generada para el CV con PublicId {PublicId}: {SignedUrl}",
+                publicId,
+                signedUrl
+            );
+            return signedUrl;
         }
 
         public async Task<bool> DeleteAsync(string publicId)

@@ -10,7 +10,7 @@ namespace backend.src.Application.DTOs.UserDTOs.UserProfileDTOs
         public required string PhoneNumber { get; set; }
         public required string AboutMe { get; set; }
         public required double Rating { get; set; }
-        public string? CurriculumVitae { get; set; }
+        public required bool HasCV { get; set; }
         public string? Disability { get; set; }
         public string? ProfilePhoto { get; set; }
         public string? PendingEmail { get; set; }

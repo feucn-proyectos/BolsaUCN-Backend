@@ -39,5 +39,9 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="userId">El ID del usuario al que pertenece el archivo.</param>
         /// <returns>True si la carga fue exitosa, de lo contrario False.</returns>
         Task<bool> UploadPDFAsync(IFormFile file, User user);
+
+        Task<(Stream fileStream, string fileName, string contentType)> DownloadCVAsync(int userId);
+
+        Task<string> BuildSignedUrlForCVAsync(string publicId);
     }
 }
