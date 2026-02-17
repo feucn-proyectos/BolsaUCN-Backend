@@ -191,6 +191,11 @@ namespace backend.src.Application.Services.Interfaces
         /// Elimina las cuentas de usuario que no han sido confirmadas dentro de un cierto período de tiempo.
         /// </summary>
         Task DeleteUnconfirmedUserAccountsAsync();
+
+        /// <summary>
+        /// Elimina las solicitudes de cambio de correo electrónico pendientes que han expirado según la configuración de tiempo de expiración.
+        /// </summary>
+        Task ClearExpiredPendingEmailChangeRequestAsync(int userId);
         #endregion
     }
 }

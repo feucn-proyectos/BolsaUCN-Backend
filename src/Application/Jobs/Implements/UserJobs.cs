@@ -19,14 +19,19 @@ namespace backend.src.Application.Jobs.Implements
             _userService = userService;
         }
 
-        /// <summary>
-        /// Deletes user accounts that have not been confirmed within a certain time frame.
-        /// This method would typically query the database for unconfirmed accounts and delete them.
-        /// </summary>
         public async Task DeleteUnconfirmedUserAccountsAsync()
         {
             Log.Information("Trabajo programado: Eliminando cuentas de usuario no confirmadas.");
             await _userService.DeleteUnconfirmedUserAccountsAsync();
+        }
+
+        public async Task ClearExpiredPendingEmailChangeRequestAsync(int userId)
+        {
+            Log.Information(
+                "Trabajo programado: Limpiando solicitudes de cambio de correo electrónico no confirmadas para el usuario con ID {UserId}.",
+                userId
+            );
+            await _userService.ClearExpiredPendingEmailChangeRequestAsync(userId);
         }
     }
 }

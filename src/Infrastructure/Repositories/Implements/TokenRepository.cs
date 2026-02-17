@@ -38,5 +38,14 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context.Whitelists.AnyAsync(w => w.UserId == userId && w.Token == token);
         }
+
+        public async Task<int> RemoveExpiredTokensAsync(DateTime cutoffDate)
+        {
+            var expiredTokens = await _context
+                .Whitelists.Where(w => w.Expiration <= cutoffDate)
+                .ToListAsync();
+            _context.Whitelists.RemoveRange(expiredTokens);
+            return await _context.SaveChangesAsync();
+        }
     }
 }

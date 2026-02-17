@@ -1,13 +1,15 @@
 namespace backend.src.Application.Jobs.Interfaces
 {
-    /// <summary>
-    /// Interface defining user-related background jobs.
-    /// </summary>
     public interface IUserJobs
     {
         /// <summary>
-        /// Deletes user accounts that have not been confirmed within a certain time frame.
+        /// Elimina cuentas de usuario que no han sido confirmadas dentro del período de retención definido en la configuración.
         /// </summary>
         Task DeleteUnconfirmedUserAccountsAsync();
+
+        /// <summary>
+        /// Elimina solicitudes de cambio de correo electrónico pendientes que han expirado segun la configuración de tiempo de expiración.
+        /// </summary>
+        Task ClearExpiredPendingEmailChangeRequestAsync(int userId);
     }
 }

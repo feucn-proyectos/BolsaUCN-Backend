@@ -7,5 +7,8 @@ namespace backend.src.Application.Services.Interfaces
         string CreateToken(User user, IList<string> roleNames, bool rememberMe);
         Task<bool> AddToWhitelistAsync(Whitelist token);
         Task<bool> RevokeAllActiveTokensAsync(int userId);
+        #region Background Job
+        Task DeleteExpiredTokensAsync();
+        #endregion
     }
 }

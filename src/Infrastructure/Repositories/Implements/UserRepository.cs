@@ -397,5 +397,46 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
             return (unconfirmedUsers.Count, verificationCodesToDelete.Count);
         }
+
+        public async Task<bool> ClearUnconfirmedEmailChangeRequestsAsync(int userId)
+        {
+            Log.Information(
+                "Limpiando solicitudes de cambio de correo electrónico no confirmadas."
+            );
+            User? userWithPendingEmail = await _context
+                .Users.Where(u => u.Id == userId)
+                .FirstOrDefaultAsync();
+            if (userWithPendingEmail!.PendingEmail == null)
+            {
+                Log.Information(
+                    "No se encontraron solicitudes de cambio de correo electrónico pendientes para el usuario ID: {UserId}",
+                    userId
+                );
+                return true; // No hay solicitudes pendientes, por lo que se considera que la limpieza fue exitosa
+            }
+            if (userWithPendingEmail.PendingEmailExpiration >= DateTime.UtcNow)
+            {
+                Log.Information(
+                    "La solicitud de cambio de correo electrónico para el usuario ID: {UserId} aún no ha expirado. No se realizará la limpieza.",
+                    userId
+                );
+                return false; // La solicitud aún no ha expirado, por lo que no se realiza la limpieza
+            }
+            var verificationCodes = await _context
+                .VerificationCodes.Where(vc =>
+                    vc.UserId == userId && vc.CodeType == CodeType.EmailChange
+                )
+                .ToListAsync();
+            userWithPendingEmail.PendingEmail = null;
+            userWithPendingEmail.PendingEmailExpiration = null;
+            _context.VerificationCodes.RemoveRange(verificationCodes);
+            await _context.SaveChangesAsync();
+            Log.Information(
+                "Limpieza de solicitudes de cambio de correo electrónico no confirmadas completada para el usuario ID: {UserId}. Cantidad de códigos de verificación eliminados: {DeletedVerificationCodesCount}",
+                userId,
+                verificationCodes.Count
+            );
+            return true; // Limpieza realizada exitosamente
+        }
     }
 }

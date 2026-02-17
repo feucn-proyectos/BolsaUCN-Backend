@@ -118,5 +118,14 @@ namespace backend.src.Application.Services.Implements
             Log.Information($"Tokens activos revocados para el usuario ID: {userId}");
             return true;
         }
+
+        #region Background Job
+        public async Task DeleteExpiredTokensAsync()
+        {
+            var cutoffDate = DateTime.Now;
+            var deletedCount = await _tokenRepository.RemoveExpiredTokensAsync(cutoffDate);
+            Log.Information($"Eliminados {deletedCount} tokens expirados de la whitelist.");
+        }
+        #endregion
     }
 }

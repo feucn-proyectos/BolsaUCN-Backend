@@ -202,16 +202,24 @@ try
     {
         app.UseHangfireDashboard();
         // === Trabajos recurrentes ===
+        /*
         RecurringJob.AddOrUpdate<IReviewService>(
             "CloseExpiredReviews",
             service => service.CloseExpiredReviewsAsync(),
             Cron.Hourly
         );
+        */
         // User Jobs
         RecurringJob.AddOrUpdate<IUserJobs>(
             nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
             job => job.DeleteUnconfirmedUserAccountsAsync(),
             Cron.Weekly(DayOfWeek.Monday, 3) // cada lunes a las 3am
+        );
+        // Whitelist Jobs
+        RecurringJob.AddOrUpdate<ITokenService>(
+            nameof(ITokenService.DeleteExpiredTokensAsync),
+            job => job.DeleteExpiredTokensAsync(),
+            Cron.Daily // cada día a la medianoche
         );
         Log.Information(
             "Hangfire dashboard habilitado y job recurrente para cierre de reviews programado. Servidor en: http://localhost:5185/hangfire"

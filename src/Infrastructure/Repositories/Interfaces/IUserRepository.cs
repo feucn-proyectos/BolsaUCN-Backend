@@ -45,5 +45,6 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             int deletedUsersCount,
             int deletedVerificationCodesCount
         )> DeleteUnconfirmedUsersByCutoffDateAsync(DateTime cutoffDate);
+        Task<bool> ClearUnconfirmedEmailChangeRequestsAsync(int userId);
     }
 }
