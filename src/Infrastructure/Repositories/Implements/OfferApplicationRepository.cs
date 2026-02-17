@@ -31,6 +31,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context
                 .JobApplications.Include(ja => ja.Student)
+                .ThenInclude(ja => ja!.CV)
                 .Include(ja => ja.JobOffer)
                 .ThenInclude(jo => jo!.User)
                 .ThenInclude(jo => jo.ProfilePhoto)
@@ -130,7 +131,10 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .Include(ja => ja.Student)
                 .ThenInclude(c => c!.CV)
                 .Include(ja => ja.JobOffer)
-                .Where(ja => ja.JobOfferId == offerId);
+                .Where(ja =>
+                    ja.JobOfferId == offerId
+                    && ja.Status != ApplicationStatus.CanceladaPorPostulante
+                );
 
             // Aplicar ordenamiento
             if (!string.IsNullOrEmpty(searchParams.SortBy))
@@ -261,6 +265,27 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .ToListAsync();
 
             return (applications, totalCount);
+        }
+
+        public async Task<bool> HasPendingCvRequiredApplication(int applicantId)
+        {
+            return await _context.JobApplications.AnyAsync(ja =>
+                ja.StudentId == applicantId
+                && ja.Status == ApplicationStatus.Pendiente
+                && ja.JobOffer!.IsCvRequired
+            );
+        }
+
+        public async Task<bool> MarkCvAsInvalidAsync(int applicantId)
+        {
+            var applicationsToUpdate = await _context
+                .JobApplications.Where(ja =>
+                    ja.StudentId == applicantId
+                    && ja.Status != ApplicationStatus.Pendiente
+                    && ja.JobOffer!.IsCvRequired
+                )
+                .ExecuteUpdateAsync(set => set.SetProperty(ja => ja.IsCVInvalid, true));
+            return applicationsToUpdate > 0;
         }
     }
 }

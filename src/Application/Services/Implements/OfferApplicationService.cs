@@ -23,6 +23,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
+        private readonly IFileService _fileService;
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
@@ -32,6 +33,7 @@ namespace backend.src.Application.Services.Implements
             IUserRepository userRepository,
             INotificationService notificationService,
             IReviewService reviewService,
+            IFileService fileService,
             IConfiguration configuration
         )
         {
@@ -40,11 +42,11 @@ namespace backend.src.Application.Services.Implements
             _publicationRepository = publicationRepository;
             _notificationService = notificationService;
             _reviewService = reviewService;
+            _fileService = fileService;
             _configuration = configuration;
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        //! COMPLETE
         public async Task<string> CreateApplicationAsync(
             int applicantId,
             int offerId,
@@ -192,6 +194,196 @@ namespace backend.src.Application.Services.Implements
             }
 
             return "Tu postulación ha sido creada exitosamente.";
+        }
+
+        public async Task<string> CancelApplicationAsync(int userId, int applicationId)
+        {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} no encontrado al intentar cancelar postulación ID: {ApplicationId}",
+                    userId,
+                    applicationId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            // Obtener la postulación
+            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al intentar cancelar",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            // Verificar que la postulación pertenezca al usuario
+            if (application.StudentId != userId)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó cancelar postulación ID: {ApplicationId} que no le pertenece",
+                    userId,
+                    applicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para cancelar esta postulación"
+                );
+            }
+            // Validar estado de postulacion
+            if (application.Status != ApplicationStatus.Pendiente)
+            {
+                Log.Error(
+                    "Usuario ID: {UserId} intentó cancelar postulación ID: {ApplicationId} con estado {Status}",
+                    userId,
+                    applicationId,
+                    application.Status
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden cancelar las postulaciones en estado Pendiente"
+                );
+            }
+
+            application.Status = ApplicationStatus.CanceladaPorPostulante;
+            bool updateResult = await _applicationRepository.UpdateAsync(application);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al cancelar postulación ID: {ApplicationId} para usuario ID: {UserId}",
+                    applicationId,
+                    userId
+                );
+                throw new Exception("No se pudo cancelar la postulación");
+            }
+
+            Log.Information(
+                "Usuario ID: {UserId} canceló postulación ID: {ApplicationId}",
+                userId,
+                applicationId
+            );
+
+            return "Tu postulación ha sido cancelada exitosamente.";
+        }
+
+        public async Task<(
+            MemoryStream fileStream,
+            string contentType,
+            string fileName
+        )> GetApplicantCVAsync(int offerId, int applicationId, int offerorId)
+        {
+            // Validar oferente
+            bool offerorExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!offerorExists)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} no encontrado al intentar descargar CV de postulación ID: {ApplicationId}",
+                    offerorId,
+                    applicationId
+                );
+                throw new KeyNotFoundException("El usuario no existe");
+            }
+            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} sin rol de Offeror intentó descargar CV de postulación ID: {ApplicationId}",
+                    offerorId,
+                    applicationId
+                );
+                throw new SecurityException("El usuario no tiene permisos de Oferente");
+            }
+
+            // Validar que la oferta existe y pertenece al oferente
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta ID: {OfferId} no encontrada al intentar descargar CV de postulación ID: {ApplicationId}",
+                    offerId,
+                    applicationId
+                );
+                throw new KeyNotFoundException("La oferta no existe");
+            }
+            if (offer.UserId != offerorId)
+            {
+                Log.Error(
+                    "Usuario ID: {OfferorId} intentó descargar CV de postulación ID: {ApplicationId} de una oferta que no le pertenece",
+                    offerorId,
+                    applicationId
+                );
+                throw new SecurityException(
+                    "El usuario no tiene permisos para descargar el CV de esta postulación"
+                );
+            }
+
+            // Validar que la solicitud existe y pertenece a la oferta
+            JobApplication? application = await _applicationRepository.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no encontrada al intentar descargar CV",
+                    applicationId
+                );
+                throw new KeyNotFoundException("La postulación no existe");
+            }
+            if (application.JobOfferId != offerId)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no pertenece a la oferta ID: {OfferId}",
+                    applicationId,
+                    offerId
+                );
+                throw new SecurityException("La postulación no pertenece a esta oferta");
+            }
+
+            // Revisar el que postulante tenga un CV (No deberia pasar si se validó correctamente al crear la postulación, pero se agrega esta verificación por seguridad adicional antes de intentar acceder al CV)
+            bool hasCV = application.Student!.CV != null;
+            if (!hasCV)
+            {
+                Log.Error(
+                    "Postulación ID: {ApplicationId} no tiene CV asociado al intentar descargar",
+                    applicationId
+                );
+                throw new InvalidOperationException("El postulante no ha subido un CV");
+            }
+
+            User applicant = application.Student!;
+            // Acceso a el archivo por url firmada
+            string signedUrl = await _fileService.BuildSignedUrlForCVAsync(applicant.CV!.PublicId);
+
+            // Descarga del archivo desde el servidor de hosting
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(signedUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Error(
+                    "Error al descargar el CV del estudiante con ID: {UserId} desde el servidor de hosting. StatusCode: {StatusCode}",
+                    applicant.Id,
+                    response.StatusCode
+                );
+                throw new Exception(
+                    "Error al descargar el CV del estudiante desde el servidor de hosting"
+                );
+            }
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            string fileName = $"CV_{applicant.FirstName}_{applicant.LastName}.pdf"
+                .Replace(" ", "_")
+                .Replace("á", "a")
+                .Replace("é", "e")
+                .Replace("í", "i")
+                .Replace("ó", "o")
+                .Replace("ú", "u")
+                .Replace("ñ", "n");
+
+            Log.Information(
+                "CV del estudiante con ID: {UserId} descargado exitosamente desde el servidor de hosting",
+                applicant.Id
+            );
+            return (memoryStream, "application/pdf", fileName);
         }
 
         public async Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(

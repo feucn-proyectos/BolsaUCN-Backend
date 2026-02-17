@@ -9,7 +9,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs
         public required string ApplicantLastName { get; set; }
         public required string ApplicantEmail { get; set; }
         public required DateTime ApplicationDate { get; set; }
-        public string? CVUrl { get; set; }
+        public required bool HasCV { get; set; }
         public string? CoverLetter { get; set; }
         public required string Status { get; set; }
     }

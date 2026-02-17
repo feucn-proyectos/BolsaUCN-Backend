@@ -8,6 +8,7 @@ namespace backend.src.Domain.Models
         Pendiente,
         Aceptada,
         Rechazada,
+        CanceladaPorPostulante,
     }
 
     public enum ReviewStatus
@@ -53,6 +54,12 @@ namespace backend.src.Domain.Models
         /// Estado actual de la postulación (Pendiente, Aceptada, Rechazada).
         /// </summary>
         public required ApplicationStatus Status { get; set; }
+
+        /// <summary>
+        /// Indica si el postulante ha actualizado o eliminado su CV despues de que la postulacion se haya cerrado.
+        /// Sirve como auditoria para la administracion, para que al revisar el historial de postulaciones puedan saber si el CV que se reviso en su momento es el mismo que el actual del postulante o no.
+        /// </summary>
+        public bool IsCVInvalid { get; set; } = false;
 
         /// <summary>
         /// Indica el estado de revision de la postulación.

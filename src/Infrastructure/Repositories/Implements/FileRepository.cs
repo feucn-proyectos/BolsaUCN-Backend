@@ -71,8 +71,6 @@ namespace backend.src.Infrastructure.Repositories.Implements
             var existingCV = await _context.CVs.FirstOrDefaultAsync(cv => cv.PublicId == publicId);
             if (existingCV != null)
             {
-                existingCV.Url = updatedCV.Url;
-                existingCV.OriginalFileName = updatedCV.OriginalFileName;
                 existingCV.FileSizeBytes = updatedCV.FileSizeBytes;
                 existingCV.UpdatedAt = updatedCV.UpdatedAt;
 

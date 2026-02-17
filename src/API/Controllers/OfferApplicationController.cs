@@ -19,14 +19,13 @@ namespace backend.src.API.Controllers
             _applicationService = service;
         }
 
-        //! COMPLETE
         /// <summary>
         /// Permite a un estudiante postularse a una oferta laboral.
         /// </summary>
         /// <param name="offerId">ID de la oferta laboral a la que el estudiante desea postularse.</param>
         /// <returns>Respuesta que entrega un DTO con la aplicación creada.</returns>
         [HttpPost("offers/{offerId}/apply")]
-        [Authorize(Roles = "Applicant")]
+        [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> ApplyToOffer(
             int offerId,
             [FromBody] CoverLetterDTO coverLetter
@@ -41,14 +40,25 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Aplicación creada exitosamente.", result));
         }
 
-        //! COMPLETE
+        [HttpPatch("my-applications/{applicationId}/cancel")]
+        [Authorize(Roles = RoleNames.Applicant)]
+        public async Task<IActionResult> CancelApplication(int applicationId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _applicationService.CancelApplicationAsync(
+                parsedUserId,
+                applicationId
+            );
+            return Ok(new GenericResponse<string>("Aplicación cancelada exitosamente.", result));
+        }
+
         /// <summary>
         /// Permite a un estudiante obtener sus postulaciones a ofertas laborales.
         /// </summary>
         /// <param name="searchParams">Parámetros de búsqueda para filtrar y paginar las postulaciones.</param>
         /// <returns>Respuesta que entrega un DTO con las postulaciones del estudiante.</returns>
         [HttpGet("my-applications")]
-        [Authorize(Roles = "Applicant")]
+        [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> GetMyApplications([FromQuery] SearchParamsDTO searchParams)
         {
             int parsedUserId = GetUserIdFromToken();

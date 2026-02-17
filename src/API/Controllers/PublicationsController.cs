@@ -183,6 +183,18 @@ namespace backend.src.API.Controllers
             );
         }
 
+        [HttpGet("my-publications/{offerId}/applications/{applicationId}/cv")]
+        public async Task<IActionResult> DownloadApplicantCV(int offerId, int applicationId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var (fileStream, contentType, fileName) = await _applicationService.GetApplicantCVAsync(
+                offerId,
+                applicationId,
+                parsedUserId
+            );
+            return File(fileStream, contentType, fileName);
+        }
+
         [HttpPatch("my-publications/{offerId}/applications/{applicationId}/update-status")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> UpdateApplicationStatus(
