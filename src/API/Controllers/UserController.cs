@@ -170,11 +170,8 @@ namespace backend.src.API.Controllers
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _userService.DownloadCVByIdAsync(parsedUserId);
-            Response.Headers.Append(
-                "Content-Disposition",
-                $"attachment; filename={result.FileName}"
-            );
-            return File(result.FileStream, result.ContentType);
+
+            return File(result.FileStream, result.FileName, result.ContentType);
         }
 
         /// <summary>

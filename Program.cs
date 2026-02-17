@@ -111,6 +111,7 @@ try
                     // ,"https://localhost:7129"  // agrega si llamas al backend en https y navegas desde https
                     )
                     .WithHeaders(HeaderNames.ContentType, HeaderNames.Authorization, "Accept")
+                    .WithExposedHeaders(HeaderNames.ContentDisposition) // para que el front pueda leer el header Content-Disposition en la respuesta (nombre del archivo al descargar CV)
                     .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                     .AllowCredentials(); // opcional si luego usas cookies
             }

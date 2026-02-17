@@ -16,6 +16,12 @@ namespace backend.src.Application.Services.Interfaces
 
         Task<string> CancelApplicationAsync(int studentId, int applicationId);
 
+        Task<(MemoryStream fileStream, string contentType, string fileName)> GetApplicantCVAsync(
+            int offerId,
+            int applicationId,
+            int offerorId
+        );
+
         Task<ApplicationsForApplicantDTO> GetApplicationsByUserIdAsync(
             int userId,
             SearchParamsDTO searchParams
