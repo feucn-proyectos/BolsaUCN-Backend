@@ -356,5 +356,46 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 _ => query.OrderBy(u => u.Id), // Ordenamiento por defecto si el campo no es reconocido
             };
         }
+
+        public async Task<(
+            int deletedUsersCount,
+            int deletedVerificationCodesCount
+        )> DeleteUnconfirmedUsersByCutoffDateAsync(DateTime cutoffDate)
+        {
+            Log.Information(
+                "Eliminando usuarios no confirmados antes de la fecha límite: {CutoffDate}",
+                cutoffDate
+            );
+
+            var unconfirmedUsers = await _context
+                .Users.Where(u => !u.EmailConfirmed && u.CreatedAt < cutoffDate)
+                .ToListAsync();
+
+            if (unconfirmedUsers.Count == 0)
+            {
+                Log.Information("No se encontraron usuarios no confirmados para eliminar.");
+                return (0, 0);
+            }
+
+            var userIdsToDelete = unconfirmedUsers.Select(u => u.Id).ToList();
+
+            // Eliminar códigos de verificación asociados a estos usuarios
+            var verificationCodesToDelete = await _context
+                .VerificationCodes.Where(vc => userIdsToDelete.Contains(vc.UserId))
+                .ToListAsync();
+
+            _context.VerificationCodes.RemoveRange(verificationCodesToDelete);
+            _context.Users.RemoveRange(unconfirmedUsers);
+
+            await _context.SaveChangesAsync();
+
+            Log.Information(
+                "Eliminación completada. Usuarios eliminados: {DeletedUsersCount}, Códigos de verificación eliminados: {DeletedVerificationCodesCount}",
+                unconfirmedUsers.Count,
+                verificationCodesToDelete.Count
+            );
+
+            return (unconfirmedUsers.Count, verificationCodesToDelete.Count);
+        }
     }
 }

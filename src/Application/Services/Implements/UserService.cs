@@ -26,6 +26,7 @@ namespace backend.src.Application.Services.Implements
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
         private readonly IVerificationCodeRepository _verificationCodeRepository;
+        private readonly int _daysOfUnconfirmedUserRetention;
 
         public UserService(
             IConfiguration configuration,
@@ -46,6 +47,9 @@ namespace backend.src.Application.Services.Implements
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
             _fileService = fileService;
+            _daysOfUnconfirmedUserRetention = _configuration.GetValue<int>(
+                "JobsConfiguration:DaysOfUnconfirmedUserRetention"
+            );
         }
 
         /// <summary>
@@ -1606,6 +1610,24 @@ namespace backend.src.Application.Services.Implements
             return "+56" + digits;
         }
 
+        #endregion
+
+        #region Background Jobs
+
+        public async Task DeleteUnconfirmedUserAccountsAsync()
+        {
+            Log.Information(
+                "Iniciando proceso de eliminación de cuentas de usuario no confirmadas."
+            );
+            DateTime cutoffDate = DateTime.UtcNow.AddDays(_daysOfUnconfirmedUserRetention * -1);
+            (int deletedUsersCount, int deletedVerificationCodesCount) =
+                await _userRepository.DeleteUnconfirmedUsersByCutoffDateAsync(cutoffDate);
+            Log.Information(
+                "Proceso de eliminación de cuentas de usuario no confirmadas completado. Cantidad de usuarios eliminados: {Count}, Cantidad de códigos de verificación eliminados: {VerificationCodesCount}",
+                deletedUsersCount,
+                deletedVerificationCodesCount
+            );
+        }
         #endregion
     }
 }
