@@ -1179,19 +1179,7 @@ namespace backend.src.Application.Services.Implements
                 userId,
                 changeUserEmailDTO.NewEmail
             );
-            user.PendingEmail = changeUserEmailDTO.NewEmail;
-            user.PendingEmailExpiration = DateTime.UtcNow.AddDays(
-                _daysOfUnconfirmedPendingEmailChangeRetention
-            );
-            bool result = await _userRepository.UpdateAsync(user);
-            if (!result)
-            {
-                Log.Error(
-                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
-                    userId
-                );
-                throw new Exception("Error al actualizar el correo electrónico.");
-            }
+
             // Enviar correo de verificación al nuevo email
             string verificationCode = new Random().Next(100000, 999999).ToString();
             VerificationCode newVerificationCode = new VerificationCode
@@ -1227,11 +1215,27 @@ namespace backend.src.Application.Services.Implements
                 throw new Exception("Error al enviar el correo de verificación.");
             }
             // Programar trabajo para eliminar el correo pendiente y código de verificación si no se confirma el cambio en el tiempo establecido
-            BackgroundJob.Schedule<IUserJobs>(
-                nameof(IUserJobs.ClearExpiredPendingEmailChangeRequestAsync) + user.Id,
+            string jobId = BackgroundJob.Schedule<IUserJobs>(
+                nameof(IUserJobs.ClearExpiredPendingEmailChangeRequestAsync).ToLower() + user.Id,
                 job => job.ClearExpiredPendingEmailChangeRequestAsync(user.Id),
-                user.PendingEmailExpiration.Value.AddMinutes(10).ToUniversalTime()
+                DateTime
+                    .UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention)
+                    .AddMinutes(10)
+                    .ToUniversalTime()
             );
+
+            // Guardar el correo pendiente y el ID del trabajo programado en el usuario para futuras referencias
+            user.PendingEmail = changeUserEmailDTO.NewEmail;
+            user.PendingEmailJobId = jobId;
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception("Error al actualizar el correo electrónico.");
+            }
             return "Correo de verificación enviado al nuevo correo electrónico.";
         }
 
@@ -1307,14 +1311,12 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Reprogramar trabajo para eliminar el correo pendiente y código de verificación si no se confirma el cambio en el tiempo establecido
-            user.PendingEmailExpiration = DateTime.UtcNow.AddDays(
-                _daysOfUnconfirmedPendingEmailChangeRetention
-            );
-            await _userRepository.UpdateAsync(user);
-
             BackgroundJob.Reschedule(
-                nameof(IUserJobs.ClearExpiredPendingEmailChangeRequestAsync) + user.Id,
-                user.PendingEmailExpiration.Value.AddMinutes(10).ToUniversalTime()
+                user.PendingEmailJobId,
+                DateTime
+                    .UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention) // Resetea el contador para el usuario
+                    .AddMinutes(10)
+                    .ToUniversalTime()
             );
             return "Código de verificación reenviado exitosamente al nuevo correo electrónico.";
         }
@@ -1356,9 +1358,13 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("El código de verificación es incorrecto o ha expirado.");
             }
+            // Cancela el trabajo programado para eliminar el correo pendiente ya que se ha confirmado el cambio de correo
+            BackgroundJob.Delete(user.PendingEmailJobId);
+
             user.Email = user.PendingEmail;
             user.PendingEmail = null;
-            user.PendingEmailExpiration = null;
+            user.PendingEmailJobId = null;
+
             bool updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult)
             {
@@ -1368,9 +1374,7 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("Error al actualizar el correo electrónico.");
             }
-            BackgroundJob.Delete(
-                nameof(IUserJobs.ClearExpiredPendingEmailChangeRequestAsync) + user.Id
-            );
+
             return "Correo electrónico actualizado correctamente.";
         }
 
