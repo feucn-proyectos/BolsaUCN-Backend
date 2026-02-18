@@ -596,7 +596,10 @@ namespace backend.src.Application.Services.Implements
             string result;
             if (isOffer)
             {
-                bool appealResult = await EditPublicationForAppealAsync<Offer>(publicationId, appealDTO);
+                bool appealResult = await EditPublicationForAppealAsync<Offer>(
+                    publicationId,
+                    appealDTO
+                );
                 if (!appealResult)
                 {
                     Log.Error("Error al apelar la oferta con ID {PublicationId}.", publicationId);
@@ -608,7 +611,10 @@ namespace backend.src.Application.Services.Implements
             }
             else
             {
-                bool appealResult = await EditPublicationForAppealAsync<BuySell>(publicationId, appealDTO);
+                bool appealResult = await EditPublicationForAppealAsync<BuySell>(
+                    publicationId,
+                    appealDTO
+                );
                 if (!appealResult)
                 {
                     Log.Error(
@@ -627,7 +633,7 @@ namespace backend.src.Application.Services.Implements
             return result;
         }
 
-        public async Task<string> ClosePublicationManuallyAsync(
+        public async Task<string> CancelOfferManuallyAsync(
             int publicationId,
             int offerorId,
             ClosePublicationRequestDTO? requestDTO = null
@@ -640,17 +646,28 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
+            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error("El usuario con ID {UserId} no tiene permisos de oferente.", offerorId);
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para cancelar esta publicación."
+                );
+            }
             // Validacion de publicacion y propiedad
-            var publication = await _publicationRepository.GetPublicationByIdAsync<Publication>(
+            var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 publicationId,
                 new PublicationQueryOptions { IncludeUser = true }
             );
             if (publication == null)
             {
-                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                Log.Error(
+                    "Publicación del tipo oferta con ID {PublicationId} no encontrada.",
+                    publicationId
+                );
                 throw new KeyNotFoundException("Publicación no encontrada.");
             }
-            // Validacion de permisos (propietario o admin)
+            // Validacion de permisos en caso de que la publicacion no le pertenezca al usuario
             bool isAdmin = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Admin);
             if (publication.UserId != offerorId && !isAdmin)
             {
@@ -664,31 +681,35 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validacion de estado actual
-            if (publication.ApprovalStatus != ApprovalStatus.Aceptada)
+            if (publication.OfferStatus != OfferStatus.RecibiendoPostulaciones)
             {
                 Log.Error(
-                    "No se puede cerrar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
+                    "No se puede cancelar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
                     publicationId,
-                    publication.ApprovalStatus
+                    publication.OfferStatus
                 );
                 throw new InvalidOperationException(
-                    "Solo se pueden cerrar manualmente las publicaciones que están en estado 'Aceptada'."
+                    "Solo se pueden cancelar manualmente las publicaciones que están en estado 'Recibiendo Postulaciones'."
                 );
             }
             // Cierre de la oferta
-            publication.ApprovalStatus = ApprovalStatus.Cerrada;
+            publication.OfferStatus = OfferStatus.CanceladaAntesDelTrabajo;
             if (isAdmin && !string.IsNullOrEmpty(requestDTO!.ClosedByAdminReason))
                 publication.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {
-                Log.Error("Error al cerrar la publicación con ID {PublicationId}.", publicationId);
-                throw new Exception("No se pudo cerrar la publicación. Inténtalo de nuevo.");
+                Log.Error(
+                    "Error al cancelar la publicación con ID {PublicationId}.",
+                    publicationId
+                );
+                throw new Exception("No se pudo cancelar la publicación. Inténtalo de nuevo.");
             }
 
-            //TODO: Activar flujo de reseñas para ofertas cerradas manualmente por el oferente
+            //TODO: Enviar notificaciones a los postulantes informando de la cancelacion de la oferta.
+            //TODO: Enviar notificacion al oferente si la accion fue realizada por un administrador.
 
-            return "Publicación cerrada exitosamente.";
+            return "Publicación cancelada exitosamente.";
         }
         #endregion
 

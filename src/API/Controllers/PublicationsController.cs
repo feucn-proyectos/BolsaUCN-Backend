@@ -223,7 +223,7 @@ namespace backend.src.API.Controllers
         public async Task<IActionResult> ClosePublicationManually(int publicationId)
         {
             int parsedOffererId = GetUserIdFromToken();
-            var result = await _publicationService.ClosePublicationManuallyAsync(
+            var result = await _publicationService.CancelOfferManuallyAsync(
                 publicationId,
                 parsedOffererId
             );

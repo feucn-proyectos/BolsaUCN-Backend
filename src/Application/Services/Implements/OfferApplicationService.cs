@@ -719,7 +719,7 @@ namespace backend.src.Application.Services.Implements
             // TODO:Cerrar publicacion si no quedan espacios.
             if (offer.AvailableSlots <= 0)
             {
-                offer.ApprovalStatus = ApprovalStatus.Cerrada;
+                offer.OfferStatus = OfferStatus.RealizandoTrabajo;
                 await _publicationRepository.UpdateAsync(offer);
             }
             return "El estado de la postulación ha sido actualizado con éxito.";

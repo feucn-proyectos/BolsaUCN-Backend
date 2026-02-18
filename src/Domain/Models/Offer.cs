@@ -11,12 +11,27 @@ namespace backend.src.Domain.Models
         Voluntariado,
     }
 
+    public enum OfferStatus
+    {
+        EnRevision, // Oferta creada y en revisión administrativa, aún no visible para usuarios regulares
+        RecibiendoPostulaciones, // Oferta aprobada y visible para usuarios regulares, recibiendo postulaciones activamente
+        RealizandoTrabajo, // Oferta cerrada para nuevas postulaciones, en proceso de realización del trabajo o voluntariado
+        CalificacionesEnProceso, // Trabajo o voluntariado finalizado, en proceso de calificaciones y reseñas por parte de oferente y postulantes
+        Finalizada, // Oferta completamente finalizada, con calificaciones y reseñas completadas, visible en el historial de ofertas del usuario
+        CanceladaAntesDelTrabajo, // Oferta cancelada por el oferente antes de que se cierre para postulaciones, no visible para usuarios regulares
+    }
+
     /// <summary>
     /// Representa una oferta de trabajo o voluntariado publicada en el sistema.
     /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
     /// </summary>
     public class Offer : Publication
     {
+        /// <summary>
+        /// Estado actual de la oferta en su ciclo de vida.
+        /// </summary>
+        public required OfferStatus OfferStatus { get; set; } = OfferStatus.EnRevision;
+
         /// <summary>
         /// Fecha de finalización de la oferta (cuando termina la posición o oportunidad).
         /// </summary>

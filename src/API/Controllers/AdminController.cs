@@ -169,7 +169,7 @@ namespace backend.src.API.Controllers
         )
         {
             int parsedAdminId = GetUserIdFromToken();
-            var result = await _publicationService.ClosePublicationManuallyAsync(
+            var result = await _publicationService.CancelOfferManuallyAsync(
                 publicationId,
                 parsedAdminId,
                 requestDTO
