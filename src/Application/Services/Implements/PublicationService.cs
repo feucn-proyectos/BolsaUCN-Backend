@@ -686,6 +686,15 @@ namespace backend.src.Application.Services.Implements
             else if (currentStatus == OfferStatus.RealizandoTrabajo)
                 publication.OfferStatus = OfferStatus.CalificacionesEnProceso;
 
+            if (publication.OfferStatus == currentStatus) // Edge case que no deberia ocurrir. Log puesto de forma defensiva.
+            {
+                Log.Warning(
+                    "El estado de la publicación con ID {PublicationId} no cambió. Estado actual: {Status}",
+                    publicationId,
+                    publication.OfferStatus
+                );
+            }
+
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {
