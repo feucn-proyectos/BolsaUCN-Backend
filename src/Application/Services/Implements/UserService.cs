@@ -1180,7 +1180,7 @@ namespace backend.src.Application.Services.Implements
                 changeUserEmailDTO.NewEmail
             );
 
-            // Enviar correo de verificación al nuevo email
+            // Crear un nuevo código de verificación para el cambio de correo electrónico
             string verificationCode = new Random().Next(100000, 999999).ToString();
             VerificationCode newVerificationCode = new VerificationCode
             {
@@ -1200,23 +1200,9 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new InvalidOperationException("Error al crear el código de verificación.");
             }
-            Log.Information("Enviando email de verificación a: {Email}", user.PendingEmail);
-            var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
-                user.PendingEmail!,
-                createdCode.Code
-            );
-            if (!emailResult)
-            {
-                Log.Error(
-                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
-                    user.Id,
-                    user.PendingEmail
-                );
-                throw new Exception("Error al enviar el correo de verificación.");
-            }
+
             // Programar trabajo para eliminar el correo pendiente y código de verificación si no se confirma el cambio en el tiempo establecido
             string jobId = BackgroundJob.Schedule<IUserJobs>(
-                nameof(IUserJobs.ClearExpiredPendingEmailChangeRequestAsync).ToLower() + user.Id,
                 job => job.ClearExpiredPendingEmailChangeRequestAsync(user.Id),
                 DateTime
                     .UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention)
@@ -1235,6 +1221,22 @@ namespace backend.src.Application.Services.Implements
                     userId
                 );
                 throw new Exception("Error al actualizar el correo electrónico.");
+            }
+
+            // Enviar email de verificación al nuevo correo electrónico
+            Log.Information("Enviando email de verificación a: {Email}", user.PendingEmail);
+            var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
+                user.PendingEmail!,
+                createdCode.Code
+            );
+            if (!emailResult)
+            {
+                Log.Error(
+                    "Error al enviar código de verificación para cambio de correo del usuario ID: {UserId}, Email: {Email}",
+                    user.Id,
+                    user.PendingEmail
+                );
+                throw new Exception("Error al enviar el correo de verificación.");
             }
             return "Correo de verificación enviado al nuevo correo electrónico.";
         }
