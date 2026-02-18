@@ -213,13 +213,21 @@ try
         RecurringJob.AddOrUpdate<IUserJobs>(
             nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
             job => job.DeleteUnconfirmedUserAccountsAsync(),
-            Cron.Weekly(DayOfWeek.Monday, 3) // cada lunes a las 3am
+            Cron.Weekly(DayOfWeek.Monday),
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+            }
         );
         // Whitelist Jobs
         RecurringJob.AddOrUpdate<ITokenService>(
             nameof(ITokenService.DeleteExpiredTokensAsync),
             job => job.DeleteExpiredTokensAsync(),
-            Cron.Daily // cada día a la medianoche
+            Cron.Daily(0, 22),
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+            }
         );
         Log.Information(
             "Hangfire dashboard habilitado y job recurrente para cierre de reviews programado. Servidor en: http://localhost:5185/hangfire"
@@ -254,7 +262,7 @@ try
 
     // Muy importante: primero autenticación, luego autorización
     app.UseAuthentication();
-    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
+    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en la whitelist
     app.UseAuthorization();
 
     app.MapControllers();
