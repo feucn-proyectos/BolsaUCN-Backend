@@ -633,6 +633,71 @@ namespace backend.src.Application.Services.Implements
             return result;
         }
 
+        public async Task<string> CloseOfferManuallyAsync(int publicationId, int offerorId)
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error("El usuario con ID {UserId} no tiene permisos de oferente.", offerorId);
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para cerrar esta publicación."
+                );
+            }
+            // Validacion de publicacion y propiedad
+            var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                publicationId,
+                new PublicationQueryOptions { IncludeUser = true }
+            );
+            if (publication == null)
+            {
+                Log.Error(
+                    "Publicación del tipo oferta con ID {PublicationId} no encontrada.",
+                    publicationId
+                );
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+
+            // Validacion de estado actual
+            if (
+                publication.OfferStatus != OfferStatus.RealizandoTrabajo
+                || publication.OfferStatus != OfferStatus.RecibiendoPostulaciones
+            )
+            {
+                Log.Error(
+                    "No se puede cerrar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
+                    publicationId,
+                    publication.OfferStatus
+                );
+                throw new InvalidOperationException(
+                    "Solo se pueden cerrar manualmente las publicaciones que están en estado 'Realizando Trabajo' o 'Recibiendo Postulaciones'."
+                );
+            }
+            // Flujo de cierre (Avanza un paso hacia adelante)
+            var currentStatus = publication.OfferStatus;
+            if (currentStatus == OfferStatus.RecibiendoPostulaciones)
+                publication.OfferStatus = OfferStatus.RealizandoTrabajo;
+            else if (currentStatus == OfferStatus.RealizandoTrabajo)
+                publication.OfferStatus = OfferStatus.CalificacionesEnProceso;
+
+            bool updateResult = await _publicationRepository.UpdateAsync(publication);
+            if (!updateResult)
+            {
+                Log.Error("Error al cerrar la publicación con ID {PublicationId}.", publicationId);
+                throw new Exception("No se pudo cerrar la publicación. Inténtalo de nuevo.");
+            }
+
+            //TODO: Enviar notificaciones a los postulantes informando del cambio de estado de la oferta.
+            //TODO: Activar flujo de calificaciones para 'ofertas entrando a CalificacionesEnProceso'.
+            return $"Publicación cerrada exitosamente. Nuevo estado: {publication.OfferStatus}";
+        }
+
         public async Task<string> CancelOfferManuallyAsync(
             int publicationId,
             int offerorId,
