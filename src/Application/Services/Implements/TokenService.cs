@@ -61,7 +61,7 @@ namespace backend.src.Application.Services.Implements
                 var expirationHours = rememberMe ? 24 : 1;
                 var token = new JwtSecurityToken(
                     claims: claims,
-                    expires: DateTime.Now.AddHours(expirationHours),
+                    expires: DateTime.UtcNow.AddHours(expirationHours),
                     signingCredentials: creds
                 );
 
@@ -122,7 +122,7 @@ namespace backend.src.Application.Services.Implements
         #region Background Job
         public async Task DeleteExpiredTokensAsync()
         {
-            var cutoffDate = DateTime.Now;
+            var cutoffDate = DateTime.UtcNow;
             var deletedCount = await _tokenRepository.RemoveExpiredTokensAsync(cutoffDate);
             Log.Information($"Eliminados {deletedCount} tokens expirados de la whitelist.");
         }
