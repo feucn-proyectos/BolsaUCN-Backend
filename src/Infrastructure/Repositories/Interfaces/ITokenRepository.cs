@@ -8,5 +8,6 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<bool> RemoveAllFromWhitelistByUserIdAsync(int userId);
         Task<bool> ExistsByUserIdAsync(int userId);
         Task<bool> IsTokenWhitelistedAsync(int userId, string token);
+        Task<int> RemoveExpiredTokensAsync(DateTime cutoffDate);
     }
 }

@@ -173,7 +173,9 @@ namespace backend.src.Application.Services.Interfaces
         /// </summary>
         /// <param name="userId">ID del usuario</param>
         /// <returns>Archivo del CV</returns>
-        Task<(MemoryStream FileStream, string FileName, string ContentType)> DownloadCVByIdAsync(int userId);
+        Task<(MemoryStream FileStream, string FileName, string ContentType)> DownloadCVByIdAsync(
+            int userId
+        );
 
         /// <summary>
         /// Elimina el CV de un usuario por su ID.
@@ -181,6 +183,19 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="userId">ID del usuario</param>
         /// <returns>Indica si la eliminación fue exitosa</returns>
         Task<string> DeleteCVByIdAsync(int userId);
+        #endregion
+
+        #region Background Jobs
+
+        /// <summary>
+        /// Elimina las cuentas de usuario que no han sido confirmadas dentro de un cierto período de tiempo.
+        /// </summary>
+        Task DeleteUnconfirmedUserAccountsAsync();
+
+        /// <summary>
+        /// Elimina las solicitudes de cambio de correo electrónico pendientes que han expirado según la configuración de tiempo de expiración.
+        /// </summary>
+        Task ClearExpiredPendingEmailChangeRequestAsync(int userId);
         #endregion
     }
 }

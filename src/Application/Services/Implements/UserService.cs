@@ -4,6 +4,7 @@ using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
 using backend.src.Application.DTOs.UserDTOs;
 using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Application.Jobs.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -11,6 +12,7 @@ using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Exceptions;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using CloudinaryDotNet;
+using Hangfire;
 using Mapster;
 using Serilog;
 
@@ -26,6 +28,8 @@ namespace backend.src.Application.Services.Implements
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
         private readonly IVerificationCodeRepository _verificationCodeRepository;
+        private readonly int _daysOfUnconfirmedUserRetention;
+        private readonly int _daysOfUnconfirmedPendingEmailChangeRetention;
 
         public UserService(
             IConfiguration configuration,
@@ -46,6 +50,12 @@ namespace backend.src.Application.Services.Implements
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
             _fileService = fileService;
+            _daysOfUnconfirmedUserRetention = _configuration.GetValue<int>(
+                "JobsConfiguration:DaysOfUnconfirmedUserRetention"
+            );
+            _daysOfUnconfirmedPendingEmailChangeRetention = _configuration.GetValue<int>(
+                "JobsConfiguration:DaysOfUnconfirmedPendingEmailChangeRetention"
+            );
         }
 
         /// <summary>
@@ -1142,7 +1152,10 @@ namespace backend.src.Application.Services.Implements
             }
             // Validar usuario
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetByIdAsync(userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { TrackChanges = true }
+            );
             if (user == null)
             {
                 Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
@@ -1166,26 +1179,15 @@ namespace backend.src.Application.Services.Implements
                 userId,
                 changeUserEmailDTO.NewEmail
             );
-            int expirationTimer = 24; // Horas
-            user.PendingEmail = changeUserEmailDTO.NewEmail;
-            user.PendingEmailExpiration = DateTime.UtcNow.AddHours(expirationTimer);
-            bool result = await _userRepository.UpdateAsync(user);
-            if (!result)
-            {
-                Log.Error(
-                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
-                    userId
-                );
-                throw new Exception("Error al actualizar el correo electrónico.");
-            }
-            // Enviar correo de verificación al nuevo email
+
+            // Crear un nuevo código de verificación para el cambio de correo electrónico
             string verificationCode = new Random().Next(100000, 999999).ToString();
             VerificationCode newVerificationCode = new VerificationCode
             {
                 Code = verificationCode,
                 CodeType = CodeType.EmailChange,
                 UserId = user.Id,
-                Expiration = DateTime.UtcNow.AddHours(expirationTimer), // Un día desde la petición
+                Expiration = DateTime.UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention),
             };
             var createdCode = await _verificationCodeRepository.CreateCodeAsync(
                 newVerificationCode
@@ -1198,6 +1200,30 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new InvalidOperationException("Error al crear el código de verificación.");
             }
+
+            // Programar trabajo para eliminar el correo pendiente y código de verificación si no se confirma el cambio en el tiempo establecido
+            string jobId = BackgroundJob.Schedule<IUserJobs>(
+                job => job.ClearExpiredPendingEmailChangeRequestAsync(user.Id),
+                DateTime
+                    .UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention)
+                    .AddMinutes(10)
+                    .ToUniversalTime()
+            );
+
+            // Guardar el correo pendiente y el ID del trabajo programado en el usuario para futuras referencias
+            user.PendingEmail = changeUserEmailDTO.NewEmail;
+            user.PendingEmailJobId = jobId;
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar el correo electrónico para usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception("Error al actualizar el correo electrónico.");
+            }
+
+            // Enviar email de verificación al nuevo correo electrónico
             Log.Information("Enviando email de verificación a: {Email}", user.PendingEmail);
             var emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
                 user.PendingEmail!,
@@ -1219,16 +1245,19 @@ namespace backend.src.Application.Services.Implements
         {
             // Validar usuario
             Log.Information("Buscando usuario con la ID: {UserId}", userId);
-            User? user = await _userRepository.GetByIdAsync(userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { TrackChanges = true }
+            );
             if (user == null)
             {
                 Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
-            if (user.PendingEmail == null || DateTime.UtcNow > user.PendingEmailExpiration)
+            if (user.PendingEmail == null)
             {
                 Log.Error(
-                    "Intento de reenvío de verificación de cambio de correo sin una solicitud previa o con solicitud expirada. Usuario ID: {UserId}",
+                    "Intento de reenvío de verificación de cambio de correo sin una solicitud previa. Usuario ID: {UserId}",
                     userId
                 );
                 throw new InvalidOperationException(
@@ -1242,7 +1271,6 @@ namespace backend.src.Application.Services.Implements
                     user.Id,
                     CodeType.EmailChange
                 );
-            bool stillValid = false;
             if (existingCode != null && DateTime.UtcNow < existingCode.Expiration)
             {
                 Log.Information(
@@ -1250,7 +1278,6 @@ namespace backend.src.Application.Services.Implements
                     user.Id,
                     user.PendingEmail
                 );
-                stillValid = true;
             }
 
             VerificationCode newCode = new VerificationCode
@@ -1258,26 +1285,22 @@ namespace backend.src.Application.Services.Implements
                 Code = new Random().Next(100000, 999999).ToString(),
                 CodeType = CodeType.EmailChange,
                 UserId = user.Id,
-                Expiration = DateTime.UtcNow.AddHours(48),
+                Expiration = DateTime.UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention),
             };
-            if (!stillValid)
+
+            var createdCode = await _verificationCodeRepository.CreateCodeAsync(newCode);
+            if (createdCode == null)
             {
-                var createdCode = await _verificationCodeRepository.CreateCodeAsync(newCode);
-                if (createdCode == null)
-                {
-                    Log.Error(
-                        "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
-                        user.Id
-                    );
-                    throw new InvalidOperationException(
-                        "Error al crear el código de verificación."
-                    );
-                }
+                Log.Error(
+                    "Error al crear código de verificación para cambio de correo del usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new InvalidOperationException("Error al crear el código de verificación.");
             }
 
             bool emailResult = await _emailService.SendChangeEmailVerificationEmailAsync(
                 user.PendingEmail!,
-                stillValid ? existingCode!.Code : newCode.Code
+                newCode.Code
             );
             if (!emailResult)
             {
@@ -1288,6 +1311,15 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("Error al enviar el correo de verificación.");
             }
+
+            // Reprogramar trabajo para eliminar el correo pendiente y código de verificación si no se confirma el cambio en el tiempo establecido
+            BackgroundJob.Reschedule(
+                user.PendingEmailJobId,
+                DateTime
+                    .UtcNow.AddDays(_daysOfUnconfirmedPendingEmailChangeRetention) // Resetea el contador para el usuario
+                    .AddMinutes(10)
+                    .ToUniversalTime()
+            );
             return "Código de verificación reenviado exitosamente al nuevo correo electrónico.";
         }
 
@@ -1328,9 +1360,13 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("El código de verificación es incorrecto o ha expirado.");
             }
+            // Cancela el trabajo programado para eliminar el correo pendiente ya que se ha confirmado el cambio de correo
+            BackgroundJob.Delete(user.PendingEmailJobId);
+
             user.Email = user.PendingEmail;
             user.PendingEmail = null;
-            user.PendingEmailExpiration = null;
+            user.PendingEmailJobId = null;
+
             bool updateResult = await _userRepository.UpdateAsync(user);
             if (!updateResult)
             {
@@ -1340,6 +1376,7 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("Error al actualizar el correo electrónico.");
             }
+
             return "Correo electrónico actualizado correctamente.";
         }
 
@@ -1606,6 +1643,59 @@ namespace backend.src.Application.Services.Implements
             return "+56" + digits;
         }
 
+        #endregion
+
+        #region Background Jobs
+
+        public async Task DeleteUnconfirmedUserAccountsAsync()
+        {
+            Log.Information(
+                "Iniciando proceso de eliminación de cuentas de usuario no confirmadas."
+            );
+            // La fecha de corte se calcula restando el número de días de retención a la fecha actual. Si el número de días es negativo, se suman en su lugar, lo que permite flexibilidad en la configuración.
+            DateTime cutoffDate =
+                _daysOfUnconfirmedUserRetention > 0
+                    ? DateTime.UtcNow.AddDays(_daysOfUnconfirmedUserRetention * -1)
+                    : DateTime.UtcNow.AddDays(_daysOfUnconfirmedUserRetention);
+
+            DateTime.UtcNow.AddDays(_daysOfUnconfirmedUserRetention * -1);
+            (int deletedUsersCount, int deletedVerificationCodesCount) =
+                await _userRepository.DeleteUnconfirmedUsersByCutoffDateAsync(cutoffDate);
+            Log.Information(
+                "Proceso de eliminación de cuentas de usuario no confirmadas completado. Cantidad de usuarios eliminados: {Count}, Cantidad de códigos de verificación eliminados: {VerificationCodesCount}",
+                deletedUsersCount,
+                deletedVerificationCodesCount
+            );
+        }
+
+        public async Task ClearExpiredPendingEmailChangeRequestAsync(int userId)
+        {
+            Log.Information(
+                "Iniciando proceso de limpieza de solicitudes de cambio de correo electrónico no confirmadas."
+            );
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool pendingEmailCleared =
+                await _userRepository.ClearUnconfirmedEmailChangeRequestsAsync(userId);
+            if (!pendingEmailCleared)
+            {
+                Log.Error(
+                    "Error al limpiar solicitudes de cambio de correo electrónico no confirmadas para el usuario ID: {UserId}",
+                    userId
+                );
+                throw new Exception(
+                    "Error al limpiar solicitudes de cambio de correo electrónico no confirmadas."
+                );
+            }
+            Log.Information(
+                "Proceso de limpieza de solicitudes de cambio de correo electrónico no confirmadas completado para el usuario ID: {UserId}",
+                userId
+            );
+        }
         #endregion
     }
 }

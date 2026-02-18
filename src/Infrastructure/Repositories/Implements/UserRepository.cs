@@ -356,5 +356,81 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 _ => query.OrderBy(u => u.Id), // Ordenamiento por defecto si el campo no es reconocido
             };
         }
+
+        public async Task<(
+            int deletedUsersCount,
+            int deletedVerificationCodesCount
+        )> DeleteUnconfirmedUsersByCutoffDateAsync(DateTime cutoffDate)
+        {
+            Log.Information(
+                "Eliminando usuarios no confirmados antes de la fecha límite: {CutoffDate}",
+                cutoffDate
+            );
+
+            var unconfirmedUsers = await _context
+                .Users.Where(u => !u.EmailConfirmed && u.CreatedAt < cutoffDate)
+                .ToListAsync();
+
+            if (unconfirmedUsers.Count == 0)
+            {
+                Log.Information("No se encontraron usuarios no confirmados para eliminar.");
+                return (0, 0);
+            }
+
+            var userIdsToDelete = unconfirmedUsers.Select(u => u.Id).ToList();
+
+            // Eliminar códigos de verificación asociados a estos usuarios
+            var verificationCodesToDelete = await _context
+                .VerificationCodes.Where(vc => userIdsToDelete.Contains(vc.UserId))
+                .ToListAsync();
+
+            _context.VerificationCodes.RemoveRange(verificationCodesToDelete);
+            _context.Users.RemoveRange(unconfirmedUsers);
+
+            await _context.SaveChangesAsync();
+
+            Log.Information(
+                "Eliminación completada. Usuarios eliminados: {DeletedUsersCount}, Códigos de verificación eliminados: {DeletedVerificationCodesCount}",
+                unconfirmedUsers.Count,
+                verificationCodesToDelete.Count
+            );
+
+            return (unconfirmedUsers.Count, verificationCodesToDelete.Count);
+        }
+
+        public async Task<bool> ClearUnconfirmedEmailChangeRequestsAsync(int userId)
+        {
+            Log.Information(
+                "Limpiando solicitudes de cambio de correo electrónico no confirmadas."
+            );
+            User? userWithPendingEmail = await _context
+                .Users.Where(u => u.Id == userId)
+                .FirstOrDefaultAsync();
+            if (userWithPendingEmail!.PendingEmail == null)
+            {
+                Log.Information(
+                    "No se encontraron solicitudes de cambio de correo electrónico pendientes para el usuario ID: {UserId}",
+                    userId
+                );
+                return false; // No hay solicitudes pendientes para limpiar
+            }
+
+            var verificationCodes = await _context
+                .VerificationCodes.Where(vc =>
+                    vc.UserId == userId && vc.CodeType == CodeType.EmailChange
+                )
+                .ToListAsync();
+
+            userWithPendingEmail.PendingEmail = null;
+            userWithPendingEmail.PendingEmailJobId = null;
+            _context.VerificationCodes.RemoveRange(verificationCodes);
+            await _context.SaveChangesAsync();
+            Log.Information(
+                "Limpieza de solicitudes de cambio de correo electrónico no confirmadas completada para el usuario ID: {UserId}. Cantidad de códigos de verificación eliminados: {DeletedVerificationCodesCount}",
+                userId,
+                verificationCodes.Count
+            );
+            return true; // Limpieza realizada exitosamente
+        }
     }
 }

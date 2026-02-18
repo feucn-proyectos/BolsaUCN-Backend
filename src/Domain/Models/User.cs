@@ -100,7 +100,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Fecha y hora de cuando el email pendiente de verificación expira.
         /// </summary>
-        public DateTime? PendingEmailExpiration { get; set; }
+        public string? PendingEmailJobId { get; set; }
 
         /// <summary>
         /// Fecha y hora de creación del usuario (UTC).

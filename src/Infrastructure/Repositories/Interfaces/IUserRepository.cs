@@ -41,5 +41,10 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<int> GetCountByTypeAsync(UserType userType);
         Task<int> GetCountByRoleAsync(string role);
         Task<bool> DeleteUserAsync(User user);
+        Task<(
+            int deletedUsersCount,
+            int deletedVerificationCodesCount
+        )> DeleteUnconfirmedUsersByCutoffDateAsync(DateTime cutoffDate);
+        Task<bool> ClearUnconfirmedEmailChangeRequestsAsync(int userId);
     }
 }

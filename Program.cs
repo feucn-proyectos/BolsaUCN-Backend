@@ -1,4 +1,6 @@
 using backend.src.Application.Infrastructure.Data;
+using backend.src.Application.Jobs.Implements;
+using backend.src.Application.Jobs.Interfaces;
 using backend.src.Application.Mappers;
 using backend.src.Application.Services.Implements;
 using backend.src.Application.Services.Interfaces;
@@ -150,7 +152,7 @@ try
 
     #region DI
     // =========================
-    // 6) DI (repos/services/mappers)
+    // 6) DI (repos/services/mappers/jobs)
     // =========================
     builder.Services.AddScoped<UserMapper>();
     builder.Services.AddScoped<PublicationMapper>();
@@ -181,6 +183,8 @@ try
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
+    builder.Services.AddScoped<IUserJobs, UserJobs>();
+
     builder.Services.AddMapster();
 
     var app = builder.Build();
@@ -193,19 +197,45 @@ try
     #endregion
 
     #region Hangfire Dashboard + Recurring Jobs
-    // Hangfire dashboard (solo en desarrollo)
+    // Asegurar el UI del dashboard de Hangfire sea solo accesible en desarrollo
     if (app.Environment.IsDevelopment())
     {
         app.UseHangfireDashboard();
-        // Registrar job recurrente cada hora para cerrar reviews vencidas
+        // === Trabajos recurrentes ===
+        /*
         RecurringJob.AddOrUpdate<IReviewService>(
             "CloseExpiredReviews",
             service => service.CloseExpiredReviewsAsync(),
             Cron.Hourly
         );
+        */
+        // User Jobs
+        RecurringJob.AddOrUpdate<IUserJobs>(
+            nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
+            job => job.DeleteUnconfirmedUserAccountsAsync(),
+            Cron.Weekly(DayOfWeek.Monday),
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+            }
+        );
+        // Whitelist Jobs
+        RecurringJob.AddOrUpdate<ITokenService>(
+            nameof(ITokenService.DeleteExpiredTokensAsync),
+            job => job.DeleteExpiredTokensAsync(),
+            Cron.Daily(0, 22),
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+            }
+        );
         Log.Information(
             "Hangfire dashboard habilitado y job recurrente para cierre de reviews programado. Servidor en: http://localhost:5185/hangfire"
         );
+    }
+    else
+    {
+        Log.Information("Servidor en modo producción, Hangfire dashboard deshabilitado");
     }
 
     #endregion
@@ -232,7 +262,7 @@ try
 
     // Muy importante: primero autenticación, luego autorización
     app.UseAuthentication();
-    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
+    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en la whitelist
     app.UseAuthorization();
 
     app.MapControllers();
