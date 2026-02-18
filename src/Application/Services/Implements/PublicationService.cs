@@ -665,35 +665,21 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Validacion de estado actual
-            if (
-                publication.OfferStatus != OfferStatus.RealizandoTrabajo
-                || publication.OfferStatus != OfferStatus.RecibiendoPostulaciones
-            )
+            if (publication.IsWorkInProgress || publication.IsAcceptingApplications)
             {
                 Log.Error(
-                    "No se puede cerrar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
-                    publicationId,
-                    publication.OfferStatus
+                    "La publicación con ID {PublicationId} no está en un estado válido para cerrarse manualmente.",
+                    publicationId
                 );
                 throw new InvalidOperationException(
                     "Solo se pueden cerrar manualmente las publicaciones que están en estado 'Realizando Trabajo' o 'Recibiendo Postulaciones'."
                 );
             }
             // Flujo de cierre (Avanza un paso hacia adelante)
-            var currentStatus = publication.OfferStatus;
-            if (currentStatus == OfferStatus.RecibiendoPostulaciones)
-                publication.OfferStatus = OfferStatus.RealizandoTrabajo;
-            else if (currentStatus == OfferStatus.RealizandoTrabajo)
-                publication.OfferStatus = OfferStatus.CalificacionesEnProceso;
-
-            if (publication.OfferStatus == currentStatus) // Edge case que no deberia ocurrir. Log puesto de forma defensiva.
-            {
-                Log.Warning(
-                    "El estado de la publicación con ID {PublicationId} no cambió. Estado actual: {Status}",
-                    publicationId,
-                    publication.OfferStatus
-                );
-            }
+            if (publication.IsAcceptingApplications)
+                publication.StartWork();
+            else if (publication.IsWorkInProgress)
+                publication.CompleteWork();
 
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
@@ -704,7 +690,7 @@ namespace backend.src.Application.Services.Implements
 
             //TODO: Enviar notificaciones a los postulantes informando del cambio de estado de la oferta.
             //TODO: Activar flujo de calificaciones para 'ofertas entrando a CalificacionesEnProceso'.
-            return $"Publicación cerrada exitosamente. Nuevo estado: {publication.OfferStatus}";
+            return $"Publicación cerrada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
         }
 
         public async Task<string> CancelOfferManuallyAsync(
@@ -755,19 +741,18 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validacion de estado actual
-            if (publication.OfferStatus != OfferStatus.RecibiendoPostulaciones)
+            if (!publication.IsAcceptingApplications)
             {
                 Log.Error(
-                    "No se puede cancelar la publicación con ID {PublicationId} porque su estado actual es {Status}.",
-                    publicationId,
-                    publication.OfferStatus
+                    "La publicación con ID {PublicationId} no está en un estado válido para cancelarse manualmente.",
+                    publicationId
                 );
                 throw new InvalidOperationException(
                     "Solo se pueden cancelar manualmente las publicaciones que están en estado 'Recibiendo Postulaciones'."
                 );
             }
             // Cierre de la oferta
-            publication.OfferStatus = OfferStatus.CanceladaAntesDelTrabajo;
+            publication.CancelOffer();
             if (isAdmin && !string.IsNullOrEmpty(requestDTO!.ClosedByAdminReason))
                 publication.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
             bool updateResult = await _publicationRepository.UpdateAsync(publication);

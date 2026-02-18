@@ -11,16 +11,6 @@ namespace backend.src.Domain.Models
         Voluntariado,
     }
 
-    public enum OfferStatus
-    {
-        EnRevision, // Oferta creada y en revisión administrativa, aún no visible para usuarios regulares
-        RecibiendoPostulaciones, // Oferta aprobada y visible para usuarios regulares, recibiendo postulaciones activamente
-        RealizandoTrabajo, // Oferta cerrada para nuevas postulaciones, en proceso de realización del trabajo o voluntariado
-        CalificacionesEnProceso, // Trabajo o voluntariado finalizado, en proceso de calificaciones y reseñas por parte de oferente y postulantes
-        Finalizada, // Oferta completamente finalizada, con calificaciones y reseñas completadas, visible en el historial de ofertas del usuario
-        CanceladaAntesDelTrabajo, // Oferta cancelada por el oferente antes de que se cierre para postulaciones, no visible para usuarios regulares
-    }
-
     /// <summary>
     /// Representa una oferta de trabajo o voluntariado publicada en el sistema.
     /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
@@ -28,12 +18,7 @@ namespace backend.src.Domain.Models
     public class Offer : Publication
     {
         /// <summary>
-        /// Estado actual de la oferta en su ciclo de vida.
-        /// </summary>
-        public required OfferStatus OfferStatus { get; set; } = OfferStatus.EnRevision;
-
-        /// <summary>
-        /// Fecha de finalización de la oferta (cuando termina la posición o oportunidad).
+        /// Fecha en la que se termina el trabajo.
         /// </summary>
         public required DateTime EndDate { get; set; }
 
@@ -68,5 +53,85 @@ namespace backend.src.Domain.Models
         /// Por defecto es true.
         /// </summary>
         public bool IsCvRequired { get; set; } = true;
+
+        // === Atributos para el seguimiento ===
+
+        public DateTime? WorkStartedAt { get; set; }
+
+        public DateTime? WorkCompletedAt { get; set; }
+
+        /// <summary>
+        /// Fecha en la que la oferta llega al final de su ciclo de vida.
+        /// A lo mas es 2 semanas despues de la fecha de termino.
+        /// </summary>
+        public DateTime? FinalizedAt { get; set; }
+
+        /// <summary>
+        /// Fecha en que la oferta es cancelada por el oferente antes de que se cierre para postulaciones.
+        /// Una vez que han terminado las postulaciones no te puedes arrepentir.
+        /// </summary>
+        public DateTime? CancelledAt { get; set; }
+
+        // === Atributos derivados ===
+        public bool IsInAdminReview => ApprovalStatus == ApprovalStatus.Pendiente;
+        public bool IsRejected => ApprovalStatus == ApprovalStatus.Rechazada;
+        public bool IsAcceptingApplications =>
+            ApprovalStatus == ApprovalStatus.Aceptada
+            && DateTime.UtcNow <= ApplicationDeadline
+            && WorkStartedAt == null;
+        public bool IsWorkInProgress =>
+            ApprovalStatus == ApprovalStatus.Aceptada
+            && WorkStartedAt.HasValue
+            && !WorkCompletedAt.HasValue;
+        public bool IsAwaitingReviews =>
+            ApprovalStatus == ApprovalStatus.Aceptada
+            && WorkCompletedAt.HasValue
+            && !FinalizedAt.HasValue;
+        public bool IsFinalized =>
+            ApprovalStatus == ApprovalStatus.Aceptada && FinalizedAt.HasValue; // Se finaliza automáticamente 2 semanas después de la fecha de término si no se ha finalizado manualmente antes
+        public bool IsCancelled => CancelledAt.HasValue;
+
+        // === Metodos para el cambio de estado ===
+        public void StartWork()
+        {
+            if (ApprovalStatus != ApprovalStatus.Aceptada)
+                throw new InvalidOperationException("Oferta no aprobada");
+            if (WorkStartedAt.HasValue)
+                throw new InvalidOperationException("Trabajo ya iniciado");
+
+            WorkStartedAt = DateTime.UtcNow;
+        }
+
+        public void CompleteWork()
+        {
+            if (!WorkStartedAt.HasValue)
+                throw new InvalidOperationException("Trabajo no iniciado");
+            if (WorkCompletedAt.HasValue)
+                throw new InvalidOperationException("Trabajo ya completado");
+
+            WorkCompletedAt = DateTime.UtcNow;
+        }
+
+        public void FinalizeOffer()
+        {
+            if (!WorkCompletedAt.HasValue)
+                throw new InvalidOperationException("Trabajo no completado");
+            if (FinalizedAt.HasValue)
+                throw new InvalidOperationException("Ya finalizado");
+
+            FinalizedAt = DateTime.UtcNow;
+        }
+
+        public void CancelOffer()
+        {
+            if (WorkStartedAt.HasValue)
+                throw new InvalidOperationException(
+                    "No se puede cancelar una oferta con trabajo iniciado"
+                );
+            if (CancelledAt.HasValue)
+                throw new InvalidOperationException("Oferta ya cancelada");
+
+            CancelledAt = DateTime.UtcNow;
+        }
     }
 }
