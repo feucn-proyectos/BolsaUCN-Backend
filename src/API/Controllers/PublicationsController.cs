@@ -218,16 +218,28 @@ namespace backend.src.API.Controllers
             );
         }
 
-        [HttpPatch("my-publications/{publicationId}/close")]
+        [HttpPatch("my-publications/{publicationId}/advance")]
         [Authorize(Roles = RoleNames.Offeror)]
-        public async Task<IActionResult> ClosePublicationManually(int publicationId)
+        public async Task<IActionResult> AdvancePublicationManually(int publicationId)
+        {
+            int parsedOffererId = GetUserIdFromToken();
+            var result = await _publicationService.AdvanceOfferManuallyAsync(
+                publicationId,
+                parsedOffererId
+            );
+            return Ok(new GenericResponse<string>("Publicación cerrada exitosamente.", result));
+        }
+
+        [HttpPatch("my-publications/{publicationId}/cancel")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> CancelPublicationManually(int publicationId)
         {
             int parsedOffererId = GetUserIdFromToken();
             var result = await _publicationService.CancelOfferManuallyAsync(
                 publicationId,
                 parsedOffererId
             );
-            return Ok(new GenericResponse<string>("Publicación cerrada exitosamente.", result));
+            return Ok(new GenericResponse<string>("Publicación cancelada exitosamente.", result));
         }
 
         [HttpPost("my-publications/{publicationId}/appeal")]

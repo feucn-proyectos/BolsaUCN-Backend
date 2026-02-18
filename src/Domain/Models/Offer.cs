@@ -11,6 +11,16 @@ namespace backend.src.Domain.Models
         Voluntariado,
     }
 
+    public enum OfferStatus
+    {
+        EnRevision,
+        RecibiendoPostulaciones,
+        RealizandoTrabajo,
+        CalificacionesEnProceso,
+        Finalizada,
+        CanceladaAntesDelTrabajo,
+    }
+
     /// <summary>
     /// Representa una oferta de trabajo o voluntariado publicada en el sistema.
     /// Hereda propiedades comunes de publicación de <see cref="Publication"/>.
@@ -56,6 +66,7 @@ namespace backend.src.Domain.Models
 
         // === Atributos para el seguimiento ===
 
+        public string? InitialReviewJobId { get; set; }
         public DateTime? WorkStartedAt { get; set; }
 
         public DateTime? WorkCompletedAt { get; set; }
@@ -132,6 +143,29 @@ namespace backend.src.Domain.Models
                 throw new InvalidOperationException("Oferta ya cancelada");
 
             CancelledAt = DateTime.UtcNow;
+        }
+
+        // === Estado para el frontend ===
+        public OfferStatus CurrentStatus
+        {
+            get
+            {
+                if (IsCancelled)
+                    return OfferStatus.CanceladaAntesDelTrabajo;
+                if (IsFinalized)
+                    return OfferStatus.Finalizada;
+                if (IsAwaitingReviews)
+                    return OfferStatus.CalificacionesEnProceso;
+                if (IsWorkInProgress)
+                    return OfferStatus.RealizandoTrabajo;
+                if (IsAcceptingApplications)
+                    return OfferStatus.RecibiendoPostulaciones;
+                if (IsInAdminReview)
+                    return OfferStatus.EnRevision;
+
+                // Si no cumple ninguna condición, se asume que está en revisión por defecto
+                return OfferStatus.EnRevision;
+            }
         }
     }
 }

@@ -135,6 +135,10 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.AppealCount, src => src.AppealCount)
                 // === OFERTAS DE TRABAJO ===
                 .Map(
+                    dest => dest.OfferStatus,
+                    src => src is Offer ? ((Offer)src).CurrentStatus.ToString() : null
+                )
+                .Map(
                     dest => dest.OfferType,
                     src => src is Offer ? ((Offer)src).OfferType.ToString() : null
                 )

@@ -25,11 +25,12 @@ public class PublicationRepository : IPublicationRepository
         _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
     }
 
-    public async Task<bool> CreatePublicationAsync<T>(T publication)
+    public async Task<(T, bool)> CreatePublicationAsync<T>(T publication)
         where T : Publication
     {
         await _context.Set<T>().AddAsync(publication);
-        return await _context.SaveChangesAsync() > 0;
+        int rowsAffected = await _context.SaveChangesAsync();
+        return (publication, rowsAffected > 0);
     }
 
     public async Task<bool> CheckOwnershipAsync(int offerorId, int publicationId)

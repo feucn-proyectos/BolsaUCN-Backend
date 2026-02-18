@@ -4,12 +4,14 @@ using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Application.Jobs.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
+using Hangfire;
 using Mapster;
 using Serilog;
 
@@ -103,16 +105,29 @@ namespace backend.src.Application.Services.Implements
             bool isAdmin = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
             newOffer.ApprovalStatus = isAdmin ? ApprovalStatus.Aceptada : ApprovalStatus.Pendiente;
 
-            bool createOfferResult = await _publicationRepository.CreatePublicationAsync(newOffer);
-
+            (Offer createdOffer, bool isCreated) =
+                await _publicationRepository.CreatePublicationAsync(newOffer);
+            if (!isCreated)
+            {
+                Log.Error("Error al crear la oferta para el usuario {UserId}.", userId);
+                throw new Exception("No se pudo crear la oferta. Inténtalo de nuevo.");
+            }
             Log.Information(
                 "Oferta creada exitosamente. ID: {OfferId}, Título: {Title}, Usuario: {UserId}",
-                createOfferResult,
-                newOffer.Title,
+                createdOffer.Id,
+                createdOffer.Title,
                 currentUser.Id
             );
 
-            return $"Oferta creada exitosamente. Oferta ID: {createOfferResult}";
+            // Programar trabajo para las calificaciones al cierre
+            string jobId = BackgroundJob.Schedule<IReviewJobs>(
+                job => job.CreateInitialReviewAsync(createdOffer.Id),
+                newOffer.EndDate.AddMinutes(1)
+            );
+            createdOffer.InitialReviewJobId = jobId;
+            await _publicationRepository.UpdateAsync(createdOffer);
+
+            return $"Oferta creada exitosamente. Oferta ID: {createdOffer.Id}";
         }
 
         #endregion
@@ -174,58 +189,6 @@ namespace backend.src.Application.Services.Implements
 
         // --- IMPLEMENTACIÓN PENDING ("InProcess") ---
         // --- IMPLEMENTACIÓN PENDING ("InProcess") CORREGIDA ---
-
-        #region Metodos para publicaciones en general
-
-        //! NEEDS MORE RESEARCH - NO FLOW DOCUMENTATION FOUND
-        /// <summary>
-        /// Allows a user to appeal a rejection if limits allow.
-        /// </summary>
-        public async Task<GenericResponse<string>> AppealPublicationAsync(
-            int publicationId,
-            int userId
-        )
-        {
-            var publication = await _publicationRepository.GetPublicationByIdAsync<Publication>(
-                publicationId
-            );
-
-            // 1. Validate existence -> 404 Not Found
-            if (publication == null)
-                throw new KeyNotFoundException("La publicación no existe.");
-
-            // 2. Validate ownership -> 401 Unauthorized (Based on JobApplicationService pattern)
-            if (publication.UserId != userId)
-                throw new UnauthorizedAccessException(
-                    "No tienes permiso para apelar esta publicación."
-                );
-
-            // 3. Validate status -> 409 Conflict (InvalidOperationException maps to 409 in your middleware)
-            if (publication.ApprovalStatus != ApprovalStatus.Rechazada)
-                throw new InvalidOperationException(
-                    "Solo se pueden apelar publicaciones que han sido rechazadas."
-                );
-
-            // 4. Validate limits -> 409 Conflict
-            if (publication.AppealCount >= _maxAppeals)
-            {
-                throw new InvalidOperationException(
-                    $"Has alcanzado el límite máximo de {_maxAppeals} apelaciones para esta publicación."
-                );
-            }
-
-            // 5. Process appeal
-            publication.ApprovalStatus = ApprovalStatus.Pendiente;
-            //publication.UserAppealJustification = dto.Justification; Clients dont want any justification provided, just notice that the publiction has been resubmitted
-            publication.AppealCount++;
-
-            await _publicationRepository.UpdateAsync(publication);
-
-            return new GenericResponse<string>(
-                $"Apelación enviada exitosamente. Intento {publication.AppealCount} de {_maxAppeals}. Un administrador revisará tu caso."
-            );
-        }
-        #endregion
 
         #region New Methods
 
@@ -633,7 +596,7 @@ namespace backend.src.Application.Services.Implements
             return result;
         }
 
-        public async Task<string> CloseOfferManuallyAsync(int publicationId, int offerorId)
+        public async Task<string> AdvanceOfferManuallyAsync(int publicationId, int offerorId)
         {
             // Validacion de usuario
             bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
@@ -653,7 +616,7 @@ namespace backend.src.Application.Services.Implements
             // Validacion de publicacion y propiedad
             var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 publicationId,
-                new PublicationQueryOptions { IncludeUser = true }
+                new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
             );
             if (publication == null)
             {
@@ -665,32 +628,52 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Validacion de estado actual
-            if (publication.IsWorkInProgress || publication.IsAcceptingApplications)
+            if (!publication.IsWorkInProgress && !publication.IsAcceptingApplications)
             {
                 Log.Error(
-                    "La publicación con ID {PublicationId} no está en un estado válido para cerrarse manualmente.",
+                    "La publicación con ID {PublicationId} no está en un estado válido para avanzarse manualmente.",
                     publicationId
                 );
                 throw new InvalidOperationException(
-                    "Solo se pueden cerrar manualmente las publicaciones que están en estado 'Realizando Trabajo' o 'Recibiendo Postulaciones'."
+                    "Solo se pueden avanzar manualmente las publicaciones que están en estado 'Realizando Trabajo' o 'Recibiendo Postulaciones'."
                 );
             }
             // Flujo de cierre (Avanza un paso hacia adelante)
             if (publication.IsAcceptingApplications)
+            {
+                if (!publication.Applications.Any(a => a.Status == ApplicationStatus.Aceptada))
+                {
+                    Log.Error(
+                        "No se puede avanzar la publicación con ID {PublicationId} porque no tiene postulantes aceptados.",
+                        publicationId
+                    );
+                    throw new InvalidOperationException(
+                        "No se puede avanzar la publicación porque no tiene postulantes aceptados. Si deseas avanzar la publicación sin postulantes, por favor considere cancelar la publicación manualmente en vez de avanzar el estado de la publicación."
+                    );
+                }
                 publication.StartWork();
+            }
             else if (publication.IsWorkInProgress)
                 publication.CompleteWork();
 
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {
-                Log.Error("Error al cerrar la publicación con ID {PublicationId}.", publicationId);
-                throw new Exception("No se pudo cerrar la publicación. Inténtalo de nuevo.");
+                Log.Error("Error al avanzar la publicación con ID {PublicationId}.", publicationId);
+                throw new Exception("No se pudo avanzar la publicación. Inténtalo de nuevo.");
             }
 
             //TODO: Enviar notificaciones a los postulantes informando del cambio de estado de la oferta.
             //TODO: Activar flujo de calificaciones para 'ofertas entrando a CalificacionesEnProceso'.
-            return $"Publicación cerrada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
+            if (publication.IsAwaitingReviews)
+            {
+                // Reprograma el trabajo para crear las calificaciones iniciales para que se ejecute enseguida en vez de la fecha original.
+                BackgroundJob.Reschedule(
+                    publication.InitialReviewJobId!,
+                    DateTimeOffset.UtcNow.AddMinutes(1)
+                );
+            }
+            return $"Publicación avanzada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
         }
 
         public async Task<string> CancelOfferManuallyAsync(
@@ -767,6 +750,8 @@ namespace backend.src.Application.Services.Implements
 
             //TODO: Enviar notificaciones a los postulantes informando de la cancelacion de la oferta.
             //TODO: Enviar notificacion al oferente si la accion fue realizada por un administrador.
+            // Cancelar el trabajo programado para crear las calificaciones iniciales ya que el trabajo ya no se realizara
+            BackgroundJob.Delete(publication.InitialReviewJobId!);
 
             return "Publicación cancelada exitosamente.";
         }
@@ -799,7 +784,8 @@ namespace backend.src.Application.Services.Implements
                     "Solo se pueden apelar publicaciones que están en estado 'Rechazada'."
                 );
             }
-            appealDTO.Adapt(publication);
+            DateTime? originalEndDate = (publication is Offer offer) ? offer.EndDate : null;
+            publication = appealDTO.Adapt(publication);
             publication.ApprovalStatus = ApprovalStatus.Pendiente;
             publication.AppealCount++;
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
@@ -810,6 +796,17 @@ namespace backend.src.Application.Services.Implements
                     publicationId
                 );
                 throw new Exception("No se pudo actualizar la publicación. Inténtalo de nuevo.");
+            }
+            if (publication is Offer updatedOffer)
+            {
+                // Si la oferta tenía una fecha de finalización original y esta fue modificada en la apelación, reprograma el trabajo de creación de reseñas.
+                if (originalEndDate != null && originalEndDate != updatedOffer.EndDate)
+                {
+                    BackgroundJob.Reschedule(
+                        updatedOffer.InitialReviewJobId!,
+                        updatedOffer.EndDate.AddMinutes(1)
+                    );
+                }
             }
             return true;
         }

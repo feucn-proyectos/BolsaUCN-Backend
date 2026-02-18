@@ -21,7 +21,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <summary>
         /// Crea una nueva publicación en la base de datos.
         /// </summary>
-        Task<bool> CreatePublicationAsync<T>(T publication)
+        Task<(T, bool)> CreatePublicationAsync<T>(T publication)
             where T : Publication;
 
         /// <summary>

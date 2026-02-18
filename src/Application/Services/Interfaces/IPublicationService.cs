@@ -13,7 +13,6 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateOfferAsync(CreateOfferDTO publicationDTO, int userId);
         Task<string> CreateBuySellAsync(CreateBuySellDTO publicationDTO, int userId);
-        Task<GenericResponse<string>> AppealPublicationAsync(int publicationId, int userId);
 
         #region New Methods
 
@@ -78,7 +77,7 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="publicationId">Id de la publicación a cerrar manualmente</param>
         /// <param name="requestingUserId">Id del usuario que solicita el cierre manual</param>
         /// <returns>Mensaje de éxito o error</returns>
-        Task<string> CloseOfferManuallyAsync(int publicationId, int requestingUserId);
+        Task<string> AdvanceOfferManuallyAsync(int publicationId, int requestingUserId);
 
         /// <summary>
         /// Permite al oferente (o a un administrador) cancelar manualmente una oferta antes de que se cierre para postulaciones, cambiando su estado a "CanceladaAntesDelTrabajo" y evitando que sea visible para usuarios regulares.
