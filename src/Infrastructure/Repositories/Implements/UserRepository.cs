@@ -412,23 +412,17 @@ namespace backend.src.Infrastructure.Repositories.Implements
                     "No se encontraron solicitudes de cambio de correo electrónico pendientes para el usuario ID: {UserId}",
                     userId
                 );
-                return true; // No hay solicitudes pendientes, por lo que se considera que la limpieza fue exitosa
+                return false; // No hay solicitudes pendientes para limpiar
             }
-            if (userWithPendingEmail.PendingEmailExpiration >= DateTime.UtcNow)
-            {
-                Log.Information(
-                    "La solicitud de cambio de correo electrónico para el usuario ID: {UserId} aún no ha expirado. No se realizará la limpieza.",
-                    userId
-                );
-                return false; // La solicitud aún no ha expirado, por lo que no se realiza la limpieza
-            }
+
             var verificationCodes = await _context
                 .VerificationCodes.Where(vc =>
                     vc.UserId == userId && vc.CodeType == CodeType.EmailChange
                 )
                 .ToListAsync();
+
             userWithPendingEmail.PendingEmail = null;
-            userWithPendingEmail.PendingEmailExpiration = null;
+            userWithPendingEmail.PendingEmailJobId = null;
             _context.VerificationCodes.RemoveRange(verificationCodes);
             await _context.SaveChangesAsync();
             Log.Information(
