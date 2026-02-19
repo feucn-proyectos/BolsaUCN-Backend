@@ -66,9 +66,10 @@ namespace backend.src.Domain.Models
 
         // === Atributos para el seguimiento ===
 
-        public string? InitialReviewJobId { get; set; }
+        public string? CloseApplicationsJobId { get; set; }
+        public string? FinishWorkAndInitializeReviewsJobId { get; set; }
+        public string? FinalizeAndCloseReviewsJobId { get; set; }
         public DateTime? WorkStartedAt { get; set; }
-
         public DateTime? WorkCompletedAt { get; set; }
 
         /// <summary>
@@ -103,6 +104,9 @@ namespace backend.src.Domain.Models
         public bool IsCancelled => CancelledAt.HasValue;
 
         // === Metodos para el cambio de estado ===
+        /// <summary>
+        /// Marca el inicio del trabajo para esta oferta, estableciendo la fecha de inicio y permitiendo avanzar al estado de "Realizando Trabajo".
+        /// </summary>
         public void StartWork()
         {
             if (ApprovalStatus != ApprovalStatus.Aceptada)
@@ -113,6 +117,9 @@ namespace backend.src.Domain.Models
             WorkStartedAt = DateTime.UtcNow;
         }
 
+        /// <summary>
+        /// Marca la oferta como trabajo completado, estableciendo la fecha de finalización del trabajo y permitiendo avanzar al estado de "Calificaciones en Proceso".
+        /// </summary>
         public void CompleteWork()
         {
             if (!WorkStartedAt.HasValue)
@@ -123,6 +130,9 @@ namespace backend.src.Domain.Models
             WorkCompletedAt = DateTime.UtcNow;
         }
 
+        /// <summary>
+        /// Marca la oferta como finalizada, estableciendo la fecha de finalización y permitiendo avanzar al estado de "Finalizada".
+        /// </summary>
         public void FinalizeOffer()
         {
             if (!WorkCompletedAt.HasValue)
@@ -133,6 +143,9 @@ namespace backend.src.Domain.Models
             FinalizedAt = DateTime.UtcNow;
         }
 
+        /// <summary>
+        /// Cancela la oferta antes de que se cierre para postulaciones, estableciendo la fecha de cancelación y permitiendo avanzar al estado de "CanceladaAntesDelTrabajo".
+        /// </summary>
         public void CancelOffer()
         {
             if (WorkStartedAt.HasValue)
@@ -146,6 +159,9 @@ namespace backend.src.Domain.Models
         }
 
         // === Estado para el frontend ===
+        /// <summary>
+        /// Estado actual de la oferta, derivado de sus propiedades y fechas. Este atributo no se almacena en la base de datos, sino que se calcula dinámicamente para facilitar la lógica del frontend.
+        /// </summary>
         public OfferStatus CurrentStatus
         {
             get
