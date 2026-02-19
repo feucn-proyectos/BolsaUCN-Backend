@@ -1,6 +1,4 @@
-using backend.src.Domain.Models;
-
-namespace backend.Application.Domain.Models
+namespace backend.src.Domain.Models
 {
     public class NewReview : ModelBase
     {
