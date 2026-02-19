@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -27,15 +28,37 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<JobApplication?> GetByIdAsync(int applicationId)
+        public async Task<JobApplication?> GetByIdAsync(
+            int applicationId,
+            JobApplicationOptions? options = null
+        )
         {
-            return await _context
-                .JobApplications.Include(ja => ja.Student)
-                .ThenInclude(ja => ja!.CV)
-                .Include(ja => ja.JobOffer)
-                .ThenInclude(jo => jo!.User)
-                .ThenInclude(jo => jo.ProfilePhoto)
-                .FirstOrDefaultAsync(ja => ja.Id == applicationId);
+            var query = _context.JobApplications.AsQueryable();
+
+            if (options != null)
+            {
+                if (!options.TrackChanges)
+                {
+                    query = query.AsNoTracking();
+                }
+                if (options.IncludeStudent)
+                {
+                    query = query.Include(ja => ja.Student).ThenInclude(s => s!.CV);
+                }
+                if (options.IncludeJobOffer)
+                {
+                    query = query
+                        .Include(ja => ja.JobOffer)
+                        .ThenInclude(jo => jo!.User)
+                        .ThenInclude(u => u.ProfilePhoto);
+                }
+                if (options.IncludeReview)
+                {
+                    query = query.Include(ja => ja.Review);
+                }
+            }
+
+            return await query.FirstOrDefaultAsync(ja => ja.Id == applicationId);
         }
 
         public async Task<JobApplication?> GetByStudentAndOfferAsync(int studentId, int offerId)

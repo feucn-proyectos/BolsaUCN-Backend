@@ -2,13 +2,17 @@ using backend.src.Application.DTOs.JobAplicationDTO.ApplicantsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 
 namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public interface IOfferApplicationRepository
     {
         Task<bool> AddAsync(JobApplication application);
-        Task<JobApplication?> GetByIdAsync(int applicationId);
+        Task<JobApplication?> GetByIdAsync(
+            int applicationId,
+            JobApplicationOptions? options = null
+        );
         Task<JobApplication?> GetByStudentAndOfferAsync(int studentId, int offerId);
         Task<(IEnumerable<JobApplication>, int)> GetByApplicantIdFilteredAsync(
             int applicantId,

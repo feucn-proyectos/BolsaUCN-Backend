@@ -24,6 +24,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IReviewRepository _reviewRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPublicationRepository _publicationRepository;
+        private readonly IOfferApplicationRepository _offerApplicationRepository;
         private readonly IAdminNotificationRepository _adminNotificationRepository;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
@@ -38,12 +39,14 @@ namespace backend.src.Application.Services.Implements
             IReviewRepository repository,
             IUserRepository userRepository,
             IPublicationRepository publicationRepository,
+            IOfferApplicationRepository offerApplicationRepository,
             IAdminNotificationRepository adminNotificationRepository,
             IEmailService emailService,
             IConfiguration configuration
         )
         {
             _reviewRepository = repository;
+            _offerApplicationRepository = offerApplicationRepository;
             _userRepository = userRepository;
             _publicationRepository = publicationRepository;
             _adminNotificationRepository = adminNotificationRepository;
@@ -640,8 +643,10 @@ namespace backend.src.Application.Services.Implements
                 acceptedApplications.Count(),
                 offerId
             );
-            // Crear una review inicial para cada postulante aceptado
-            var reviewsToCreate = acceptedApplications
+            // Crear una review inicial para cada postulante aceptado y se asocia a la postulación correspondiente
+            // Si bien, lo ideal seria juntar todas las reseñares en una colleccion y hacer una sola llamada al repositorio para crear todas las reseñas de una,
+            // para facilitar las consultas posteriores, se opta por crear cada reseña individualmente y asociarla a su postulación correspondiente, de esta forma no es necesario hacer consultas adicionales para relacionar las reseñas con las postulaciones.
+            /*var reviewsToCreate = acceptedApplications
                 .Select(application => new NewReview
                 {
                     ApplicationId = application.Id,
@@ -649,14 +654,33 @@ namespace backend.src.Application.Services.Implements
                     ApplicantId = application.StudentId,
                 })
                 .ToList();
-            await _reviewRepository.CreateReviewsAsync(reviewsToCreate);
+            await _reviewRepository.CreateReviewsAsync(reviewsToCreate);*/
+
+            foreach (var application in acceptedApplications)
+            {
+                var review = new NewReview
+                {
+                    ApplicationId = application.Id,
+                    OfferorId = offer.UserId,
+                    ApplicantId = application.StudentId,
+                };
+                await _reviewRepository.CreateReviewAsync(review);
+                // Asociar la review creada a la postulación correspondiente
+                application.ReviewId = review.Id;
+                await _offerApplicationRepository.UpdateAsync(application);
+                Log.Information(
+                    "Review inicial creada para la postulación con ID {ApplicationId}, asociada a la oferta con ID {OfferId}",
+                    application.Id,
+                    offerId
+                );
+            }
 
             Log.Information(
                 "Reviews iniciales creadas para la oferta con ID {OfferId}. Se programará el cierre automático de las reviews después de {Days} días.",
                 offerId,
                 _daysUntilReviewAutoClose
             );
-            return reviewsToCreate.Count;
+            return acceptedApplications.Count();
         }
         #endregion
     }
