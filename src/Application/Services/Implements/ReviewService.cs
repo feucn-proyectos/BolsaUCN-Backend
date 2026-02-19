@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs;
 using backend.src.Application.Mappers;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -8,6 +9,7 @@ using backend.src.Domain.Models.Options;
 using backend.src.Domain.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
+using Mapster;
 using Serilog;
 
 // Este codigo funciona en base a sueños y esperanzas, y mucho Claude Sonnet 4.5
@@ -681,6 +683,183 @@ namespace backend.src.Application.Services.Implements
                 _daysUntilReviewAutoClose
             );
             return acceptedApplications.Count();
+        }
+
+        public async Task<string> CreateApplicantReviewForOfferorAsync(
+            int reviewId,
+            int applicantId,
+            ApplicantReviewForOfferorDTO reviewDTO
+        )
+        {
+            // Validar al usuario
+            User? user = await _userRepository.GetByIdAsync(applicantId);
+            if (user == null)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {ApplicantId} para crear la review hacia el oferente.",
+                    applicantId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {applicantId}.");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(
+                applicantId,
+                RoleNames.Applicant
+            );
+            if (!isApplicant)
+            {
+                Log.Error(
+                    "El usuario con ID {ApplicantId} no tiene el rol de postulante para crear la review hacia el oferente.",
+                    applicantId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {applicantId} no tiene el rol de postulante para crear la review hacia el oferente."
+                );
+            }
+
+            // Validar la review
+            NewReview? review = await _reviewRepository.GetByIdAsync(
+                reviewId,
+                new ReviewQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeApplicant = true,
+                    IncludeOfferor = true,
+                    IncludeApplication = true,
+                }
+            );
+            if (review == null)
+            {
+                Log.Error(
+                    "No se encontró la review con ID {ReviewId} para crear la review hacia el oferente.",
+                    reviewId
+                );
+                throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}.");
+            }
+            if (review.ApplicantId != applicantId)
+            {
+                Log.Error(
+                    "El usuario con ID {ApplicantId} no es el postulante asociado a la review con ID {ReviewId}.",
+                    applicantId,
+                    reviewId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {applicantId} no es el postulante asociado a la review con ID {reviewId}."
+                );
+            }
+            if (review.HasApplicantEvaluatedOfferor)
+            {
+                Log.Error(
+                    "La review con ID {ReviewId} ya ha sido completada para el oferente. No se puede crear una nueva review, o editar la review hacia el oferente.",
+                    reviewId
+                );
+                throw new InvalidOperationException(
+                    $"La review con ID {reviewId} ya ha sido completada para el oferente."
+                );
+            }
+            // Mapeo de la información de la review hacia el oferente
+            reviewDTO.Adapt(review);
+            bool updated = await _reviewRepository.UpdateReviewAsync(review);
+            if (!updated)
+            {
+                Log.Error("No se pudo actualizar la review con ID {ReviewId}", review.Id);
+                throw new InvalidOperationException("No se pudo actualizar la review");
+            }
+            Log.Information(
+                "Review con ID {ReviewId} actualizada por el postulante con ID {ApplicantId} para el oferente con ID {OfferorId}",
+                review.Id,
+                applicantId,
+                review.OfferorId
+            );
+            if (review.IsCompleted) { } //TODO: Llamar metodo para finalizar la publicacion.
+
+            return "Review creada exitosamente para el oferente.";
+        }
+
+        public async Task<string> CreateOfferorReviewForApplicantAsync(
+            int reviewId,
+            int offerorId,
+            OfferorReviewForApplicantDTO reviewDTO
+        )
+        {
+            // Validar al usuario
+            User? user = await _userRepository.GetByIdAsync(offerorId);
+            if (user == null)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {OfferorId} para crear la review hacia el postulante.",
+                    offerorId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {offerorId}.");
+            }
+            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error(
+                    "El usuario con ID {OfferorId} no tiene el rol de oferente para crear la review hacia el postulante.",
+                    offerorId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {offerorId} no tiene el rol de oferente para crear la review hacia el postulante."
+                );
+            }
+
+            // Validar la review
+            NewReview? review = await _reviewRepository.GetByIdAsync(
+                reviewId,
+                new ReviewQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeApplicant = true,
+                    IncludeOfferor = true,
+                    IncludeApplication = true,
+                }
+            );
+            if (review == null)
+            {
+                Log.Error(
+                    "No se encontró la review con ID {ReviewId} para crear la review hacia el oferente.",
+                    reviewId
+                );
+                throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}.");
+            }
+            if (review.OfferorId != offerorId)
+            {
+                Log.Error(
+                    "El usuario con ID {OfferorId} no es el oferente asociado a la review con ID {ReviewId}.",
+                    offerorId,
+                    reviewId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {offerorId} no es el oferente asociado a la review con ID {reviewId}."
+                );
+            }
+            if (review.HasOfferorEvaluatedApplicant)
+            {
+                Log.Error(
+                    "La review con ID {ReviewId} ya ha sido completada para el postulante. No se puede crear una nueva review, o editar la review hacia el oferente.",
+                    reviewId
+                );
+                throw new InvalidOperationException(
+                    $"La review con ID {reviewId} ya ha sido completada para el postulante."
+                );
+            }
+            // Mapeo de la información de la review hacia el oferente
+            reviewDTO.Adapt(review);
+            bool updated = await _reviewRepository.UpdateReviewAsync(review);
+            if (!updated)
+            {
+                Log.Error("No se pudo actualizar la review con ID {ReviewId}", review.Id);
+                throw new InvalidOperationException("No se pudo actualizar la review");
+            }
+            Log.Information(
+                "Review con ID {ReviewId} actualizada por el oferente con ID {OfferorId} para el postulante con ID {ApplicantId}",
+                review.Id,
+                offerorId,
+                review.ApplicantId
+            );
+            if (review.IsCompleted) { } //TODO: Llamar metodo para finalizar la publicacion.
+
+            return "Review creada exitosamente para el oferente.";
         }
         #endregion
     }

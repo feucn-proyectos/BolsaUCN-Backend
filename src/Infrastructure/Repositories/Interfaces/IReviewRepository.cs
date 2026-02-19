@@ -1,5 +1,6 @@
 using System;
 using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 
 namespace backend.src.Infrastructure.Repositories.Interfaces
 {
@@ -83,6 +84,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         #region Refactored Methods
         Task<bool> CreateReviewAsync(NewReview review);
         Task CreateReviewsAsync(IEnumerable<NewReview> reviews);
+        Task<NewReview?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null);
+        Task<bool> UpdateReviewAsync(NewReview review);
         #endregion
     }
 }

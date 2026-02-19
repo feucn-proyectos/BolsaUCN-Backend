@@ -130,7 +130,7 @@ namespace backend.src.Application.Services.Implements
                 user,
                 RoleNames.Applicant // Ya que solo los Applicants pueden postular
             );
-            if (pendingReviewsCount >= 3)
+            if (pendingReviewsCount >= 903) //TODO
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta con {PendingCount} reseñas pendientes",

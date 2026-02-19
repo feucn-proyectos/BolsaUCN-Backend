@@ -16,23 +16,29 @@ namespace backend.src.Domain.Models
         public required int ApplicantId { get; set; }
 
         // === Atributos de la revisión ===
-        public int? OfferorRatingOfApplicant { get; set; }
+        public float? OfferorRatingOfApplicant { get; set; }
         public string? OfferorCommentForApplicant { get; set; }
-        public int? ApplicantRatingOfOfferor { get; set; }
+        public float? ApplicantRatingOfOfferor { get; set; }
         public string? ApplicantCommentForOfferor { get; set; }
         public bool IsOnTime { get; set; } = false;
         public bool IsPresentable { get; set; } = false;
         public bool IsRespectful { get; set; } = false;
 
         // === Atributos de auditoria ===
+        // Estos atributos son para llevar un registro de cuando se crean o actualizan las reseñas.
+        public DateTime? OfferorReviewCompletedAt { get; set; }
+        public DateTime? ApplicantReviewCompletedAt { get; set; }
+
         // Estos atributos son para que el frontend sepa si los comentarios has sido accionados por los administradores y actue acorde
         public bool IsOfferorCommentForApplicantHidden { get; set; } = false;
+        public DateTime? OfferorCommentForApplicantHiddenAt { get; set; }
         public bool IsApplicantCommentForOfferorHidden { get; set; } = false;
+        public DateTime? ApplicantCommentForOfferorHiddenAt { get; set; }
 
         // === Atributos auxiliares ===
-        public bool IsPending => !HasOfferorEvaluated || !HasApplicantEvaluated;
-        public bool HasOfferorEvaluated => OfferorRatingOfApplicant.HasValue;
-        public bool HasApplicantEvaluated => ApplicantRatingOfOfferor.HasValue;
-        public bool IsCompleted => HasOfferorEvaluated && HasApplicantEvaluated;
+        public bool IsPending => !HasOfferorEvaluatedApplicant || !HasApplicantEvaluatedOfferor;
+        public bool HasOfferorEvaluatedApplicant => OfferorRatingOfApplicant.HasValue;
+        public bool HasApplicantEvaluatedOfferor => ApplicantRatingOfOfferor.HasValue;
+        public bool IsCompleted => HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor;
     }
 }

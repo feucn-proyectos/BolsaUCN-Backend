@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs;
 using backend.src.Domain.Models;
 using backend.src.Domain.Models.Options;
 
@@ -138,6 +139,18 @@ namespace backend.src.Application.Services.Interfaces
         #region Refactored Methods
 
         Task<int> CreateInitialReviewsForCompletedOfferAsync(int publicationId);
+
+        Task<string> CreateApplicantReviewForOfferorAsync(
+            int reviewId,
+            int applicantId,
+            ApplicantReviewForOfferorDTO reviewDTO
+        );
+
+        Task<string> CreateOfferorReviewForApplicantAsync(
+            int reviewId,
+            int offerorId,
+            OfferorReviewForApplicantDTO reviewDTO
+        );
 
         #endregion
     }

@@ -1,5 +1,6 @@
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -191,6 +192,31 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             await _context.NewReviews.AddRangeAsync(reviews);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<NewReview?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null)
+        {
+            var query = _context.NewReviews.AsQueryable();
+
+            if (options != null)
+            {
+                if (options.IncludeApplication)
+                    query = query.Include(r => r.Application);
+                if (options.IncludeOfferor)
+                    query = query.Include(r => r.Offeror);
+                if (options.IncludeApplicant)
+                    query = query.Include(r => r.Applicant);
+                if (!options.TrackChanges)
+                    query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync(r => r.Id == reviewId);
+        }
+
+        public async Task<bool> UpdateReviewAsync(NewReview review)
+        {
+            _context.NewReviews.Update(review);
+            return await _context.SaveChangesAsync() > 0;
         }
 
         #endregion
