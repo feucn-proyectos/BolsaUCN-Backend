@@ -5,7 +5,9 @@ using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Models.Options;
+using backend.src.Domain.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
+using Hangfire;
 using Serilog;
 
 // Este codigo funciona en base a sueños y esperanzas, y mucho Claude Sonnet 4.5
@@ -19,10 +21,13 @@ namespace backend.src.Application.Services.Implements
     /// </summary>
     public class ReviewService : IReviewService
     {
-        private readonly IReviewRepository _repository;
+        private readonly IReviewRepository _reviewRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPublicationRepository _publicationRepository;
         private readonly IAdminNotificationRepository _adminNotificationRepository;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
+        private readonly int _daysUntilReviewAutoClose;
 
         /// <summary>
         /// Inicializa una nueva instancia del servicio de reseñas.
@@ -32,14 +37,21 @@ namespace backend.src.Application.Services.Implements
         public ReviewService(
             IReviewRepository repository,
             IUserRepository userRepository,
+            IPublicationRepository publicationRepository,
             IAdminNotificationRepository adminNotificationRepository,
-            IEmailService emailService
+            IEmailService emailService,
+            IConfiguration configuration
         )
         {
-            _repository = repository;
+            _reviewRepository = repository;
             _userRepository = userRepository;
+            _publicationRepository = publicationRepository;
             _adminNotificationRepository = adminNotificationRepository;
             _emailService = emailService;
+            _configuration = configuration;
+            _daysUntilReviewAutoClose = _configuration.GetValue<int>(
+                "JobsConfiguration:DaysUntilReviewAutoClose"
+            );
         }
 
         #region Obtener Reviews y Ratings
@@ -64,7 +76,7 @@ namespace backend.src.Application.Services.Implements
             int offerorId
         )
         {
-            var reviews = await _repository.GetByOfferorIdAsync(offerorId);
+            var reviews = await _reviewRepository.GetByOfferorIdAsync(offerorId);
             if (reviews == null || !reviews.Any())
                 throw new KeyNotFoundException(
                     $"No se encontraron reseñas para el oferente con ID {offerorId}."
@@ -75,7 +87,7 @@ namespace backend.src.Application.Services.Implements
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
             {
-                var publications = await _repository.GetPublicationInformationAsync(
+                var publications = await _reviewRepository.GetPublicationInformationAsync(
                     review.PublicationId
                 );
                 if (publications != null)
@@ -102,18 +114,18 @@ namespace backend.src.Application.Services.Implements
         /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
         public async Task<double?> GetOfferorAverageRatingAsync(int offerorId)
         {
-            return await _repository.GetOfferorAverageRatingAsync(offerorId);
+            return await _reviewRepository.GetOfferorAverageRatingAsync(offerorId);
         }
 
         public async Task<double?> GetStudentAverageRatingAsync(int studentId)
         {
-            return await _repository.GetStudentAverageRatingAsync(studentId);
+            return await _reviewRepository.GetStudentAverageRatingAsync(studentId);
         }
 
         public async Task<ShowReviewDTO> GetReviewAsync(int id)
         {
             var review =
-                await _repository.GetByIdAsync(id)
+                await _reviewRepository.GetByIdAsync(id)
                 ?? throw new KeyNotFoundException($"No se encontró una review con ID {id}.");
             return ReviewMapper.ShowReviewDTO(review);
         }
@@ -122,7 +134,7 @@ namespace backend.src.Application.Services.Implements
             int studentId
         )
         {
-            var reviews = await _repository.GetByStudentIdAsync(studentId);
+            var reviews = await _reviewRepository.GetByStudentIdAsync(studentId);
             if (reviews == null || !reviews.Any())
                 throw new KeyNotFoundException(
                     $"No se encontraron reseñas para el estudiante con ID {studentId}."
@@ -131,7 +143,7 @@ namespace backend.src.Application.Services.Implements
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
             {
-                var publications = await _repository.GetPublicationInformationAsync(
+                var publications = await _reviewRepository.GetPublicationInformationAsync(
                     review.PublicationId
                 );
                 if (publications != null)
@@ -153,11 +165,11 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<IEnumerable<PublicationAndReviewInfoDTO>> GetAllReviewsAsync()
         {
-            var reviews = await _repository.GetAllAsync();
+            var reviews = await _reviewRepository.GetAllAsync();
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
             {
-                var publications = await _repository.GetPublicationInformationAsync(
+                var publications = await _reviewRepository.GetPublicationInformationAsync(
                     review.PublicationId
                 );
                 if (publications != null)
@@ -191,7 +203,7 @@ namespace backend.src.Application.Services.Implements
         public async Task AddStudentReviewAsync(ReviewForStudentDTO dto, int currentUserId)
         {
             var review =
-                await _repository.GetByIdAsync(dto.ReviewId)
+                await _reviewRepository.GetByIdAsync(dto.ReviewId)
                 ?? throw new KeyNotFoundException(
                     "No se ha encontrado una reseña para el ID de publicación dado."
                 );
@@ -226,7 +238,7 @@ namespace backend.src.Application.Services.Implements
             ReviewMapper.StudentUpdateReview(dto, review);
             if (review.IsCompleted)
                 await BothReviewsCompletedAsync(review);
-            await _repository.UpdateAsync(review);
+            await _reviewRepository.UpdateAsync(review);
             Log.Information(
                 "Offeror {OfferorId} added review for student in review {ReviewId}",
                 currentUserId,
@@ -267,7 +279,7 @@ namespace backend.src.Application.Services.Implements
         public async Task AddOfferorReviewAsync(ReviewForOfferorDTO dto, int currentUserId)
         {
             var review =
-                await _repository.GetByIdAsync(dto.ReviewId)
+                await _reviewRepository.GetByIdAsync(dto.ReviewId)
                 ?? throw new KeyNotFoundException(
                     "No se ha encontrado una reseña para el ID de publicación dado."
                 );
@@ -301,7 +313,7 @@ namespace backend.src.Application.Services.Implements
             ReviewMapper.OfferorUpdateReview(dto, review);
             if (review.IsCompleted)
                 await BothReviewsCompletedAsync(review);
-            await _repository.UpdateAsync(review);
+            await _reviewRepository.UpdateAsync(review);
             Log.Information(
                 "Student {StudentId} added review for offeror in Review {ReviewId}",
                 currentUserId,
@@ -366,7 +378,7 @@ namespace backend.src.Application.Services.Implements
                 await _userRepository.GetByIdAsync(dto.OfferorId)
                 ?? throw new ArgumentException($"El oferente con ID {dto.OfferorId} no existe.");
             // Validar que no exista ya una review para esta publicación
-            var existingReview = await _repository.GetByPublicationIdAsync(dto.PublicationId);
+            var existingReview = await _reviewRepository.GetByPublicationIdAsync(dto.PublicationId);
             if (existingReview != null)
             {
                 throw new InvalidOperationException(
@@ -374,7 +386,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             var review = ReviewMapper.CreateInitialReviewAsync(dto, student, offeror);
-            await _repository.AddAsync(review);
+            await _reviewRepository.AddAsync(review);
             return review;
         }
         #endregion
@@ -398,7 +410,7 @@ namespace backend.src.Application.Services.Implements
             }
             // Obtener la review
             var review =
-                await _repository.GetByIdAsync(dto.ReviewId)
+                await _reviewRepository.GetByIdAsync(dto.ReviewId)
                 ?? throw new KeyNotFoundException(
                     $"No se encontró una review con ID {dto.ReviewId}."
                 );
@@ -415,7 +427,7 @@ namespace backend.src.Application.Services.Implements
             // Eliminar la parte del oferente si se solicita
             if (dto.DeleteReviewForOfferor)
                 ReviewMapper.DeleteReviewForOfferor(review);
-            await _repository.UpdateAsync(review);
+            await _reviewRepository.UpdateAsync(review);
         }
         #endregion
         #region Otras operaciones
@@ -428,7 +440,7 @@ namespace backend.src.Application.Services.Implements
             IEnumerable<Review> reviews;
             if (user.UserType == UserType.Estudiante)
             {
-                reviews = await _repository.GetByStudentIdAsync(userId);
+                reviews = await _reviewRepository.GetByStudentIdAsync(userId);
                 if (reviews == null || !reviews.Any())
                     throw new KeyNotFoundException(
                         $"No se encontraron reseñas para el estudiante con ID {userId}."
@@ -436,7 +448,7 @@ namespace backend.src.Application.Services.Implements
             }
             else if (user.UserType == UserType.Empresa || user.UserType == UserType.Particular)
             {
-                reviews = await _repository.GetByOfferorIdAsync(userId);
+                reviews = await _reviewRepository.GetByOfferorIdAsync(userId);
                 if (reviews == null || !reviews.Any())
                     throw new KeyNotFoundException(
                         $"No se encontraron reseñas para el oferente con ID {userId}."
@@ -451,7 +463,9 @@ namespace backend.src.Application.Services.Implements
             var result = new List<PublicationAndReviewInfoDTO>();
             foreach (var review in reviews)
             {
-                var publications = await _repository.GetPublicationInformationAsync(review.Id);
+                var publications = await _reviewRepository.GetPublicationInformationAsync(
+                    review.Id
+                );
                 if (publications != null)
                 {
                     foreach (var publication in publications)
@@ -483,11 +497,11 @@ namespace backend.src.Application.Services.Implements
             // Determinar el tipo de usuario y obtener su calificación promedio
             if (user.UserType == UserType.Estudiante)
             {
-                averageRating = await _repository.GetStudentAverageRatingAsync(userId);
+                averageRating = await _reviewRepository.GetStudentAverageRatingAsync(userId);
             }
             else if (user.UserType == UserType.Empresa || user.UserType == UserType.Particular)
             {
-                averageRating = await _repository.GetOfferorAverageRatingAsync(userId);
+                averageRating = await _reviewRepository.GetOfferorAverageRatingAsync(userId);
             }
             else
             {
@@ -551,7 +565,7 @@ namespace backend.src.Application.Services.Implements
                 }
             }
             // Contar el numero de reseñas pendientes por medio de filtrado por ID
-            int pendingCount = await _repository.GetPendingCountOfReviewsByUserIdAsync(
+            int pendingCount = await _reviewRepository.GetPendingCountOfReviewsByUserIdAsync(
                 user.Id,
                 role
             );
@@ -587,6 +601,62 @@ namespace backend.src.Application.Services.Implements
             //     Log.Information("Review {ReviewId} cerrada automáticamente por vencimiento.", review.Id);
             // }
             // Log.Information("Cierre automático de reviews vencidas completado. Total cerrado: {Count}", expiredReviews.Count());
+        }
+        #endregion
+
+        #region Refactored Methods
+        public async Task<int> CreateInitialReviewsForCompletedOfferAsync(int offerId)
+        {
+            Log.Information("Inicializando reviews para la oferta con ID {OfferId}", offerId);
+            // Validacion de oferta
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
+            );
+            if (offer == null)
+            {
+                Log.Error(
+                    "No se encontró la oferta con ID {OfferId} para inicializar la review.",
+                    offerId
+                );
+                throw new KeyNotFoundException($"No se encontró la oferta con ID {offerId}.");
+            }
+            // Validacion de postulantes aceptados
+            var acceptedApplications = offer.Applications.Where(a =>
+                a.Status == ApplicationStatus.Aceptada
+            );
+            if (!acceptedApplications.Any())
+            {
+                Log.Error(
+                    "No se puede inicializar la review para la oferta con ID {OfferId} porque no tiene postulantes aceptados.",
+                    offerId
+                );
+                throw new InvalidOperationException(
+                    $"No se puede inicializar la review para la oferta con ID {offerId} porque no tiene postulantes aceptados."
+                );
+            }
+            Log.Information(
+                "Se encontraron {AcceptedCount} postulantes aceptados para la oferta con ID {OfferId}. Se procederá a crear las reviews iniciales.",
+                acceptedApplications.Count(),
+                offerId
+            );
+            // Crear una review inicial para cada postulante aceptado
+            var reviewsToCreate = acceptedApplications
+                .Select(application => new NewReview
+                {
+                    ApplicationId = application.Id,
+                    OfferorId = offer.UserId,
+                    ApplicantId = application.StudentId,
+                })
+                .ToList();
+            await _reviewRepository.CreateReviewsAsync(reviewsToCreate);
+
+            Log.Information(
+                "Reviews iniciales creadas para la oferta con ID {OfferId}. Se programará el cierre automático de las reviews después de {Days} días.",
+                offerId,
+                _daysUntilReviewAutoClose
+            );
+            return reviewsToCreate.Count;
         }
         #endregion
     }

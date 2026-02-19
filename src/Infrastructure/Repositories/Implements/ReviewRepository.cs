@@ -178,5 +178,21 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context.Publications.Where(p => p.Id == publicationId).ToListAsync();
         }
+
+        #region Refactored Methods
+
+        public async Task<bool> CreateReviewAsync(NewReview review)
+        {
+            await _context.NewReviews.AddAsync(review);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task CreateReviewsAsync(IEnumerable<NewReview> reviews)
+        {
+            await _context.NewReviews.AddRangeAsync(reviews);
+            await _context.SaveChangesAsync();
+        }
+
+        #endregion
     }
 }

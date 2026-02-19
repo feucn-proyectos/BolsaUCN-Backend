@@ -79,5 +79,10 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <returns>El número de reseñas pendientes.</returns>
         Task<int> GetPendingCountOfReviewsByUserIdAsync(int userId, string? role = null);
         Task<IEnumerable<Publication>> GetPublicationInformationAsync(int publicationId);
+
+        #region Refactored Methods
+        Task<bool> CreateReviewAsync(NewReview review);
+        Task CreateReviewsAsync(IEnumerable<NewReview> reviews);
+        #endregion
     }
 }

@@ -184,6 +184,8 @@ try
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
     builder.Services.AddScoped<IUserJobs, UserJobs>();
+    builder.Services.AddScoped<IOfferJobs, OfferJobs>();
+    builder.Services.AddScoped<IWhitelistedTokenJobs, WhitelistedTokenJobs>();
 
     builder.Services.AddMapster();
 
@@ -220,10 +222,10 @@ try
             }
         );
         // Whitelist Jobs
-        RecurringJob.AddOrUpdate<ITokenService>(
-            nameof(ITokenService.DeleteExpiredTokensAsync),
+        RecurringJob.AddOrUpdate<IWhitelistedTokenJobs>(
+            nameof(IWhitelistedTokenJobs.DeleteExpiredTokensAsync),
             job => job.DeleteExpiredTokensAsync(),
-            Cron.Daily(0, 22),
+            Cron.Daily(),
             new RecurringJobOptions
             {
                 TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),

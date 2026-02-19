@@ -134,5 +134,11 @@ namespace backend.src.Application.Services.Interfaces
         /// <returns>El número de reseñas pendientes del usuario.</returns>
         /// <exception cref="KeyNotFoundException">Lanzada si no se encuentra el usuario.</exception>
         Task<int> GetPendingReviewsCountAsync(User user, string? role = null);
+
+        #region Refactored Methods
+
+        Task<int> CreateInitialReviewsForCompletedOfferAsync(int publicationId);
+
+        #endregion
     }
 }

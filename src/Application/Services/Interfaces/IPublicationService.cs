@@ -72,7 +72,7 @@ namespace backend.src.Application.Services.Interfaces
 
         /// <summary>
         /// Permite al oferente cerrar manualmente una oferta que está en estado "Realizando Trabajo", o "Recibiendo Postulaciones".
-        /// El objetivo del metodo es avanzar la postulacion un estado hacia adelante si se encuentra en uno de estos dos estados.
+        /// Este metodo llama a los mismos metodos llamados por los trabajos programados para cerrar las postulaciones, finalizar el trabajo e inicializar las reseñas, y finalizar las reseñas, dependiendo del estado actual de la publicación, pero lo hace de forma inmediata al cancelar los trabajos programados correspondientes y ejecutando manualmente los métodos necesarios para avanzar la publicación al siguiente estado.
         /// </summary>
         /// <param name="publicationId">Id de la publicación a cerrar manualmente</param>
         /// <param name="requestingUserId">Id del usuario que solicita el cierre manual</param>
@@ -93,6 +93,32 @@ namespace backend.src.Application.Services.Interfaces
             int requestingUserId,
             ClosePublicationRequestDTO? requestDTO = null
         );
+        #endregion
+
+        #region Background Jobs
+
+        /// <summary>
+        /// Cierra una oferta para nuevas postulaciones, cambiando su estado a "CerradaParaPostulaciones" y evitando que nuevos usuarios puedan postularse.
+        /// Resuelve tambien algunos casos especiales: Si la oferta no tiene postulantes aceptados, se marca como "CanceladaAntesDelTrabajo". Si la oferta aun esta en "Pendiente", se marca como "Rechazada" para evitar que quede en un estado inconsistente.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a cerrar para postulaciones</param>
+        /// <returns></returns>
+        Task CloseOfferForApplicationsAsync(int offerId);
+
+        /// <summary>
+        /// Marca una oferta como "Realizando Trabajo" y crea las reseñas correspondientes para el proceso de evaluación, permitiendo que los usuarios que postularon puedan dejar sus reseñas una vez que la oferta se haya cerrado para postulaciones.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a marcar como "Realizando Trabajo"</param>
+        /// <returns></returns>
+        Task CompleteAndInitializeReviewsAsync(int offerId);
+
+        /// <summary>
+        /// Marca una oferta como "Finalizada" y cierra las reseñas correspondientes, evitando que los usuarios puedan dejar nuevas reseñas después de un tiempo definido desde el cierre de la oferta.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a marcar como "Finalizada"</param>
+        /// <returns></returns>
+        Task FinalizeAndCloseReviewsAsync(int offerId);
+
         #endregion
     }
 }

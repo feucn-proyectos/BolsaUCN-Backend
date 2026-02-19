@@ -28,6 +28,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly int _daysUntilReviewAutoClose;
 
         public PublicationService(
             IPublicationRepository publicationRepository,
@@ -42,6 +43,9 @@ namespace backend.src.Application.Services.Implements
             _configuration = configuration;
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
             _maxAppeals = _configuration.GetValue<int>("PublicationSettings:MaxAppeals");
+            _daysUntilReviewAutoClose = _configuration.GetValue<int>(
+                "JobsConfiguration:DaysUntilReviewAutoClose"
+            );
         }
 
         #region Metodos para las Ofertas
@@ -119,12 +123,24 @@ namespace backend.src.Application.Services.Implements
                 currentUser.Id
             );
 
-            // Programar trabajo para las calificaciones al cierre
-            string jobId = BackgroundJob.Schedule<IReviewJobs>(
-                job => job.CreateInitialReviewAsync(createdOffer.Id),
+            // Programar trabajos para controlar el ciclo de vida de la oferta
+            // Trabajo para cerrar la postulación, otro para marcar como finalizada e inicializar reseñas, y otro para cerrar reseñas después de un tiempo definido.
+            string closeOfferForApplicationsId = BackgroundJob.Schedule<IOfferJobs>(
+                job => job.SetAsCloseForApplicationsAsync(createdOffer.Id),
+                newOffer.ApplicationDeadline.AddMinutes(1)
+            );
+            string finishWorkAndInitializeReviewsId = BackgroundJob.Schedule<IOfferJobs>(
+                job => job.SetAsCompleteAndInitializeReviewsAsync(createdOffer.Id),
                 newOffer.EndDate.AddMinutes(1)
             );
-            createdOffer.InitialReviewJobId = jobId;
+            string closeReviewsId = BackgroundJob.Schedule<IOfferJobs>(
+                job => job.SetAsFinalizedAndCloseReviewsAsync(createdOffer.Id),
+                newOffer.EndDate.AddDays(_daysUntilReviewAutoClose).AddMinutes(1)
+            );
+
+            createdOffer.CloseApplicationsJobId = closeOfferForApplicationsId;
+            createdOffer.FinishWorkAndInitializeReviewsJobId = finishWorkAndInitializeReviewsId;
+            createdOffer.FinalizeAndCloseReviewsJobId = closeReviewsId;
             await _publicationRepository.UpdateAsync(createdOffer);
 
             return $"Oferta creada exitosamente. Oferta ID: {createdOffer.Id}";
@@ -616,7 +632,7 @@ namespace backend.src.Application.Services.Implements
             // Validacion de publicacion y propiedad
             var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 publicationId,
-                new PublicationQueryOptions { IncludeUser = true, IncludeApplications = true }
+                new PublicationQueryOptions { IncludeApplications = true }
             );
             if (publication == null)
             {
@@ -651,28 +667,24 @@ namespace backend.src.Application.Services.Implements
                         "No se puede avanzar la publicación porque no tiene postulantes aceptados. Si deseas avanzar la publicación sin postulantes, por favor considere cancelar la publicación manualmente en vez de avanzar el estado de la publicación."
                     );
                 }
-                publication.StartWork();
+                // Cancelar el trabajo y llamar manualmente al metodo que cierra la postulación para .
+                BackgroundJob.Delete(publication.CloseApplicationsJobId);
+                await CloseOfferForApplicationsAsync(publication.Id);
             }
             else if (publication.IsWorkInProgress)
-                publication.CompleteWork();
-
-            bool updateResult = await _publicationRepository.UpdateAsync(publication);
-            if (!updateResult)
             {
-                Log.Error("Error al avanzar la publicación con ID {PublicationId}.", publicationId);
-                throw new Exception("No se pudo avanzar la publicación. Inténtalo de nuevo.");
+                // Cancelar el trabajo y llamar manualmente al metodo que finaliza el trabajo e inicializa las reseñas para esta publicación.
+                BackgroundJob.Delete(publication.FinishWorkAndInitializeReviewsJobId);
+                await CompleteAndInitializeReviewsAsync(publication.Id);
+                // Reprogramar el trabajo que cierra las reseñas para que se ejecute después de los días configurados a partir de ahora, ya que al ejecutar manualmente el método anterior, la publicación se marca como finalizada y las reseñas se inicializan, por lo que el trabajo programado para cerrar las reseñas debe ejecutarse después de esto.
+                BackgroundJob.Reschedule(
+                    publication.FinalizeAndCloseReviewsJobId,
+                    DateTimeOffset.UtcNow.AddDays(_daysUntilReviewAutoClose)
+                );
             }
 
             //TODO: Enviar notificaciones a los postulantes informando del cambio de estado de la oferta.
-            //TODO: Activar flujo de calificaciones para 'ofertas entrando a CalificacionesEnProceso'.
-            if (publication.IsAwaitingReviews)
-            {
-                // Reprograma el trabajo para crear las calificaciones iniciales para que se ejecute enseguida en vez de la fecha original.
-                BackgroundJob.Reschedule(
-                    publication.InitialReviewJobId!,
-                    DateTimeOffset.UtcNow.AddMinutes(1)
-                );
-            }
+
             return $"Publicación avanzada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
         }
 
@@ -700,7 +712,7 @@ namespace backend.src.Application.Services.Implements
             // Validacion de publicacion y propiedad
             var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 publicationId,
-                new PublicationQueryOptions { IncludeUser = true }
+                new PublicationQueryOptions { TrackChanges = true, IncludeUser = true }
             );
             if (publication == null)
             {
@@ -751,7 +763,8 @@ namespace backend.src.Application.Services.Implements
             //TODO: Enviar notificaciones a los postulantes informando de la cancelacion de la oferta.
             //TODO: Enviar notificacion al oferente si la accion fue realizada por un administrador.
             // Cancelar el trabajo programado para crear las calificaciones iniciales ya que el trabajo ya no se realizara
-            BackgroundJob.Delete(publication.InitialReviewJobId!);
+            BackgroundJob.Delete(publication.FinishWorkAndInitializeReviewsJobId!);
+            BackgroundJob.Delete(publication.FinalizeAndCloseReviewsJobId!);
 
             return "Publicación cancelada exitosamente.";
         }
@@ -765,7 +778,8 @@ namespace backend.src.Application.Services.Implements
         {
             // Validar que la publicación exista y sea del tipo correcto
             var publication = await _publicationRepository.GetPublicationByIdAsync<T>(
-                publicationId
+                publicationId,
+                new PublicationQueryOptions { TrackChanges = true }
             );
             if (publication == null)
             {
@@ -803,12 +817,158 @@ namespace backend.src.Application.Services.Implements
                 if (originalEndDate != null && originalEndDate != updatedOffer.EndDate)
                 {
                     BackgroundJob.Reschedule(
-                        updatedOffer.InitialReviewJobId!,
+                        updatedOffer.FinishWorkAndInitializeReviewsJobId!,
                         updatedOffer.EndDate.AddMinutes(1)
                     );
                 }
             }
             return true;
         }
+
+        #region Background Jobs
+
+        public async Task CloseOfferForApplicationsAsync(int offerId)
+        {
+            // Validar oferta
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+            );
+            if (offer == null)
+            {
+                Log.Error("Oferta con ID {OfferId} no encontrada para cierre automático.", offerId);
+                throw new KeyNotFoundException("Oferta no encontrada.");
+            }
+            // Validar estado actual: Si aun esta en estado pendiente significa no lo ha revisado un administrador.
+            if (offer.IsInAdminReview)
+            {
+                Log.Warning(
+                    "La oferta con ID {OfferId} está en revisión administrativa por lo que se mueve a rechazada automaticamente.",
+                    offerId
+                );
+                offer.ApprovalStatus = ApprovalStatus.Rechazada;
+                offer.RejectedByAdminReason =
+                    "La oferta fue rechazada automáticamente por no ser revisada por un administrador dentro del plazo establecido.";
+                bool resultRejected = await _publicationRepository.UpdateAsync(offer);
+                if (!resultRejected)
+                {
+                    Log.Error(
+                        "Error al actualizar la oferta con ID {OfferId} a estado rechazada durante el cierre automático.",
+                        offerId
+                    );
+                    throw new Exception("No se pudo actualizar la oferta. Inténtalo de nuevo.");
+                }
+                // Cancelar los trabajos programados ya que la oferta no se realizara
+                BackgroundJob.Delete(offer.FinishWorkAndInitializeReviewsJobId!);
+                BackgroundJob.Delete(offer.FinalizeAndCloseReviewsJobId!);
+                return;
+            }
+            // Validar estado actual: Si no esta en estado de recibiendo postulaciones, no se puede cerrar para postulaciones ya que algo salio mal. No deberia pasar pero se valida por seguridad.
+            if (!offer.IsAcceptingApplications)
+            {
+                Log.Error(
+                    "La oferta con ID {OfferId} no está en estado 'Recibiendo Postulaciones' para cierre automático. Estado actual: {Status}",
+                    offerId,
+                    offer.CurrentStatus.ToString()
+                );
+                throw new InvalidOperationException(
+                    "La oferta no está en estado 'Recibiendo Postulaciones' para cierre automático."
+                );
+            }
+            // Validar postulantes aceptadas
+            var acceptedApplications = offer
+                .Applications.Where(a => a.Status == ApplicationStatus.Aceptada)
+                .ToList();
+            if (acceptedApplications.Count == 0)
+            {
+                Log.Warning(
+                    "La oferta con ID {OfferId} no tiene postulantes aceptados al momento del cierre automático.",
+                    offerId
+                );
+                offer.CancelOffer();
+                // Cancelar los trabajos programados ya que la oferta no se realizara
+                BackgroundJob.Delete(offer.FinishWorkAndInitializeReviewsJobId!);
+                BackgroundJob.Delete(offer.FinalizeAndCloseReviewsJobId!);
+            }
+            else
+            {
+                offer.StartWork();
+            }
+            bool updateResult = await _publicationRepository.UpdateAsync(offer);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al cerrar la oferta con ID {OfferId} para postulaciones automáticamente.",
+                    offerId
+                );
+                throw new Exception("No se pudo cerrar la oferta. Inténtalo de nuevo.");
+            }
+        }
+
+        public async Task CompleteAndInitializeReviewsAsync(int offerId)
+        {
+            Log.Information(
+                "Ejecutando trabajo para finalizar la oferta con ID {OfferId} y crear reseñas automáticamente.",
+                offerId
+            );
+            // Validar oferta
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+            );
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta con ID {OfferId} no encontrada para finalizar y crear reseñas automáticamente.",
+                    offerId
+                );
+                throw new KeyNotFoundException("Oferta no encontrada.");
+            }
+            // Validar estado actual
+            if (!offer.IsWorkInProgress)
+            {
+                Log.Error(
+                    "La oferta con ID {OfferId} no está en estado 'Realizando Trabajo' para finalizar y crear reseñas automáticamente. Estado actual: {Status}",
+                    offerId,
+                    offer.CurrentStatus.ToString()
+                );
+                throw new InvalidOperationException(
+                    "La oferta no está en estado 'Realizando Trabajo' para finalizar y crear reseñas automáticamente."
+                );
+            }
+            Log.Information(
+                "Finalizando la oferta con ID {OfferId} y creando reseñas automáticamente.",
+                offerId
+            );
+            // Finalizar el trabajo y crear las reseñas iniciales
+            offer.CompleteWork();
+            bool updateResult = await _publicationRepository.UpdateAsync(offer);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al finalizar la oferta con ID {OfferId} y crear reseñas automáticamente.",
+                    offerId
+                );
+                throw new Exception("No se pudo finalizar la oferta. Inténtalo de nuevo.");
+            }
+            int reviewsCreated = await _reviewService.CreateInitialReviewsForCompletedOfferAsync(
+                offer.Id
+            );
+            Log.Information(
+                "Oferta con ID {OfferId} finalizada y {ReviewCount} reseñas iniciales creadas automáticamente.",
+                offerId,
+                reviewsCreated
+            );
+        }
+
+        public async Task FinalizeAndCloseReviewsAsync(int offerId)
+        {
+            Log.Information(
+                "Ejecutando trabajo para finalizar y cerrar reseñas de la oferta con ID {OfferId} automáticamente.",
+                offerId
+            );
+            throw new NotImplementedException();
+        }
+        #endregion
     }
 }
