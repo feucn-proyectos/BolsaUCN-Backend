@@ -125,12 +125,12 @@ namespace backend.src.Application.Services.Implements
                     "Se requiere un CV para postular a esta oferta"
                 );
             }
-            // Validar que el usuario no tenga más de 3 reseñas pendientes
+            // Validar que el usuario no tenga más de 3 reseñas pendientes como postulante
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
                 user,
-                RoleNames.Applicant // Ya que solo los Applicants pueden postular
+                RoleNames.Applicant
             );
-            if (pendingReviewsCount >= 903) //TODO
+            if (pendingReviewsCount >= 3)
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta con {PendingCount} reseñas pendientes",

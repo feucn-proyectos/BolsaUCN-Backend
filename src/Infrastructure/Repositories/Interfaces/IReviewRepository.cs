@@ -85,6 +85,9 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<bool> CreateReviewAsync(NewReview review);
         Task CreateReviewsAsync(IEnumerable<NewReview> reviews);
         Task<NewReview?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null);
+        Task<List<NewReview>> GetReviewsByOfferIdAsync(int offerId);
+        Task CalculateUserRating(User user);
+        Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId);
         Task<bool> UpdateReviewAsync(NewReview review);
         #endregion
     }

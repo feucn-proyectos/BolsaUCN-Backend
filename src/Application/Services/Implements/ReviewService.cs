@@ -29,6 +29,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IOfferApplicationRepository _offerApplicationRepository;
         private readonly IAdminNotificationRepository _adminNotificationRepository;
         private readonly IEmailService _emailService;
+        private readonly IPublicationService _publicationService;
         private readonly IConfiguration _configuration;
         private readonly int _daysUntilReviewAutoClose;
 
@@ -44,6 +45,7 @@ namespace backend.src.Application.Services.Implements
             IOfferApplicationRepository offerApplicationRepository,
             IAdminNotificationRepository adminNotificationRepository,
             IEmailService emailService,
+            IPublicationService publicationService,
             IConfiguration configuration
         )
         {
@@ -53,6 +55,7 @@ namespace backend.src.Application.Services.Implements
             _publicationRepository = publicationRepository;
             _adminNotificationRepository = adminNotificationRepository;
             _emailService = emailService;
+            _publicationService = publicationService;
             _configuration = configuration;
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
@@ -515,7 +518,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Actualizar el rating del usuario (usar 0.0 si no hay calificaciones)
-            user.Rating = averageRating ?? 0.0;
+            user.Rating = (float?)averageRating ?? 0.0f;
             await _userRepository.UpdateAsync(user);
             Log.Information(
                 "Se actualizo el rating del usuario: {UserId} a: {Rating}",
@@ -735,6 +738,26 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}.");
             }
+            if (review.HasApplicantEvaluatedOfferor)
+            {
+                Log.Error(
+                    "La review con ID {ReviewId} ya ha sido completada para el oferente. No se puede crear una nueva review, o editar la review hacia el oferente.",
+                    reviewId
+                );
+                throw new InvalidOperationException(
+                    $"La review con ID {reviewId} ya ha sido completada para el oferente."
+                );
+            }
+            if (review.IsClosed && !review.IsCompleted)
+            {
+                Log.Error(
+                    "La review con ID {ReviewId} ha sido cerrada automáticamente por vencimiento. No se puede crear una nueva review, o editar la review hacia el oferente.",
+                    reviewId
+                );
+                throw new InvalidOperationException(
+                    $"La review con ID {reviewId} ha sido cerrada automáticamente por vencimiento."
+                );
+            }
             if (review.ApplicantId != applicantId)
             {
                 Log.Error(
@@ -744,16 +767,6 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new UnauthorizedAccessException(
                     $"El usuario con ID {applicantId} no es el postulante asociado a la review con ID {reviewId}."
-                );
-            }
-            if (review.HasApplicantEvaluatedOfferor)
-            {
-                Log.Error(
-                    "La review con ID {ReviewId} ya ha sido completada para el oferente. No se puede crear una nueva review, o editar la review hacia el oferente.",
-                    reviewId
-                );
-                throw new InvalidOperationException(
-                    $"La review con ID {reviewId} ya ha sido completada para el oferente."
                 );
             }
             // Mapeo de la información de la review hacia el oferente
@@ -770,7 +783,26 @@ namespace backend.src.Application.Services.Implements
                 applicantId,
                 review.OfferorId
             );
-            if (review.IsCompleted) { } //TODO: Llamar metodo para finalizar la publicacion.
+            // Verifica si la oferta a la que esta asociada la reseña tiene reseñas pendientes fuera de esta
+            if (review.IsCompleted)
+            {
+                int offerId = review.Application!.JobOfferId;
+                int pendingReviewsCount =
+                    await _reviewRepository.GetPendingReviewsCountByOfferIdAsync(offerId);
+                if (pendingReviewsCount == 0)
+                {
+                    Log.Information(
+                        "La oferta con ID {OfferId} no tiene reseñas pendientes después de completar la review con ID {ReviewId}. Se procederá a finalizar la publicación.",
+                        offerId,
+                        review.Id
+                    );
+                    Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                        offerId
+                    );
+                    BackgroundJob.Delete(offer!.FinalizeAndCloseReviewsJobId);
+                    await _publicationService.FinalizeAndCloseReviewsAsync(offer.Id);
+                }
+            }
 
             return "Review creada exitosamente para el oferente.";
         }
@@ -857,7 +889,26 @@ namespace backend.src.Application.Services.Implements
                 offerorId,
                 review.ApplicantId
             );
-            if (review.IsCompleted) { } //TODO: Llamar metodo para finalizar la publicacion.
+            // Verifica si la oferta a la que esta asociada la reseña tiene reseñas pendientes fuera de esta
+            if (review.IsCompleted)
+            {
+                int offerId = review.Application!.JobOfferId;
+                int pendingReviewsCount =
+                    await _reviewRepository.GetPendingReviewsCountByOfferIdAsync(offerId);
+                if (pendingReviewsCount == 0)
+                {
+                    Log.Information(
+                        "La oferta con ID {OfferId} no tiene reseñas pendientes después de completar la review con ID {ReviewId}. Se procederá a finalizar la publicación.",
+                        offerId,
+                        review.Id
+                    );
+                    Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                        offerId
+                    );
+                    BackgroundJob.Delete(offer!.FinalizeAndCloseReviewsJobId);
+                    await _publicationService.FinalizeAndCloseReviewsAsync(offer.Id);
+                }
+            }
 
             return "Review creada exitosamente para el oferente.";
         }

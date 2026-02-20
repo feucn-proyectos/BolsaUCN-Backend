@@ -95,5 +95,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<(IEnumerable<Publication>?, int)> GetAllPublicationsFilteredForAdminAsync(
             PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
+
+        Task<int> SaveChangesAsync();
     }
 }

@@ -18,7 +18,7 @@ namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
         /// <summary>
         /// Promedio de calificación del usuario (obtenido de GeneralUser.Rating)
         /// </summary>
-        public double AverageRating { get; set; }
+        public float? AverageRating { get; set; }
 
         /// <summary>
         /// Total de reviews del usuario

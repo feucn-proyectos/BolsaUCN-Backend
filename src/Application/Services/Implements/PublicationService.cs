@@ -28,17 +28,20 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly IReviewRepository _reviewRepository;
         private readonly int _daysUntilReviewAutoClose;
 
         public PublicationService(
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
+            IReviewRepository reviewRepository,
             IUserRepository userRepository,
             IConfiguration configuration
         )
         {
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
+            _reviewRepository = reviewRepository;
             _userRepository = userRepository;
             _configuration = configuration;
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
@@ -165,8 +168,11 @@ namespace backend.src.Application.Services.Implements
                     : throw new UnauthorizedAccessException(
                         "Solo los administradores pueden crear publicaciones de compra/venta directamente publicadas."
                     );
-            // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            // Validar que el usuario no tenga más de 3 reseñas pendientes como oferente
+            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
+                currentUser,
+                RoleNames.Offeror
+            );
             if (pendingReviewsCount >= 3)
             {
                 Log.Warning(
@@ -967,7 +973,79 @@ namespace backend.src.Application.Services.Implements
                 "Ejecutando trabajo para finalizar y cerrar reseñas de la oferta con ID {OfferId} automáticamente.",
                 offerId
             );
-            throw new NotImplementedException();
+
+            // Validar oferta
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+            );
+            if (offer == null)
+            {
+                Log.Error(
+                    "Oferta con ID {OfferId} no encontrada para finalizar y cerrar reseñas automáticamente.",
+                    offerId
+                );
+                throw new KeyNotFoundException("Oferta no encontrada.");
+            }
+            // Validar estado actual
+            if (!offer.IsAwaitingReviews)
+            {
+                Log.Error(
+                    "La oferta con ID {OfferId} no está en estado 'Calificaciones en Proceso' para finalizar y cerrar reseñas automáticamente. Estado actual: {Status}",
+                    offerId,
+                    offer.CurrentStatus.ToString()
+                );
+                throw new InvalidOperationException(
+                    "La oferta no está en estado 'Calificaciones en Proceso' para finalizar y cerrar reseñas automáticamente."
+                );
+            }
+            Log.Information(
+                "Finalizando y cerrando reseñas de la oferta con ID {OfferId} automáticamente.",
+                offerId
+            );
+            // Validar que las reseñas existan y estén en estado completado
+            var reviews = await _reviewRepository.GetReviewsByOfferIdAsync(offer.Id);
+            if (reviews.Count == 0)
+            {
+                Log.Warning(
+                    "La oferta con ID {OfferId} no tiene reseñas asociadas al momento de finalizar y cerrar reseñas automáticamente.",
+                    offerId
+                );
+                throw new InvalidOperationException(
+                    "No se pueden finalizar y cerrar las reseñas porque no existen reseñas asociadas a esta oferta."
+                );
+            }
+            // Obtener todos los usuarios involucrados
+            var usersInvolved = new HashSet<User> { offer.User };
+            foreach (var review in reviews)
+            {
+                if (review.Applicant != null)
+                    usersInvolved.Add(review.Applicant);
+
+                review.ReviewClosedAt = DateTime.UtcNow;
+            }
+            // Calcular las calificaciones finales promediando las calificaciones del oferente hacia el postulante y viceversa.
+            foreach (User user in usersInvolved)
+            {
+                await _reviewRepository.CalculateUserRating(user);
+            }
+
+            // Finalizar el ciclo de vida de la oferta
+
+            offer.FinalizeOffer();
+            int updateResult = await _publicationRepository.SaveChangesAsync();
+            if (updateResult == 0)
+            {
+                Log.Error(
+                    "Error al finalizar la oferta con ID {OfferId} durante el proceso de finalización y cierre automático de reseñas.",
+                    offerId
+                );
+                throw new Exception("No se pudo finalizar la oferta. Inténtalo de nuevo.");
+            }
+            Log.Information(
+                "Oferta con ID {OfferId} finalizada y reseñas cerradas automáticamente.",
+                offerId
+            );
         }
         #endregion
     }

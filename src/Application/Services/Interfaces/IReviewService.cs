@@ -151,7 +151,6 @@ namespace backend.src.Application.Services.Interfaces
             int offerorId,
             OfferorReviewForApplicantDTO reviewDTO
         );
-
         #endregion
     }
 }

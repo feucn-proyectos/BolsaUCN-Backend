@@ -28,6 +28,7 @@ namespace backend.src.Domain.Models
         // Estos atributos son para llevar un registro de cuando se crean o actualizan las reseñas.
         public DateTime? OfferorReviewCompletedAt { get; set; }
         public DateTime? ApplicantReviewCompletedAt { get; set; }
+        public DateTime? ReviewClosedAt { get; set; }
 
         // Estos atributos son para que el frontend sepa si los comentarios has sido accionados por los administradores y actue acorde
         public bool IsOfferorCommentForApplicantHidden { get; set; } = false;
@@ -40,5 +41,6 @@ namespace backend.src.Domain.Models
         public bool HasOfferorEvaluatedApplicant => OfferorRatingOfApplicant.HasValue;
         public bool HasApplicantEvaluatedOfferor => ApplicantRatingOfOfferor.HasValue;
         public bool IsCompleted => HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor;
+        public bool IsClosed => IsCompleted || ReviewClosedAt.HasValue;
     }
 }

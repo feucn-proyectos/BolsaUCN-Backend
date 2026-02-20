@@ -61,7 +61,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Calificación promedio del usuario (de 1.0 a 6.0).
         /// </summary>
-        public double Rating { get; set; } = 6.0;
+        public float? Rating { get; set; }
 
         // === PROPIEDADES DE ESTUDIANTES ===
 

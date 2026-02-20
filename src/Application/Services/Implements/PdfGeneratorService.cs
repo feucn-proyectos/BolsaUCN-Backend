@@ -159,7 +159,7 @@ namespace backend.src.Application.Services.Implements
                                 {
                                     col.Item().Text("Promedio General").FontSize(12).SemiBold();
                                     col.Item()
-                                        .Text($"{data.AverageRating:F2}/6.0")
+                                        .Text($"{data.AverageRating?.ToString("F2") ?? "n/a "}/6.0")
                                         .FontSize(24)
                                         .Bold()
                                         .FontColor(GetRatingColor(data.AverageRating));
@@ -330,16 +330,18 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Obtiene el color según el rating
         /// </summary>
-        private static string GetRatingColor(double rating)
+        private static string GetRatingColor(float? rating)
         {
-            if (rating >= 5.5)
+            if (rating >= 5.5f)
                 return Colors.Green.Darken2;
-            if (rating >= 4.5)
+            if (rating >= 4.5f)
                 return Colors.Green.Medium;
-            if (rating >= 4.0)
+            if (rating >= 4.0f)
                 return Colors.Blue.Medium;
-            if (rating >= 3.0)
+            if (rating >= 3.0f)
                 return Colors.Orange.Medium;
+            if (rating == null)
+                return Colors.Grey.Medium;
             return Colors.Red.Medium;
         }
 

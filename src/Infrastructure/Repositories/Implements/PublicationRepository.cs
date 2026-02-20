@@ -353,4 +353,9 @@ public class PublicationRepository : IPublicationRepository
             .ToListAsync();
         return (publications, totalCount);
     }
+
+    public async Task<int> SaveChangesAsync()
+    {
+        return await _context.SaveChangesAsync();
+    }
 }

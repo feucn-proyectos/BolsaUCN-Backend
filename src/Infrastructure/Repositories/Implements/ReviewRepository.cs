@@ -139,6 +139,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .ToListAsync();
         }
 
+        //!REFACTORIZADA
         /// <summary>
         /// Obtiene el conteo de reseñas pendientes para un usuario específico.
         /// </summary>
@@ -150,26 +151,20 @@ namespace backend.src.Infrastructure.Repositories.Implements
             string? role = null
         )
         {
-            var pendingCountQuery = _context.Reviews.AsQueryable();
-            switch (role)
+            var pendingCountQuery = _context.NewReviews.AsQueryable();
+            pendingCountQuery = role switch
             {
-                case RoleNames.Offeror:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        r.OfferorId == userId && r.IsReviewForStudentCompleted == false
-                    );
-                    break;
-                case RoleNames.Applicant:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        r.StudentId == userId && r.IsReviewForOfferorCompleted == false
-                    );
-                    break;
-                default:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        (r.OfferorId == userId && r.IsReviewForStudentCompleted == false)
-                        || (r.StudentId == userId && r.IsReviewForOfferorCompleted == false)
-                    );
-                    break;
-            }
+                RoleNames.Offeror => pendingCountQuery.Where(r =>
+                    r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant
+                ),
+                RoleNames.Applicant => pendingCountQuery.Where(r =>
+                    r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor
+                ),
+                _ => pendingCountQuery.Where(r =>
+                    (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
+                    || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
+                ),
+            };
             return await pendingCountQuery.CountAsync();
         }
 
@@ -211,6 +206,43 @@ namespace backend.src.Infrastructure.Repositories.Implements
             }
 
             return await query.FirstOrDefaultAsync(r => r.Id == reviewId);
+        }
+
+        public async Task<List<NewReview>> GetReviewsByOfferIdAsync(int offerId)
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .Where(r => r.Application!.JobOfferId == offerId)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .ToListAsync();
+        }
+
+        public async Task CalculateUserRating(User user)
+        {
+            List<float> ratingsAsOfferor = await _context
+                .NewReviews.Where(r => r.OfferorId == user.Id && r.HasApplicantEvaluatedOfferor)
+                .Select(r => r.ApplicantRatingOfOfferor!.Value)
+                .ToListAsync();
+
+            List<float> ratingsAsApplicant = await _context
+                .NewReviews.Where(r => r.ApplicantId == user.Id && r.HasOfferorEvaluatedApplicant)
+                .Select(r => r.OfferorRatingOfApplicant!.Value)
+                .ToListAsync();
+
+            List<float> allRatings = [.. ratingsAsOfferor, .. ratingsAsApplicant];
+
+            if (allRatings.Count > 0)
+            {
+                user.Rating = allRatings.Average();
+            }
+        }
+
+        public async Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId)
+        {
+            return await _context
+                .NewReviews.Where(r => r.Application!.JobOfferId == offerId && !r.IsCompleted)
+                .CountAsync();
         }
 
         public async Task<bool> UpdateReviewAsync(NewReview review)

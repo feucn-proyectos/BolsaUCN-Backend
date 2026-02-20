@@ -31,8 +31,6 @@ namespace backend.src.Infrastructure.Data
         public DbSet<ReviewChecklistValues> ReviewChecklistValues { get; set; }
         public DbSet<AdminNotification> AdminNotifications { get; set; }
 
-        // public DbSet<Review> Reviews { get; set; } // Desactivado temporalmente
-
         /// <summary>
         /// Configura las relaciones entre entidades y otras configuraciones de EF Core
         /// </summary>
@@ -133,11 +131,11 @@ namespace backend.src.Infrastructure.Data
 
             // Logica de creación de reviews al cerrar publicaciones
             // Detectar publicaciones cerradas antes de guardar
-            var closedPublications = DetectClosedPublications();
+            //var closedPublications = DetectClosedPublications();
             // Guardar cambios
             var result = await base.SaveChangesAsync(cancellationToken);
             // Procesar publicaciones cerradas (crear reviews)
-            await ProcessClosedPublicationsAsync(closedPublications, cancellationToken);
+            //await ProcessClosedPublicationsAsync(closedPublications, cancellationToken);
             return result;
         }
 

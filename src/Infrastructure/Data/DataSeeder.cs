@@ -132,7 +132,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = "12345678-9",
                 EmailConfirmed = true,
                 IsBlocked = false,
-                Rating = 3.3,
+                Rating = 3.3f,
                 FirstName = "Juan",
                 LastName = "Pérez Estudiante",
                 Disability = Disability.Ninguna,
@@ -174,7 +174,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = "22334455-6",
                 EmailConfirmed = true,
                 IsBlocked = false,
-                Rating = 0.0,
+                Rating = 0.0f,
                 FirstName = "Pedro",
                 LastName = "López Morales",
                 Disability = Disability.Ninguna,
@@ -215,7 +215,7 @@ namespace backend.src.Application.Infrastructure.Data
                 AboutMe = "Empresa comprometida con el cambio y progreso de sus trabajadores",
                 Rut = "76543210-K",
                 EmailConfirmed = true,
-                Rating = 5.4,
+                Rating = 5.4f,
                 IsBlocked = false,
                 FirstName = "Tech Corp SpA",
                 LastName = "Tecnología Corporativa SpA",
@@ -250,7 +250,7 @@ namespace backend.src.Application.Infrastructure.Data
                 AboutMe = "Emprendedor con 5 años de experiencia",
                 Rut = "11222333-4",
                 EmailConfirmed = true,
-                Rating = 6.0,
+                Rating = 6.0f,
                 IsBlocked = false,
                 FirstName = "María",
                 LastName = "González Particular",
@@ -354,7 +354,7 @@ namespace backend.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                     IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Name.FirstName(),
                     LastName = faker.Name.LastName(),
@@ -394,7 +394,7 @@ namespace backend.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                     IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Company.CompanyName(),
                     LastName = faker.Company.CompanyName() + " S.A.",
@@ -428,7 +428,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = faker.Random.Replace("##.###.###-K"),
                 AboutMe = faker.Random.Replace("################"),
                 EmailConfirmed = true,
-                Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                 IsBlocked = faker.Random.Bool(0.9f),
                 FirstName = faker.Name.FirstName(),
                 LastName = faker.Name.LastName(),
@@ -1740,7 +1740,7 @@ namespace backend.src.Application.Infrastructure.Data
                     if (offerorReviews.Any())
                         averageRating = offerorReviews.Average(r => r.RatingForOfferor!.Value);
                 }
-                user.Rating = averageRating ?? 0.0;
+                user.Rating = (float?)averageRating ?? 0.0f;
                 context.Users.Update(user);
             }
 
