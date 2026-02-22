@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -52,7 +53,28 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Review creada exitosamente", result));
         }
 
+        [HttpGet("reviews")]
+        [Authorize(Roles = RoleNames.Applicant + "," + RoleNames.Offeror)]
+        public async Task<IActionResult> GetMyReviewsAsync(
+            [FromQuery] MyReviewsSearchParamsDTO searchParams
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _reviewService.GetMyReviewsAsync(searchParams, parsedUserId);
+            return Ok(new GenericResponse<MyReviewsDTO>("Reviews obtenidas exitosamente", result));
+        }
 
+        public async Task<IActionResult> GetMyReviewDetailsAsync(int reviewId)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _reviewService.GetMyReviewDetailsAsync(reviewId, parsedUserId);
+            return Ok(
+                new GenericResponse<MyReviewDetailsDTO>(
+                    "Detalles de review obtenidos exitosamente",
+                    result
+                )
+            );
+        }
         #endregion
     }
 }

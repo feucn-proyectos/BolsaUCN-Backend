@@ -1,8 +1,8 @@
-using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
 using backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Domain.Models;
-using backend.src.Domain.Models.Options;
 
 namespace backend.src.Application.Services.Interfaces
 {
@@ -126,16 +126,6 @@ namespace backend.src.Application.Services.Interfaces
         /// </summary>
         Task CloseExpiredReviewsAsync();
 
-        /// <summary>
-        /// Obtiene el número de reseñas pendientes de un usuario.
-        /// Una reseña está pendiente si el usuario no ha completado su parte de la evaluación,
-        /// la reseña no está cerrada y no está completada por ambas partes.
-        /// </summary>
-        /// <param name="userId">El identificador del usuario (estudiante u oferente).</param>
-        /// <returns>El número de reseñas pendientes del usuario.</returns>
-        /// <exception cref="KeyNotFoundException">Lanzada si no se encuentra el usuario.</exception>
-        Task<int> GetPendingReviewsCountAsync(User user, string? role = null);
-
         #region Refactored Methods
 
         Task<int> CreateInitialReviewsForCompletedOfferAsync(int publicationId);
@@ -151,6 +141,22 @@ namespace backend.src.Application.Services.Interfaces
             int offerorId,
             OfferorReviewForApplicantDTO reviewDTO
         );
+
+        Task<MyReviewsDTO> GetMyReviewsAsync(MyReviewsSearchParamsDTO searchParams, int userId);
+
+        Task<MyReviewDetailsDTO> GetMyReviewDetailsAsync(int reviewId, int userId);
+
+        /// <summary>
+        /// Obtiene el número de reseñas pendientes de un usuario.
+        /// Una reseña está pendiente si el usuario no ha completado su parte de la evaluación,
+        /// la reseña no está cerrada y no está completada por ambas partes.
+        /// </summary>
+        /// <param name="userId">El identificador del usuario (estudiante u oferente).</param>
+        /// <returns>El número de reseñas pendientes del usuario.</returns>
+        /// <exception cref="KeyNotFoundException">Lanzada si no se encuentra el usuario.</exception>
+        Task<int> GetPendingReviewsCountAsync(User user, string? role = null);
+
+        Task<string> HideReviewInfoAsync(int reviewId, int adminId, HideReviewInfoDTO infoDTO);
         #endregion
     }
 }

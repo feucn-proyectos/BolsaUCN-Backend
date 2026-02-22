@@ -1,3 +1,4 @@
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
@@ -243,6 +244,75 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _context
                 .NewReviews.Where(r => r.Application!.JobOfferId == offerId && !r.IsCompleted)
                 .CountAsync();
+        }
+
+        public async Task<(List<NewReview> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
+            MyReviewsSearchParamsDTO searchParams,
+            int userId
+        )
+        {
+            IQueryable<NewReview> query = _context
+                .NewReviews.Include(r => r.Application)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .Where(r => r.OfferorId == userId || r.ApplicantId == userId);
+
+            // Filtro por estado de la review
+            if (!string.IsNullOrEmpty(searchParams.ReviewStatus))
+            {
+                query = searchParams.ReviewStatus switch
+                {
+                    "Pending" => query.Where(r =>
+                        (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
+                        || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
+                    ),
+                    "Completed" => query.Where(r => r.IsCompleted),
+                    "Closed" => query.Where(r => r.IsClosed),
+                    _ => query,
+                };
+            }
+            // Busqueda por titulo de publicacion
+            if (!string.IsNullOrEmpty(searchParams.PublicationTitle))
+            {
+                string searchTerm = searchParams.PublicationTitle.ToLower();
+                query = query.Where(r =>
+                    r.Application!.JobOffer!.Title.ToLower().Contains(searchTerm)
+                );
+            }
+            // Ordenamiento por fecha de creacion de la review
+            bool ascending = true; // Orden por defecto.
+            if (!string.IsNullOrEmpty(searchParams.SortOrder))
+            {
+                ascending = searchParams.SortOrder == "asc";
+            }
+            query = ascending
+                ? query.OrderBy(r => r.CreatedAt)
+                : query.OrderByDescending(r => r.CreatedAt);
+
+            // Paginacion
+            int totalCount = await query.CountAsync();
+            int pageSize = searchParams.PageSize ?? 10;
+            var reviews = await query
+                .Skip((searchParams.PageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .AsNoTracking()
+                .ToListAsync();
+            return (reviews, totalCount);
+        }
+
+        public async Task<NewReview?> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
+        {
+            var review = await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r =>
+                    r.Id == reviewId && (r.OfferorId == userId || r.ApplicantId == userId)
+                );
+
+            return review;
         }
 
         public async Task<bool> UpdateReviewAsync(NewReview review)

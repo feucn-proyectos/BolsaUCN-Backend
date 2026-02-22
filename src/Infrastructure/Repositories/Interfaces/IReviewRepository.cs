@@ -1,4 +1,5 @@
 using System;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Domain.Models;
 using backend.src.Domain.Options;
 
@@ -88,6 +89,11 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<List<NewReview>> GetReviewsByOfferIdAsync(int offerId);
         Task CalculateUserRating(User user);
         Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId);
+        Task<(List<NewReview> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
+            MyReviewsSearchParamsDTO searchParams,
+            int userId
+        );
+        Task<NewReview?> GetMyReviewDetailsByIdAsync(int reviewId, int userId);
         Task<bool> UpdateReviewAsync(NewReview review);
         #endregion
     }

@@ -1,6 +1,7 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
 using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -15,16 +16,19 @@ namespace backend.src.API.Controllers
         private readonly IAdminService _adminService;
         private readonly IPublicationService _publicationService;
         private readonly IOfferApplicationService _applicationService;
+        private readonly IReviewService _reviewService;
 
         public AdminController(
             IAdminService adminService,
             IPublicationService publicationService,
-            IOfferApplicationService applicationService
+            IOfferApplicationService applicationService,
+            IReviewService reviewService
         )
         {
             _adminService = adminService;
             _publicationService = publicationService;
             _applicationService = applicationService;
+            _reviewService = reviewService;
         }
 
         #region User Management
@@ -179,6 +183,27 @@ namespace backend.src.API.Controllers
 
         #endregion
         #region Review Management
+
+        [HttpPatch("reviews/{reviewId}/hide")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> HideReviewInfo(
+            int reviewId,
+            [FromBody] HideReviewInfoDTO requestDTO
+        )
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var result = await _reviewService.HideReviewInfoAsync(
+                parsedAdminId,
+                reviewId,
+                requestDTO
+            );
+            return Ok(
+                new GenericResponse<string>(
+                    "Información de la reseña ocultada exitosamente.",
+                    result
+                )
+            );
+        }
 
         #endregion
     }

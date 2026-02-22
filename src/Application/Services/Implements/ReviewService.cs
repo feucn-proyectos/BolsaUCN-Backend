@@ -1,6 +1,7 @@
-using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
 using backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Application.Mappers;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -32,6 +33,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationService _publicationService;
         private readonly IConfiguration _configuration;
         private readonly int _daysUntilReviewAutoClose;
+        private readonly int _defaultPageSize;
 
         /// <summary>
         /// Inicializa una nueva instancia del servicio de reseñas.
@@ -60,6 +62,7 @@ namespace backend.src.Application.Services.Implements
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
             );
+            _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
         #region Obtener Reviews y Ratings
@@ -909,8 +912,154 @@ namespace backend.src.Application.Services.Implements
                     await _publicationService.FinalizeAndCloseReviewsAsync(offer.Id);
                 }
             }
+            return "Review creada exitosamente para el postulante.";
+        }
 
-            return "Review creada exitosamente para el oferente.";
+        public async Task<MyReviewsDTO> GetMyReviewsAsync(
+            MyReviewsSearchParamsDTO searchParams,
+            int userId
+        )
+        {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {UserId} para obtener sus reviews.",
+                    userId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {userId}.");
+            }
+            // Obtener las reviews del usuario
+            (List<NewReview> reviews, int totalCount) =
+                await _reviewRepository.GetMyReviewsByUserIdAsync(searchParams, userId);
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            return new MyReviewsDTO
+            {
+                Reviews = reviews.Adapt<List<MyReviewDTO>>(),
+                TotalCount = totalCount,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+            };
+        }
+
+        public async Task<MyReviewDetailsDTO> GetMyReviewDetailsAsync(int reviewId, int userId)
+        {
+            // Validar al usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {UserId} para obtener los detalles de la review.",
+                    userId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {userId}.");
+            }
+            // Obtener los detalles de la review
+            NewReview? reviewDetails = await _reviewRepository.GetMyReviewDetailsByIdAsync(
+                reviewId,
+                userId
+            );
+            if (reviewDetails == null)
+            {
+                Log.Error(
+                    "No se encontró la review con ID {ReviewId} para obtener sus detalles.",
+                    reviewId
+                );
+                throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}.");
+            }
+            // Validar rol y estado del usuario dentro de la review para determinar qué información esconder de forma manual.
+            // Si el usuario no ha evaluado a su contraparte, se oculta la información de su contraparte para evitar que pueda acceder a ella antes de completar su evaluación.
+            // Esto se hace de forma manual para evitar tener que hacer consultas adicionales a la base de datos para determinar qué información ocultar.
+            if (reviewDetails.ApplicantId == userId && !reviewDetails.HasApplicantEvaluatedOfferor)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} intentó acceder a los detalles de una review que aún no ha evaluado al oferente.",
+                    userId
+                );
+                reviewDetails.OfferorCommentForApplicant = null;
+                reviewDetails.OfferorRatingOfApplicant = null;
+            }
+            else if (
+                reviewDetails.OfferorId == userId
+                && !reviewDetails.HasOfferorEvaluatedApplicant
+            )
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} intentó acceder a los detalles de una review que aún no ha evaluado al postulante.",
+                    userId
+                );
+                reviewDetails.ApplicantCommentForOfferor = null;
+                reviewDetails.ApplicantRatingOfOfferor = null;
+            }
+            return reviewDetails.Adapt<MyReviewDetailsDTO>();
+        }
+
+        public async Task<string> HideReviewInfoAsync(
+            int reviewId,
+            int adminId,
+            HideReviewInfoDTO infoDTO
+        )
+        {
+            // Validar al usuario
+            bool adminExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!adminExists)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {AdminId} para ocultar información de la review.",
+                    adminId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {adminId}.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Error(
+                    "El usuario con ID {AdminId} no tiene el rol de admin para ocultar información de la review.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {adminId} no tiene el rol de admin para ocultar información de la review."
+                );
+            }
+            // Validar la review
+            NewReview? review = await _reviewRepository.GetByIdAsync(
+                reviewId,
+                new ReviewQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeApplicant = true,
+                    IncludeOfferor = true,
+                    IncludeApplication = true,
+                }
+            );
+            if (review == null)
+            {
+                Log.Error(
+                    "No se encontró la review con ID {ReviewId} para ocultar información de la review.",
+                    reviewId
+                );
+                throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}");
+            }
+            // Ocultar la información de la review según lo especificado en el DTO
+            infoDTO.Adapt(review);
+            bool updated = await _reviewRepository.UpdateReviewAsync(review);
+            if (!updated)
+            {
+                Log.Error(
+                    "No se pudo actualizar la review con ID {ReviewId} para ocultar información de la review.",
+                    review.Id
+                );
+                throw new InvalidOperationException(
+                    "No se pudo actualizar la review para ocultar información de la review"
+                );
+            }
+            return "Información de la review ocultada exitosamente.";
         }
         #endregion
     }

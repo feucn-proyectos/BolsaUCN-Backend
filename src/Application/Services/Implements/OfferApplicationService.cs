@@ -179,7 +179,6 @@ namespace backend.src.Application.Services.Implements
                 Status = ApplicationStatus.Pendiente,
                 CoverLetter = coverLetter.CoverLetter,
                 CreatedAt = DateTime.UtcNow,
-                ReviewStatus = ReviewStatus.NoDisponible,
             };
 
             bool result = await _applicationRepository.AddAsync(jobApplication);

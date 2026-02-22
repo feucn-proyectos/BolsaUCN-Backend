@@ -1,5 +1,14 @@
 namespace backend.src.Domain.Models
 {
+    public enum ReviewStatus
+    {
+        Pendiente,
+        OferenteEvaluoEstudiante,
+        EstudianteEvaluoOferente,
+        Completada,
+        Cerrada,
+    }
+
     public class NewReview : ModelBase
     {
         // === Atributos de navegación principales ===
@@ -32,9 +41,20 @@ namespace backend.src.Domain.Models
 
         // Estos atributos son para que el frontend sepa si los comentarios has sido accionados por los administradores y actue acorde
         public bool IsOfferorCommentForApplicantHidden { get; set; } = false;
-        public DateTime? OfferorCommentForApplicantHiddenAt { get; set; }
+        public bool IsOfferorRatingOfApplicantHidden { get; set; } = false;
+        public DateTime? OfferorReviewHiddenAt { get; set; }
+        public string? OfferorReviewHiddenReason { get; set; }
         public bool IsApplicantCommentForOfferorHidden { get; set; } = false;
-        public DateTime? ApplicantCommentForOfferorHiddenAt { get; set; }
+        public bool IsApplicantRatingOfOfferorHidden { get; set; } = false;
+        public DateTime? ApplicantReviewHiddenAt { get; set; }
+        public string? ApplicantReviewHiddenReason { get; set; }
+        public bool IsReviewActionedByAdmin =>
+            OfferorReviewHiddenAt.HasValue
+            || IsOfferorCommentForApplicantHidden
+            || IsOfferorRatingOfApplicantHidden
+            || IsApplicantCommentForOfferorHidden
+            || IsApplicantRatingOfOfferorHidden
+            || ApplicantReviewHiddenAt.HasValue;
 
         // === Atributos auxiliares ===
         public bool IsPending => !HasOfferorEvaluatedApplicant || !HasApplicantEvaluatedOfferor;
@@ -42,5 +62,21 @@ namespace backend.src.Domain.Models
         public bool HasApplicantEvaluatedOfferor => ApplicantRatingOfOfferor.HasValue;
         public bool IsCompleted => HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor;
         public bool IsClosed => IsCompleted || ReviewClosedAt.HasValue;
+
+        public ReviewStatus CurrentStatus
+        {
+            get
+            {
+                if (IsClosed)
+                    return ReviewStatus.Cerrada;
+                if (IsCompleted)
+                    return ReviewStatus.Completada;
+                if (HasOfferorEvaluatedApplicant && !HasApplicantEvaluatedOfferor)
+                    return ReviewStatus.OferenteEvaluoEstudiante;
+                if (!HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor)
+                    return ReviewStatus.EstudianteEvaluoOferente;
+                return ReviewStatus.Pendiente;
+            }
+        }
     }
 }

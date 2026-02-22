@@ -11,15 +11,6 @@ namespace backend.src.Domain.Models
         CanceladaPorPostulante,
     }
 
-    public enum ReviewStatus
-    {
-        NoDisponible,
-        SinRevisar,
-        RevisadaPorOferente,
-        RevisadaPorPostulante,
-        RevisadaPorAmbos,
-    }
-
     /// <summary>
     /// Representa una postulación realizada por un estudiante a una oferta laboral.
     /// </summary>
@@ -70,10 +61,5 @@ namespace backend.src.Domain.Models
         /// Sirve como auditoria para la administracion, para que al revisar el historial de postulaciones puedan saber si el CV que se reviso en su momento es el mismo que el actual del postulante o no.
         /// </summary>
         public bool IsCVInvalid { get; set; } = false;
-
-        /// <summary>
-        /// Indica el estado de revision de la postulación.
-        /// </summary>
-        public required ReviewStatus ReviewStatus { get; set; } = ReviewStatus.NoDisponible;
     }
 }
