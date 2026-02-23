@@ -85,7 +85,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = 0; //await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            var pendingReviewsCount = 0; //TODO await _reviewService.GetPendingReviewsCountAsync(currentUser);
             Log.Information(
                 "Reseñas pendientes para el usuario {userId}: {pendingReviewsCount}",
                 userId,
@@ -106,6 +106,7 @@ namespace backend.src.Application.Services.Implements
             // Mapeo a la entidad y asignaciones adicionales
             Offer newOffer = offerDTO.Adapt<Offer>();
             newOffer.UserId = currentUser.Id;
+            newOffer.ReviewDeadline = newOffer.EndDate.AddDays(_daysUntilReviewAutoClose);
             newOffer.PublicationType = PublicationType.Oferta;
 
             // Asignar estado de aprobación e isOpen según el rol
@@ -130,15 +131,15 @@ namespace backend.src.Application.Services.Implements
             // Trabajo para cerrar la postulación, otro para marcar como finalizada e inicializar reseñas, y otro para cerrar reseñas después de un tiempo definido.
             string closeOfferForApplicationsId = BackgroundJob.Schedule<IOfferJobs>(
                 job => job.SetAsCloseForApplicationsAsync(createdOffer.Id),
-                newOffer.ApplicationDeadline.AddMinutes(1)
+                newOffer.ApplicationDeadline
             );
             string finishWorkAndInitializeReviewsId = BackgroundJob.Schedule<IOfferJobs>(
                 job => job.SetAsCompleteAndInitializeReviewsAsync(createdOffer.Id),
-                newOffer.EndDate.AddMinutes(1)
+                newOffer.EndDate
             );
             string closeReviewsId = BackgroundJob.Schedule<IOfferJobs>(
                 job => job.SetAsFinalizedAndCloseReviewsAsync(createdOffer.Id),
-                newOffer.EndDate.AddDays(_daysUntilReviewAutoClose).AddMinutes(1)
+                newOffer.ReviewDeadline
             );
 
             createdOffer.CloseApplicationsJobId = closeOfferForApplicationsId;
@@ -679,6 +680,7 @@ namespace backend.src.Application.Services.Implements
             }
             else if (publication.IsWorkInProgress)
             {
+                publication.ReviewDeadline = DateTime.UtcNow.AddDays(_daysUntilReviewAutoClose);
                 // Cancelar el trabajo y llamar manualmente al metodo que finaliza el trabajo e inicializa las reseñas para esta publicación.
                 BackgroundJob.Delete(publication.FinishWorkAndInitializeReviewsJobId);
                 await CompleteAndInitializeReviewsAsync(publication.Id);
@@ -804,10 +806,52 @@ namespace backend.src.Application.Services.Implements
                     "Solo se pueden apelar publicaciones que están en estado 'Rechazada'."
                 );
             }
-            DateTime? originalEndDate = (publication is Offer offer) ? offer.EndDate : null;
+            // Guardar las fechas originales en caso de que la publicación sea una oferta, para luego comparar si fueron modificadas en la apelación y reprogramar los trabajos correspondientes en caso de ser necesario.
+            DateTime? originalEndDate;
+            DateTime? originalApplicationDeadline;
+            if (publication is Offer offer)
+            {
+                originalEndDate = offer.EndDate;
+                originalApplicationDeadline = offer.ApplicationDeadline;
+            }
+            else
+            {
+                originalEndDate = null;
+                originalApplicationDeadline = null;
+            }
             publication = appealDTO.Adapt(publication);
             publication.ApprovalStatus = ApprovalStatus.Pendiente;
             publication.AppealCount++;
+
+            if (publication is Offer updatedOffer)
+            {
+                // Si la oferta tenía una fecha de cierre de postulación original y esta fue modificada en la apelación, reprograma el trabajo de cierre de postulación.
+                if (
+                    originalApplicationDeadline != null
+                    && originalApplicationDeadline != updatedOffer.ApplicationDeadline
+                )
+                {
+                    BackgroundJob.Reschedule(
+                        updatedOffer.CloseApplicationsJobId,
+                        updatedOffer.ApplicationDeadline
+                    );
+                }
+                // Si la oferta tenía una fecha de finalización original y esta fue modificada en la apelación, reprograma el trabajo de creación de reseñas.
+                if (originalEndDate != null && originalEndDate != updatedOffer.EndDate)
+                {
+                    updatedOffer.ReviewDeadline = updatedOffer.EndDate.AddDays(
+                        _daysUntilReviewAutoClose
+                    );
+                    BackgroundJob.Reschedule(
+                        updatedOffer.FinishWorkAndInitializeReviewsJobId,
+                        updatedOffer.EndDate
+                    );
+                    BackgroundJob.Reschedule(
+                        updatedOffer.FinalizeAndCloseReviewsJobId,
+                        updatedOffer.ReviewDeadline
+                    );
+                }
+            }
             bool updateResult = await _publicationRepository.UpdateAsync(publication);
             if (!updateResult)
             {
@@ -816,17 +860,6 @@ namespace backend.src.Application.Services.Implements
                     publicationId
                 );
                 throw new Exception("No se pudo actualizar la publicación. Inténtalo de nuevo.");
-            }
-            if (publication is Offer updatedOffer)
-            {
-                // Si la oferta tenía una fecha de finalización original y esta fue modificada en la apelación, reprograma el trabajo de creación de reseñas.
-                if (originalEndDate != null && originalEndDate != updatedOffer.EndDate)
-                {
-                    BackgroundJob.Reschedule(
-                        updatedOffer.FinishWorkAndInitializeReviewsJobId!,
-                        updatedOffer.EndDate.AddMinutes(1)
-                    );
-                }
             }
             return true;
         }
@@ -846,6 +879,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("Oferta no encontrada.");
             }
             // Validar estado actual: Si aun esta en estado pendiente significa no lo ha revisado un administrador.
+            // En este caso la oferta se cancela y se le indica al oferente que someta una nueva oferta o apele.
             if (offer.IsInAdminReview)
             {
                 Log.Warning(
@@ -882,6 +916,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar postulantes aceptadas
+            // Si no hay postulantes aceptados, se cancela la oferta y se le indica al oferente que someta una nueva oferta o apele. Si hay postulantes aceptados, se avanza al siguiente estado de realizando trabajo.
             var acceptedApplications = offer
                 .Applications.Where(a => a.Status == ApplicationStatus.Aceptada)
                 .ToList();

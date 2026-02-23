@@ -15,8 +15,8 @@ namespace backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO
         public string? PublicationTitle { get; set; }
 
         [RegularExpression(
-            "Pending|Completed|Closed",
-            ErrorMessage = "Estado de reseña inválido. Debe ser 'Pending', 'Completed' o 'Closed'."
+            "Pendiente|Completada|Cerrada",
+            ErrorMessage = "Estado de reseña inválido. Debe ser 'Pendiente', 'Completada' o 'Cerrada'."
         )]
         public string? ReviewStatus { get; set; }
 

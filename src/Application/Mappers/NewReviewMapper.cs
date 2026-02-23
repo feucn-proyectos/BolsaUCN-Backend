@@ -28,10 +28,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.ReviewStatus, src => src.CurrentStatus.ToString())
                 .Map(dest => dest.JobOfferTitle, src => src.Application!.JobOffer!.Title)
-                .Map(
-                    dest => dest.OpenUntil,
-                    src => src.Application!.JobOffer!.WorkCompletedAt!.Value.AddDays(7)
-                )
+                .Map(dest => dest.OpenUntil, src => src.Application!.JobOffer!.ReviewDeadline)
                 .Map(dest => dest.HasReviewBeenActionedByAdmin, src => src.IsReviewActionedByAdmin);
 
             TypeAdapterConfig<NewReview, MyReviewDetailsDTO>

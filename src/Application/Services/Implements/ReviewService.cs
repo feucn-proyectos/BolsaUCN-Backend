@@ -1000,6 +1000,50 @@ namespace backend.src.Application.Services.Implements
             return reviewDetails.Adapt<MyReviewDetailsDTO>();
         }
 
+        public async Task<GetReviewsDTO> GetAllReviewsForAdminAsync(
+            int adminId,
+            GetReviewsSearchParamsDTO searchParams
+        )
+        {
+            // Validar que el usuario sea un administrador
+            bool userExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {AdminId} para ocultar información de la review.",
+                    adminId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {adminId}.");
+            }
+            var isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Error(
+                    "El usuario con ID {AdminId} no tiene permisos de administrador para acceder a las reviews.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {adminId} no tiene permisos de administrador para acceder a las reviews."
+                );
+            }
+
+            (List<NewReview> reviews, int totalCount) =
+                await _reviewRepository.GetAllReviewsForAdminAsync(searchParams, adminId);
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            return new GetReviewsDTO
+            {
+                Reviews = reviews.Adapt<List<GetReviewDTO>>(),
+                TotalCount = totalCount,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+            };
+        }
+
         public async Task<string> HideReviewInfoAsync(
             int reviewId,
             int adminId,

@@ -184,6 +184,20 @@ namespace backend.src.API.Controllers
         #endregion
         #region Review Management
 
+        [HttpGet("reviews")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetAllReviews(GetReviewsSearchParamsDTO searchParams)
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var reviews = await _reviewService.GetAllReviewsForAdminAsync(
+                parsedAdminId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<GetReviewsDTO>("Reseñas obtenidas exitosamente.", reviews)
+            );
+        }
+
         [HttpPatch("reviews/{reviewId}/hide")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> HideReviewInfo(

@@ -152,7 +152,7 @@ namespace backend.src.Application.Mappers
                 )
                 .Map(
                     dest => dest.Remuneration,
-                    src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                    src => src is Offer ? ((Offer)src).Remuneration : null
                 )
                 .Map(
                     dest => dest.IsCvRequired,

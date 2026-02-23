@@ -146,6 +146,11 @@ namespace backend.src.Application.Services.Interfaces
 
         Task<MyReviewDetailsDTO> GetMyReviewDetailsAsync(int reviewId, int userId);
 
+        Task<GetReviewsDTO> GetAllReviewsForAdminAsync(
+            int adminId,
+            GetReviewsSearchParamsDTO searchParams
+        );
+
         /// <summary>
         /// Obtiene el número de reseñas pendientes de un usuario.
         /// Una reseña está pendiente si el usuario no ha completado su parte de la evaluación,

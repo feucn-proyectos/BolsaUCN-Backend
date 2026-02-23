@@ -262,12 +262,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
             {
                 query = searchParams.ReviewStatus switch
                 {
-                    "Pending" => query.Where(r =>
+                    "Pendiente" => query.Where(r =>
                         (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
                         || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
                     ),
-                    "Completed" => query.Where(r => r.IsCompleted),
-                    "Closed" => query.Where(r => r.IsClosed),
+                    "Completada" => query.Where(r => r.IsCompleted),
+                    "Cerrada" => query.Where(r => r.IsClosed),
                     _ => query,
                 };
             }
