@@ -948,7 +948,7 @@ namespace backend.src.Application.Services.Implements
             };
         }
 
-        public async Task<MyReviewDetailsDTO> GetMyReviewDetailsAsync(int reviewId, int userId)
+        public async Task<MyReviewDetailsDTO> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
         {
             // Validar al usuario
             bool userExists = await _userRepository.ExistsByIdAsync(userId);
@@ -1042,6 +1042,47 @@ namespace backend.src.Application.Services.Implements
                 PageSize = pageSize,
                 TotalPages = totalPages,
             };
+        }
+
+        public async Task<GetReviewDetailsDTO> GetReviewDetailsForAdminByIdAsync(
+            int reviewId,
+            int adminId
+        )
+        {
+            // Validar que el usuario sea un administrador
+            bool userExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!userExists)
+            {
+                Log.Error(
+                    "No se encontró el usuario con ID {AdminId} para ocultar información de la review.",
+                    adminId
+                );
+                throw new KeyNotFoundException($"No se encontró el usuario con ID {adminId}.");
+            }
+            var isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Error(
+                    "El usuario con ID {AdminId} no tiene permisos de administrador para acceder a las reviews.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    $"El usuario con ID {adminId} no tiene permisos de administrador para acceder a las reviews."
+                );
+            }
+
+            NewReview? reviewDetails = await _reviewRepository.GetReviewDetailsForAdminByIdAsync(
+                reviewId
+            );
+            if (reviewDetails == null)
+            {
+                Log.Error(
+                    "No se encontró la review con ID {ReviewId} para obtener sus detalles.",
+                    reviewId
+                );
+                throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}.");
+            }
+            return reviewDetails.Adapt<GetReviewDetailsDTO>();
         }
 
         public async Task<string> HideReviewInfoAsync(

@@ -67,7 +67,7 @@ namespace backend.src.API.Controllers
         public async Task<IActionResult> GetMyReviewDetailsAsync(int reviewId)
         {
             int parsedUserId = GetUserIdFromToken();
-            var result = await _reviewService.GetMyReviewDetailsAsync(reviewId, parsedUserId);
+            var result = await _reviewService.GetMyReviewDetailsByIdAsync(reviewId, parsedUserId);
             return Ok(
                 new GenericResponse<MyReviewDetailsDTO>(
                     "Detalles de review obtenidos exitosamente",

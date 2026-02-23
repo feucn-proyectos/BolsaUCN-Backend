@@ -144,12 +144,14 @@ namespace backend.src.Application.Services.Interfaces
 
         Task<MyReviewsDTO> GetMyReviewsAsync(MyReviewsSearchParamsDTO searchParams, int userId);
 
-        Task<MyReviewDetailsDTO> GetMyReviewDetailsAsync(int reviewId, int userId);
+        Task<MyReviewDetailsDTO> GetMyReviewDetailsByIdAsync(int reviewId, int userId);
 
         Task<GetReviewsDTO> GetAllReviewsForAdminAsync(
             int adminId,
             GetReviewsSearchParamsDTO searchParams
         );
+
+        Task<GetReviewDetailsDTO> GetReviewDetailsForAdminByIdAsync(int reviewId, int adminId);
 
         /// <summary>
         /// Obtiene el número de reseñas pendientes de un usuario.

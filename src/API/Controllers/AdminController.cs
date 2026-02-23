@@ -198,6 +198,23 @@ namespace backend.src.API.Controllers
             );
         }
 
+        [HttpGet("reviews/{reviewId}")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetReviewDetailsById(int reviewId)
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var reviewDetails = await _reviewService.GetReviewDetailsForAdminByIdAsync(
+                reviewId,
+                parsedAdminId
+            );
+            return Ok(
+                new GenericResponse<GetReviewDetailsDTO>(
+                    "Detalles de la reseña obtenidos exitosamente.",
+                    reviewDetails
+                )
+            );
+        }
+
         [HttpPatch("reviews/{reviewId}/hide")]
         [Authorize(Roles = RoleNames.Admin)]
         public async Task<IActionResult> HideReviewInfo(
