@@ -99,7 +99,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             GetReviewsSearchParamsDTO searchParams,
             int adminId
         );
-        Task<NewReview?> GetReviewDetailsForAdminByIdAsync(int reviewId, int adminId);
+        Task<NewReview?> GetReviewDetailsForAdminByIdAsync(int reviewId);
         Task<bool> UpdateReviewAsync(NewReview review);
         #endregion
     }
