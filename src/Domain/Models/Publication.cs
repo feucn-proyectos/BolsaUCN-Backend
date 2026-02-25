@@ -17,7 +17,6 @@ namespace backend.src.Domain.Models
         Aceptada, // Aprobado y publicado por un administrador
         Pendiente, // En revisión administrativa
         Rechazada, // Rechazado por un administrador
-        Cerrada,
     }
 
     /// <summary>

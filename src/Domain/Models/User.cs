@@ -44,6 +44,14 @@ namespace backend.src.Domain.Models
         public required string LastName { get; set; }
 
         /// <summary>
+        /// Nombre completo del usuario.
+        /// Estudiante/Particular/Administrador: "Nombre Apellido".
+        /// Empresa: "Nombre de la empresa".
+        /// </summary>
+        public string FullName =>
+            UserType == UserType.Empresa ? FirstName : $"{FirstName} {LastName}";
+
+        /// <summary>
         /// Tipo de usuario en el sistema.
         /// </summary>
         public required UserType UserType { get; set; }

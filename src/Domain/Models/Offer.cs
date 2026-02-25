@@ -37,7 +37,7 @@ namespace backend.src.Domain.Models
         /// </summary>
         public required DateTime ApplicationDeadline { get; set; }
 
-        public DateTime ReviewDeadline { get; set; } // Fecha límite para que el sistema cierre automáticamente las reseñas, establecida al crear la oferta como EndDate + un número definido de días
+        public required DateTime ReviewDeadline { get; set; } // Fecha límite para que el sistema cierre automáticamente las reseñas, establecida al crear la oferta como EndDate + un número definido de días
 
         /// <summary>
         /// Remuneración ofrecida en pesos chilenos. No aplica para posiciones voluntarias.
