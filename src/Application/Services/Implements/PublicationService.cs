@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Jobs.Interfaces;
@@ -209,10 +210,6 @@ namespace backend.src.Application.Services.Implements
 
         #endregion
 
-
-        // --- IMPLEMENTACIÓN PENDING ("InProcess") ---
-        // --- IMPLEMENTACIÓN PENDING ("InProcess") CORREGIDA ---
-
         #region New Methods
 
         public async Task<MyPublicationsDTO> GetMyPublicationsAsync(
@@ -246,6 +243,59 @@ namespace backend.src.Application.Services.Implements
                 TotalCount = totalCount,
             };
             return myPublicationsDTO;
+        }
+
+        public async Task<UserPublicationsForAdminDTO> GetPublicationByUserIdAsync(
+            int adminId,
+            int userId,
+            UserPublicationsSearchParamsDTO searchParams
+        )
+        {
+            // Validar usuario admin
+            bool adminExists = await _userRepository.ExistsByIdAsync(adminId);
+            if (!adminExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(adminId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} no tiene permisos de administrador.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para acceder a esta información."
+                );
+            }
+            // Validar usuario objetivo
+            bool userExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            var (publications, totalCount) =
+                await _publicationRepository.GetPublicationsByUserIdFilteredAsync(
+                    userId,
+                    searchParams
+                );
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            UserPublicationsForAdminDTO userPublicationsForAdminDTO = new()
+            {
+                Publications = publications.Adapt<List<UserPublicationForAdminDTO>>(),
+                TotalPages = totalPages,
+                PageNumber = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return userPublicationsForAdminDTO;
         }
 
         public async Task<OffersForApplicantDTO> GetOffersAsync(

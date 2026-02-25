@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -75,6 +76,70 @@ public class PublicationRepository : IPublicationRepository
             query = query.Include(p => p.User);
 
         return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
+    }
+
+    public async Task<(List<Publication> publications, int totalCount)> GetPublicationsByUserIdFilteredAsync(
+        int userId,
+        UserPublicationsSearchParamsDTO searchParams
+    )
+    {
+        IQueryable<Publication> query = _context
+            .Publications.Where(p => p.UserId == userId)
+            .AsQueryable();
+
+        // Filtrado por tipo y estado de aprobación
+        if (!string.IsNullOrEmpty(searchParams.FilterByPublicationType))
+        {
+            if (searchParams.FilterByPublicationType == "Oferta")
+            {
+                query = query.Where(p => p.PublicationType == PublicationType.Oferta);
+            }
+            else if (searchParams.FilterByPublicationType == "CompraVenta")
+            {
+                query = query.Where(p => p.PublicationType == PublicationType.CompraVenta);
+            }
+        }
+        if (!string.IsNullOrEmpty(searchParams.FilterByPublicationStatus))
+        {
+            if (searchParams.FilterByPublicationStatus == "Aprobada")
+            {
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Aceptada);
+            }
+            else if (searchParams.FilterByPublicationStatus == "Rechazada")
+            {
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Rechazada);
+            }
+            else if (searchParams.FilterByPublicationStatus == "Pendiente")
+            {
+                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Pendiente);
+            }
+        }
+
+        // Ordenamiento
+        if (!string.IsNullOrEmpty(searchParams.SortBy))
+        {
+            query = searchParams.SortBy switch
+            {
+                "Title" => searchParams.SortOrder == "asc"
+                    ? query.OrderBy(p => p.Title)
+                    : query.OrderByDescending(p => p.Title),
+                "CreatedAt" => searchParams.SortOrder == "asc"
+                    ? query.OrderBy(p => p.CreatedAt)
+                    : query.OrderByDescending(p => p.CreatedAt),
+                _ => query.OrderBy(p => p.Id),
+            };
+        }
+
+        // Paginación
+        int totalCount = await query.CountAsync();
+        int pageSize = searchParams.PageSize ?? _defaultPageSize;
+        var publications = await query
+            .Skip((searchParams.PageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return (publications, totalCount);
     }
 
     public async Task<(IEnumerable<Offer>?, int)> GetOffersFilteredAsync(
@@ -313,8 +378,6 @@ public class PublicationRepository : IPublicationRepository
                 query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Rechazada);
             else if (searchParams.FilterByApprovalStatus == "Pendiente")
                 query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Pendiente);
-            else if (searchParams.FilterByApprovalStatus == "Cerrada")
-                query = query.Where(p => p.ApprovalStatus == ApprovalStatus.Cerrada);
         }
         // Busqueda
         if (!string.IsNullOrEmpty(searchParams.SearchTerm))

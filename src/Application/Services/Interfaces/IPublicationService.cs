@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -24,6 +25,12 @@ namespace backend.src.Application.Services.Interfaces
         Task<MyPublicationsDTO> GetMyPublicationsAsync(
             int userId,
             MyPublicationsSeachParamsDTO searchParamsDTO
+        );
+
+        Task<UserPublicationsForAdminDTO> GetPublicationByUserIdAsync(
+            int adminId,
+            int userId,
+            UserPublicationsSearchParamsDTO searchParams
         );
 
         Task<OffersForApplicantDTO> GetOffersAsync(
