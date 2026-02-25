@@ -160,6 +160,7 @@ try
     builder.Services.AddScoped<BuySellMapper>();
     builder.Services.AddScoped<ApplicationMapper>();
     builder.Services.AddScoped<ProfileMapper>();
+    builder.Services.AddScoped<NewReviewMapper>();
 
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
