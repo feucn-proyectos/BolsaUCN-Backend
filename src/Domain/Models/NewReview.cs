@@ -40,20 +40,16 @@ namespace backend.src.Domain.Models
         public DateTime? ReviewClosedAt { get; set; }
 
         // Estos atributos son para que el frontend sepa si los comentarios has sido accionados por los administradores y actue acorde
-        public bool IsOfferorCommentForApplicantHidden { get; set; } = false;
-        public bool IsOfferorRatingOfApplicantHidden { get; set; } = false;
+        public bool IsOfferorReviewForApplicantHidden { get; set; } = false;
         public DateTime? OfferorReviewHiddenAt { get; set; }
         public string? OfferorReviewHiddenReason { get; set; }
-        public bool IsApplicantCommentForOfferorHidden { get; set; } = false;
-        public bool IsApplicantRatingOfOfferorHidden { get; set; } = false;
+        public bool IsApplicantReviewForOfferorHidden { get; set; } = false;
         public DateTime? ApplicantReviewHiddenAt { get; set; }
         public string? ApplicantReviewHiddenReason { get; set; }
         public bool IsReviewActionedByAdmin =>
             OfferorReviewHiddenAt.HasValue
-            || IsOfferorCommentForApplicantHidden
-            || IsOfferorRatingOfApplicantHidden
-            || IsApplicantCommentForOfferorHidden
-            || IsApplicantRatingOfOfferorHidden
+            || IsOfferorReviewForApplicantHidden
+            || IsApplicantReviewForOfferorHidden
             || ApplicantReviewHiddenAt.HasValue;
 
         // === Atributos auxiliares ===
@@ -61,7 +57,7 @@ namespace backend.src.Domain.Models
         public bool HasOfferorEvaluatedApplicant => OfferorRatingOfApplicant.HasValue;
         public bool HasApplicantEvaluatedOfferor => ApplicantRatingOfOfferor.HasValue;
         public bool IsCompleted => HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor;
-        public bool IsClosed => IsCompleted || ReviewClosedAt.HasValue;
+        public bool IsClosed => ReviewClosedAt.HasValue;
 
         public ReviewStatus CurrentStatus
         {
