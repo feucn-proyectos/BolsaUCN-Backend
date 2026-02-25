@@ -37,16 +37,6 @@ namespace backend.src.Domain.Models
         public required int JobOfferId { get; set; }
 
         /// <summary>
-        /// Identificador de la revisión asociada a esta postulación, si es que llegara a existir.
-        /// </summary>
-        public int? ReviewId { get; set; }
-
-        /// <summary>
-        /// La revisión asociada a esta postulación, si es que llegara a existir.
-        /// </summary>
-        public NewReview? Review { get; set; }
-
-        /// <summary>
         /// Carta de presentación opcional adjuntada por el estudiante.
         /// </summary>
         public string? CoverLetter { get; set; }
