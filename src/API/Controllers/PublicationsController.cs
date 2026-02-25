@@ -81,7 +81,9 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
+        #region Punto de vista del postulante
         [HttpGet("explore/offers")]
         public async Task<IActionResult> ExploreOffers(
             [FromQuery] ExploreOffersSearchParamsDTO searchParams
@@ -161,7 +163,9 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
+        #region Postulaciones
         [HttpGet("my-publications/{offerId}/applications")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> GetAllApplicationsByOfferId(
@@ -217,7 +221,9 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
+        #region Manejo manual de publicaciones (avance, cierre, apelación)
         [HttpPatch("my-publications/{publicationId}/advance")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> AdvancePublicationManually(int publicationId)
@@ -227,7 +233,7 @@ namespace backend.src.API.Controllers
                 publicationId,
                 parsedOffererId
             );
-            return Ok(new GenericResponse<string>("Publicación cerrada exitosamente.", result));
+            return Ok(new GenericResponse<string>("Publicación avanzada exitosamente.", result));
         }
 
         [HttpPatch("my-publications/{publicationId}/cancel")]
