@@ -2,9 +2,9 @@ namespace backend.src.Application.DTOs.ReviewDTO.AdminDTOs
 {
     public class HideReviewInfoDTO
     {
-        public bool? HideOfferorRating { get; set; }
-        public bool? HideOfferorComment { get; set; }
-        public bool? HideApplicantRating { get; set; }
-        public bool? HideApplicantComment { get; set; }
+        public bool? HideOfferorReviewForApplicant { get; set; }
+        public string? OfferorReviewHiddenReason { get; set; }
+        public bool? HideApplicantReviewForOfferor { get; set; }
+        public string? ApplicantReviewHiddenReason { get; set; }
     }
 }

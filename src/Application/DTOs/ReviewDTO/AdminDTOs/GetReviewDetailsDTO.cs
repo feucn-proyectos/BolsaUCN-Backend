@@ -16,9 +16,9 @@ namespace backend.src.Application.DTOs.ReviewDTO.AdminDTOs
         public DateTime? ReviewClosedAt { get; set; }
 
         // === Atributos de visibilidad ===
-        public bool? IsOfferorCommentForApplicantHidden { get; set; }
+        public bool? IsOfferorReviewForApplicantHidden { get; set; }
         public DateTime? OfferorReviewHiddenAt { get; set; }
-        public bool? IsApplicantCommentForOfferorHidden { get; set; }
+        public bool? IsApplicantReviewForOfferorHidden { get; set; }
         public DateTime? ApplicantReviewHiddenAt { get; set; }
 
         // === Atributos relacionados a la oferta y postulacion ===

@@ -1,4 +1,4 @@
-namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
+namespace backend.src.Application.DTOs.ReviewDTO.ReviewReportDTO
 {
     /// <summary>
     /// DTO con el detalle de una review para el reporte del sistema
@@ -19,7 +19,7 @@ namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
         /// <summary>
         /// Nombre del estudiante
         /// </summary>
-        public string StudentName { get; set; } = string.Empty;
+        public string ApplicantName { get; set; } = string.Empty;
 
         /// <summary>
         /// Nombre del oferente
@@ -54,17 +54,17 @@ namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
         /// <summary>
         /// Indica si el estudiante llegó a tiempo
         /// </summary>
-        public bool? AtTime { get; set; }
+        public bool? IsOnTime { get; set; }
 
         /// <summary>
         /// Indica si el estudiante tuvo buena presentación
         /// </summary>
-        public bool? GoodPresentation { get; set; }
+        public bool? IsPresentable { get; set; }
 
         /// <summary>
         /// Indica si el estudiante mostró respeto hacia el oferente
         /// </summary>
-        public bool? StudentHasRespectOfferor { get; set; }
+        public bool? IsRespectful { get; set; }
 
         /// <summary>
         /// Indica si la review está completada

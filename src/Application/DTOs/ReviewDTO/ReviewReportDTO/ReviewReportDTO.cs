@@ -1,4 +1,4 @@
-namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
+namespace backend.src.Application.DTOs.ReviewDTO.ReviewReportDTO
 {
     /// <summary>
     /// DTO que contiene toda la información necesaria para generar un reporte PDF de reviews de un usuario
@@ -33,6 +33,6 @@ namespace backend.src.Application.DTOs.ReviewDTO.ReviewReport
         /// <summary>
         /// Lista de reviews detalladas
         /// </summary>
-        public List<ReviewDetailDTO> Reviews { get; set; } = new();
+        public List<ReviewDetailDTO> Reviews { get; set; } = [];
     }
 }
