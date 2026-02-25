@@ -52,10 +52,6 @@ namespace backend.src.Infrastructure.Repositories.Implements
                         .ThenInclude(jo => jo!.User)
                         .ThenInclude(u => u.ProfilePhoto);
                 }
-                if (options.IncludeReview)
-                {
-                    query = query.Include(ja => ja.Review);
-                }
             }
 
             return await query.FirstOrDefaultAsync(ja => ja.Id == applicationId);
@@ -223,6 +219,11 @@ namespace backend.src.Infrastructure.Repositories.Implements
             _context.JobApplications.Update(application);
             var result = await _context.SaveChangesAsync();
             return result > 0;
+        }
+
+        public async Task<bool> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> ExistsByApplicantIdAndOfferId(int applicantId, int offerId)

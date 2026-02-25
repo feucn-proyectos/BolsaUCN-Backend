@@ -100,6 +100,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             int adminId
         );
         Task<NewReview?> GetReviewDetailsForAdminByIdAsync(int reviewId);
+        Task<List<NewReview>> GetAllForAdminAsync();
+        Task<List<NewReview>> GetAllByUserIdAsync(int userId);
         Task<bool> UpdateReviewAsync(NewReview review);
         #endregion
     }

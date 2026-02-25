@@ -47,7 +47,6 @@ namespace backend.src.Application.Services.Implements
             IOfferApplicationRepository offerApplicationRepository,
             IAdminNotificationRepository adminNotificationRepository,
             IEmailService emailService,
-            IPublicationService publicationService,
             IConfiguration configuration
         )
         {
@@ -57,7 +56,6 @@ namespace backend.src.Application.Services.Implements
             _publicationRepository = publicationRepository;
             _adminNotificationRepository = adminNotificationRepository;
             _emailService = emailService;
-            _publicationService = publicationService;
             _configuration = configuration;
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
@@ -673,9 +671,6 @@ namespace backend.src.Application.Services.Implements
                     ApplicantId = application.StudentId,
                 };
                 await _reviewRepository.CreateReviewAsync(review);
-                // Asociar la review creada a la postulación correspondiente
-                application.ReviewId = review.Id;
-                await _offerApplicationRepository.UpdateAsync(application);
                 Log.Information(
                     "Review inicial creada para la postulación con ID {ApplicationId}, asociada a la oferta con ID {OfferId}",
                     application.Id,
@@ -1086,8 +1081,8 @@ namespace backend.src.Application.Services.Implements
         }
 
         public async Task<string> HideReviewInfoAsync(
-            int reviewId,
             int adminId,
+            int reviewId,
             HideReviewInfoDTO infoDTO
         )
         {
@@ -1132,7 +1127,49 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException($"No se encontró la review con ID {reviewId}");
             }
             // Ocultar la información de la review según lo especificado en el DTO
-            infoDTO.Adapt(review);
+            if (
+                infoDTO.HideOfferorReviewForApplicant.HasValue
+                && (
+                    !review.HasOfferorEvaluatedApplicant || review.IsOfferorReviewForApplicantHidden
+                )
+            )
+            {
+                Log.Error(
+                    "El admin con ID {AdminId} intentó ocultar la información de una review que aún no ha sido completada por el oferente.",
+                    adminId
+                );
+                throw new InvalidOperationException(
+                    "No se puede ocultar la información de una review que aún no ha sido completada por el oferente."
+                );
+            }
+            else if (
+                infoDTO.HideApplicantReviewForOfferor.HasValue
+                && (
+                    !review.HasApplicantEvaluatedOfferor || review.IsApplicantReviewForOfferorHidden
+                )
+            )
+            {
+                Log.Error(
+                    "El admin con ID {AdminId} intentó ocultar la información de una review que aún no ha sido completada por el postulante.",
+                    adminId
+                );
+                throw new InvalidOperationException(
+                    "No se puede ocultar la información de una review que aún no ha sido completada por el postulante."
+                );
+            }
+            if (infoDTO.HideOfferorReviewForApplicant == true)
+            {
+                review.IsOfferorReviewForApplicantHidden = true;
+                review.OfferorReviewHiddenReason =
+                    infoDTO.OfferorReviewHiddenReason ?? "Información oculta por un administrador.";
+            }
+            if (infoDTO.HideApplicantReviewForOfferor == true)
+            {
+                review.IsApplicantReviewForOfferorHidden = true;
+                review.ApplicantReviewHiddenReason =
+                    infoDTO.ApplicantReviewHiddenReason
+                    ?? "Información oculta por un administrador.";
+            }
             bool updated = await _reviewRepository.UpdateReviewAsync(review);
             if (!updated)
             {

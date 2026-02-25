@@ -295,7 +295,7 @@ namespace backend.src.API.Controllers
         {
             try
             {
-                var pdfBytes = await _pdfGeneratorService.GenerateSystemReviewsPdfAsync();
+                var pdfBytes = await _pdfGeneratorService.GenerateSystemReviewsPdfAsync(0);
                 return File(
                     pdfBytes,
                     "application/pdf",

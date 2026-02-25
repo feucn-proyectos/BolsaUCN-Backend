@@ -247,7 +247,13 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId)
         {
             return await _context
-                .NewReviews.Where(r => r.Application!.JobOfferId == offerId && !r.IsCompleted)
+                .NewReviews.Where(r =>
+                    r.Application!.JobOfferId == offerId
+                    && (
+                        !r.OfferorReviewCompletedAt.HasValue
+                        || !r.ApplicantReviewCompletedAt.HasValue
+                    )
+                )
                 .CountAsync();
         }
 
@@ -258,6 +264,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             IQueryable<NewReview> query = _context
                 .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
                 .Where(r => r.OfferorId == userId || r.ApplicantId == userId);
@@ -268,11 +275,15 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 query = searchParams.ReviewStatus switch
                 {
                     "Pendiente" => query.Where(r =>
-                        (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
-                        || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
+                        (r.OfferorId == userId && !r.OfferorRatingOfApplicant.HasValue)
+                        || (r.ApplicantId == userId && !r.ApplicantRatingOfOfferor.HasValue)
                     ),
-                    "Completada" => query.Where(r => r.IsCompleted),
-                    "Cerrada" => query.Where(r => r.IsClosed),
+                    "Completada" => query.Where(r =>
+                        (r.OfferorRatingOfApplicant.HasValue && r.ApplicantRatingOfOfferor.HasValue)
+                        || (r.OfferorId == userId && r.OfferorRatingOfApplicant.HasValue)
+                        || (r.ApplicantId == userId && r.ApplicantRatingOfOfferor.HasValue)
+                    ),
+                    "Cerrada" => query.Where(r => r.ReviewClosedAt.HasValue),
                     _ => query,
                 };
             }
@@ -400,6 +411,32 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .FirstOrDefaultAsync(r => r.Id == reviewId);
 
             return review;
+        }
+
+        public async Task<List<NewReview>> GetAllForAdminAsync()
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<NewReview>> GetAllByUserIdAsync(int userId)
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .Where(r =>
+                    (r.OfferorId == userId && r.ApplicantRatingOfOfferor.HasValue)
+                    || (r.ApplicantId == userId && r.OfferorRatingOfApplicant.HasValue)
+                )
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
         }
 
         public async Task<bool> UpdateReviewAsync(NewReview review)
