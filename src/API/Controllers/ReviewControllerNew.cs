@@ -13,10 +13,15 @@ namespace backend.src.API.Controllers
     public class NewReviewController : BaseController
     {
         private readonly IReviewService _reviewService;
+        private readonly IPdfGeneratorService _pdfGeneratorService;
 
-        public NewReviewController(IReviewService reviewService)
+        public NewReviewController(
+            IReviewService reviewService,
+            IPdfGeneratorService pdfGeneratorService
+        )
         {
             _reviewService = reviewService;
+            _pdfGeneratorService = pdfGeneratorService;
         }
 
         #region Creacion de reviews por usuarios
@@ -25,7 +30,7 @@ namespace backend.src.API.Controllers
         [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> CreateApplicantReviewForOfferor(
             int reviewId,
-            ApplicantReviewForOfferorDTO reviewDTO
+            [FromBody] ApplicantReviewForOfferorDTO reviewDTO
         )
         {
             int parsedUserId = GetUserIdFromToken();
@@ -41,7 +46,7 @@ namespace backend.src.API.Controllers
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> CreateOfferorReviewForApplicantAsync(
             int reviewId,
-            OfferorReviewForApplicantDTO reviewDTO
+            [FromBody] OfferorReviewForApplicantDTO reviewDTO
         )
         {
             int parsedUserId = GetUserIdFromToken();
@@ -64,6 +69,8 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<MyReviewsDTO>("Reviews obtenidas exitosamente", result));
         }
 
+        [HttpGet("reviews/{reviewId}")]
+        [Authorize(Roles = RoleNames.Applicant + "," + RoleNames.Offeror)]
         public async Task<IActionResult> GetMyReviewDetailsAsync(int reviewId)
         {
             int parsedUserId = GetUserIdFromToken();
@@ -73,6 +80,20 @@ namespace backend.src.API.Controllers
                     "Detalles de review obtenidos exitosamente",
                     result
                 )
+            );
+        }
+
+        [HttpGet("reviews/pdf")]
+        [Authorize(Roles = RoleNames.Applicant + "," + RoleNames.Offeror)]
+        public async Task<IActionResult> GetMyReviewsPdf()
+        {
+            int parsedUserId = GetUserIdFromToken();
+
+            var pdfBytes = await _pdfGeneratorService.GenerateUserReviewsPdfAsync(parsedUserId);
+            return File(
+                pdfBytes,
+                "application/pdf",
+                $"reviews_{parsedUserId}_{DateTime.Now:yyyyMMdd}.pdf"
             );
         }
         #endregion
