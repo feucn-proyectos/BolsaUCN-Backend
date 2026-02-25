@@ -37,12 +37,26 @@ namespace backend.src.API.Controllers
         /// <param name="offerDto">Datos de la oferta a crear</param>
         /// <returns>Resultado de la creación de la oferta con el ID generado</returns>
         [HttpPost("offers")]
-        [Authorize]
+        [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDTO offerDto)
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _publicationService.CreateOfferAsync(offerDto, parsedUserId);
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
+        }
+
+        [HttpPost("buysells")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO buySellDto)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.CreateBuySellAsync(buySellDto, parsedUserId);
+            return Ok(
+                new GenericResponse<string>(
+                    "Publicación de Compra/Venta creada exitosamente.",
+                    result
+                )
+            );
         }
         #endregion
 
