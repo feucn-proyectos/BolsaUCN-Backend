@@ -16,6 +16,13 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<bool?> CreateAsync(Image file);
 
         /// <summary>
+        /// Crea un archivo de imagen en la base de datos.
+        /// </summary>
+        /// <param name="files">La lista de archivos de imagen a crear.</param>
+        /// <returns>True si los archivos se crearon correctamente, de lo contrario false.</returns>
+        Task<bool> CreateBatchAsync(List<Image> files);
+
+        /// <summary>
         /// Crea un archivo de imagen de usuario en la base de datos.
         /// </summary>
         /// <param name="file">El archivo de imagen a crear.</param>

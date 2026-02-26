@@ -1,16 +1,14 @@
 using backend.src.Application.DTOs.BaseResponse;
-using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
-using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
 
 namespace backend.src.API.Controllers
 {
@@ -45,9 +43,14 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
         }
 
+        /// <summary>
+        /// Crea una nueva publicación de compra/venta
+        /// </summary>
+        /// <param name="buySellDto">Los datos de la publicación de compra/venta a crear</param>
+        /// <returns>Resultado de la creación de la publicación con el ID generado</returns>
         [HttpPost("buysells")]
         [Authorize(Roles = RoleNames.Offeror)]
-        public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO buySellDto)
+        public async Task<IActionResult> CreateBuySell([FromForm] CreateBuySellDTO buySellDto)
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _publicationService.CreateBuySellAsync(buySellDto, parsedUserId);

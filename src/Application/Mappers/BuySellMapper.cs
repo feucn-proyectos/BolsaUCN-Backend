@@ -34,7 +34,8 @@ namespace backend.src.Application.Mappers
                 .Map(
                     dest => dest.AdditionalContactPhoneNumber,
                     src => src.AdditionalContactPhoneNumber
-                );
+                )
+                .Map(dest => dest.Images, src => src.Images);
 
             TypeAdapterConfig<BuySell, BuySellSummaryDto>
                 .NewConfig()

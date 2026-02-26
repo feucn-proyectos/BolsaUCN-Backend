@@ -17,6 +17,14 @@ namespace backend.src.Application.Services.Interfaces
         Task<bool> UploadAsync(IFormFile file, int productId);
 
         /// <summary>
+        /// Sube un lote de imágenes a Cloudinary para una publicación de compra/venta.
+        /// </summary>
+        /// <param name="images">La lista de archivos de imagen a subir.</param>
+        /// <param name="buySell">La publicación de compra/venta a la que pertenecen las imágenes.</param>
+        /// <returns>True si todas las imágenes se cargaron exitosamente, de lo contrario False.</returns>
+        Task<bool> UploadBatchAsync(List<IFormFile> images, BuySell buySell);
+
+        /// <summary>
         /// Sube una imagen de usuario a Cloudinary.
         /// </summary>
         /// <param name="file">El archivo de imagen a subir.</param>

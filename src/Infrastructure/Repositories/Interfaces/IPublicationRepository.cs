@@ -102,6 +102,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
 
+        Task RollbackCreatedBuySellAsync(int buySellId);
+
         Task<int> SaveChangesAsync();
     }
 }

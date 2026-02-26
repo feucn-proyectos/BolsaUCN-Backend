@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
@@ -29,12 +30,14 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly IFileService _fileService;
         private readonly IReviewRepository _reviewRepository;
         private readonly int _daysUntilReviewAutoClose;
 
         public PublicationService(
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
+            IFileService fileService,
             IReviewRepository reviewRepository,
             IUserRepository userRepository,
             IConfiguration configuration
@@ -42,6 +45,7 @@ namespace backend.src.Application.Services.Implements
         {
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
+            _fileService = fileService;
             _reviewRepository = reviewRepository;
             _userRepository = userRepository;
             _configuration = configuration;
@@ -86,7 +90,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = 0; //TODO await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
             Log.Information(
                 "Reseñas pendientes para el usuario {userId}: {pendingReviewsCount}",
                 userId,
@@ -158,18 +162,30 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Crea una nueva publicación de compra/venta
         /// </summary>
-        public async Task<string> CreateBuySellAsync(CreateBuySellDTO buySellDTO, int currentUserId)
+        public async Task<string> CreateBuySellAsync(
+            CreateBuySellDTO createBuySell,
+            int currentUserId
+        )
         {
             // Obtener y validar el usuario actual
-            var currentUser =
-                await _userRepository.GetByIdAsync(currentUserId)
-                ?? throw new KeyNotFoundException("Usuario no encontrado.");
-            var isAdmin =
-                currentUser.UserType == UserType.Administrador
-                    ? true
-                    : throw new UnauthorizedAccessException(
-                        "Solo los administradores pueden crear publicaciones de compra/venta directamente publicadas."
-                    );
+            User? currentUser = await _userRepository.GetByIdAsync(currentUserId);
+            if (currentUser == null)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", currentUserId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(currentUserId, RoleNames.Admin);
+            bool isOfferor = await _userRepository.CheckRoleAsync(currentUserId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error(
+                    "El usuario con ID {UserId} no tiene permisos de oferente.",
+                    currentUserId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para crear publicaciones de compra/venta."
+                );
+            }
             // Validar que el usuario no tenga más de 3 reseñas pendientes como oferente
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
                 currentUser,
@@ -186,26 +202,60 @@ namespace backend.src.Application.Services.Implements
                     "No se puede crear una publicacion de compra/venta mientras se tengan 3 o más reseñas pendientes."
                 );
             }
+
             // Mapeo principal DTO a Entidad
-            BuySell newBuySell = buySellDTO.Adapt<BuySell>();
+            BuySell newBuySell = createBuySell.Adapt<BuySell>();
             // Mapeo adicional y asignaciones
             newBuySell.UserId = currentUser.Id;
+            newBuySell.Images = new List<Image>(); // Inicializar la lista de imágenes vacía, se llenará después con las URLs de Cloudinary
             newBuySell.PublicationType = PublicationType.CompraVenta;
 
             newBuySell.ApprovalStatus = isAdmin
                 ? ApprovalStatus.Aceptada
                 : ApprovalStatus.Pendiente;
 
-            var createdBuySellResult = true; //await _buySellRepository.CreateBuySellAsync(newBuySell);
+            (BuySell createdBuySell, bool isCreated) =
+                await _publicationRepository.CreatePublicationAsync(newBuySell);
+
+            if (!isCreated)
+            {
+                Log.Error(
+                    "Error al crear la publicación de compra/venta para el usuario {UserId}.",
+                    currentUser.Id
+                );
+                throw new Exception(
+                    "No se pudo crear la publicación de compra/venta. Inténtalo de nuevo."
+                );
+            }
+
+            // Manejo de imagenes
+            if (createBuySell.Images != null && createBuySell.Images.Count > 0)
+            {
+                bool uploadResult = await _fileService.UploadBatchAsync(
+                    createBuySell.Images,
+                    createdBuySell
+                );
+                if (!uploadResult)
+                {
+                    Log.Error(
+                        "Error al subir las imágenes para la publicación de compra/venta con ID {BuySellId}.",
+                        createdBuySell.Id
+                    );
+                    await _publicationRepository.RollbackCreatedBuySellAsync(createdBuySell.Id); // Eliminar la publicación creada si las imágenes no se suben correctamente
+                    throw new Exception(
+                        "La publicación de compra/venta se creó, pero ocurrió un error al subir las imágenes. Inténtalo de nuevo."
+                    );
+                }
+            }
 
             Log.Information(
                 "Publicación de compra/venta creada exitosamente. ID: {BuySellId}, Título: {Title}, Usuario: {UserId}",
-                createdBuySellResult,
+                createdBuySell.Id,
                 newBuySell.Title,
                 currentUser.Id
             );
 
-            return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySellResult}";
+            return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySell.Id}";
         }
 
         #endregion

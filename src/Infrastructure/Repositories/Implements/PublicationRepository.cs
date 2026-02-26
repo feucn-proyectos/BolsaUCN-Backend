@@ -78,7 +78,10 @@ public class PublicationRepository : IPublicationRepository
         return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
-    public async Task<(List<Publication> publications, int totalCount)> GetPublicationsByUserIdFilteredAsync(
+    public async Task<(
+        List<Publication> publications,
+        int totalCount
+    )> GetPublicationsByUserIdFilteredAsync(
         int userId,
         UserPublicationsSearchParamsDTO searchParams
     )
@@ -415,6 +418,26 @@ public class PublicationRepository : IPublicationRepository
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);
+    }
+
+    public async Task RollbackCreatedBuySellAsync(int buySellId)
+    {
+        var buySell = await _context
+            .BuySells.Include(bs => bs.Images)
+            .FirstOrDefaultAsync(bs => bs.Id == buySellId);
+
+        if (buySell != null)
+        {
+            // Eliminar imágenes asociadas
+            if (buySell.Images != null && buySell.Images.Count != 0)
+            {
+                _context.Images.RemoveRange(buySell.Images);
+            }
+
+            // Eliminar la publicación de compra/venta
+            _context.BuySells.Remove(buySell);
+            await _context.SaveChangesAsync();
+        }
     }
 
     public async Task<int> SaveChangesAsync()

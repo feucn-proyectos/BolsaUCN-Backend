@@ -1,5 +1,5 @@
 using backend.src.Application.DTOs.OfferDTOs;
-using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Domain.Models;
 using Mapster;

@@ -34,6 +34,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return null;
         }
 
+        public async Task<bool> CreateBatchAsync(List<Image> files)
+        {
+            await _context.Images.AddRangeAsync(files);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         /// <summary>
         /// Crea un archivo de imagen de usuario en la base de datos.
         /// </summary>
