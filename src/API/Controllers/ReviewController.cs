@@ -10,12 +10,12 @@ namespace backend.src.API.Controllers
 {
     [ApiController]
     [Route("api/")]
-    public class NewReviewController : BaseController
+    public class ReviewController : BaseController
     {
         private readonly IReviewService _reviewService;
         private readonly IPdfGeneratorService _pdfGeneratorService;
 
-        public NewReviewController(
+        public ReviewController(
             IReviewService reviewService,
             IPdfGeneratorService pdfGeneratorService
         )
