@@ -86,9 +86,7 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException($"Usuario con ID {targetUserId} no encontrado");
             }
 
-            List<NewReview> reviews = await _reviewRepository.GetAllByUserIdAsync(
-                (int)targetUserId
-            );
+            List<Review> reviews = await _reviewRepository.GetAllByUserIdAsync((int)targetUserId);
 
             // 5. Construir DTO para el reporte
             ReviewReportDTO reportData = new()
@@ -414,7 +412,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Obtener todas las reviews del sistema con includes
-            List<NewReview> reviews = await _reviewRepository.GetAllForAdminAsync();
+            List<Review> reviews = await _reviewRepository.GetAllForAdminAsync();
 
             // 2. Calcular estadísticas del sistema
             int totalReviews = reviews.Count;

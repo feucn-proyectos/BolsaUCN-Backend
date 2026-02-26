@@ -18,13 +18,13 @@ namespace backend.src.Application.Mappers
 
         public void ConfigureCreateReviewMappings()
         {
-            TypeAdapterConfig<ApplicantReviewForOfferorDTO, NewReview>
+            TypeAdapterConfig<ApplicantReviewForOfferorDTO, Review>
                 .NewConfig()
                 .Map(dest => dest.ApplicantRatingOfOfferor, src => src.Rating)
                 .Map(dest => dest.ApplicantCommentForOfferor, src => src.Comment)
                 .Map(dest => dest.ApplicantReviewCompletedAt, src => DateTime.UtcNow);
 
-            TypeAdapterConfig<OfferorReviewForApplicantDTO, NewReview>
+            TypeAdapterConfig<OfferorReviewForApplicantDTO, Review>
                 .NewConfig()
                 .Map(dest => dest.OfferorRatingOfApplicant, src => src.Rating)
                 .Map(dest => dest.OfferorCommentForApplicant, src => src.Comment)
@@ -36,7 +36,7 @@ namespace backend.src.Application.Mappers
 
         public void ConfigureGetReviewsMappings()
         {
-            TypeAdapterConfig<NewReview, MyReviewDTO>
+            TypeAdapterConfig<Review, MyReviewDTO>
                 .NewConfig()
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.ReviewStatus, src => src.CurrentStatus.ToString())
@@ -48,7 +48,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.OfferorId, src => src.OfferorId)
                 .Map(dest => dest.OfferorFullName, src => src.Offeror!.FullName);
 
-            TypeAdapterConfig<NewReview, MyReviewDetailsDTO>
+            TypeAdapterConfig<Review, MyReviewDetailsDTO>
                 .NewConfig()
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.OfferorCommentForApplicant, src => src.OfferorCommentForApplicant)
@@ -87,7 +87,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.OpenUntil, src => src.Application!.JobOffer!.ReviewDeadline)
                 .Map(dest => dest.ReviewStatus, src => src.CurrentStatus.ToString());
 
-            TypeAdapterConfig<NewReview, GetReviewDTO>
+            TypeAdapterConfig<Review, GetReviewDTO>
                 .NewConfig()
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.ReviewStatus, src => src.CurrentStatus.ToString())
@@ -97,7 +97,7 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.OfferorFullName, src => src.Offeror!.FullName)
                 .Map(dest => dest.HasReviewBeenActionedByAdmin, src => src.IsReviewActionedByAdmin);
 
-            TypeAdapterConfig<NewReview, GetReviewDetailsDTO>
+            TypeAdapterConfig<Review, GetReviewDetailsDTO>
                 .NewConfig()
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.OfferorCommentForApplicant, src => src.OfferorCommentForApplicant)
@@ -139,7 +139,7 @@ namespace backend.src.Application.Mappers
 
         public void ConfigureReportMappings()
         {
-            TypeAdapterConfig<NewReview, SystemReviewDetailDTO>
+            TypeAdapterConfig<Review, SystemReviewDetailDTO>
                 .NewConfig()
                 .Map(dest => dest.ReviewId, src => src.Id)
                 .Map(dest => dest.PublicationTitle, src => src.Application!.JobOffer!.Title)

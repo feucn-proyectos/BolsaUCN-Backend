@@ -30,121 +30,6 @@ namespace backend.src.Infrastructure.Repositories.Implements
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        /// <summary>
-        /// Agrega una nueva reseña a la base de datos.
-        /// </summary>
-        /// <param name="review">La reseña a agregar.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        public async Task AddAsync(Review review)
-        {
-            _context.Reviews.Add(review);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un oferente específico.
-        /// Incluye la información del estudiante relacionado.
-        /// </summary>
-        /// <param name="offerorId">El identificador del oferente.</param>
-        /// <returns>Una colección de reseñas del oferente con información del estudiante.</returns>
-        public async Task<IEnumerable<Review>> GetByOfferorIdAsync(int offerorId)
-        {
-            return await _context
-                .Reviews.Where(r => r.OfferorId == offerorId)
-                .Include(r => r.Student)
-                .ToListAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un estudiante específico.
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>Una colección de reseñas del estudiante.</returns>
-        public async Task<IEnumerable<Review>> GetByStudentIdAsync(int studentId)
-        {
-            return await _context
-                .Reviews.Where(r => r.StudentId == studentId)
-                .Include(r => r.Offeror)
-                .ToListAsync();
-        }
-
-        /// <summary>
-        /// Calcula el promedio de calificaciones de un oferente.
-        /// Solo considera las calificaciones completadas (RatingForOfferor no null).
-        /// </summary>
-        /// <param name="offerorId">El identificador del oferente.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        public async Task<double?> GetOfferorAverageRatingAsync(int offerorId)
-        {
-            return await _context
-                .Reviews.Where(r => r.OfferorId == offerorId)
-                .AverageAsync(r => (double?)r.RatingForOfferor);
-        }
-
-        /// <summary>
-        /// Calcula el promedio de calificaciones de un estudiante.
-        /// Solo considera las calificaciones completadas (RatingForStudent no null).
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        public async Task<double?> GetStudentAverageRatingAsync(int studentId)
-        {
-            return await _context
-                .Reviews.Where(r => r.StudentId == studentId)
-                .AverageAsync(r => (double?)r.RatingForStudent);
-        }
-
-        /// <summary>
-        /// Obtiene una reseña asociada a una publicación específica.
-        /// </summary>
-        /// <param name="publicationId">El identificador de la publicación.</param>
-        /// <returns>La reseña asociada a la publicación, o null si no existe.</returns>
-        public async Task<Review?> GetByPublicationIdAsync(int publicationId)
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .Where(r => r.PublicationId == publicationId)
-                .FirstOrDefaultAsync();
-        }
-
-        /// <summary>
-        /// Obtiene una reseña por su identificador único.
-        /// </summary>
-        /// <param name="reviewId">El identificador de la reseña.</param>
-        /// <returns>La reseña solicitada, o null si no existe.</returns>
-        public async Task<Review?> GetByIdAsync(int reviewId)
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .Where(r => r.Id == reviewId)
-                .FirstOrDefaultAsync();
-        }
-
-        /// <summary>
-        /// Actualiza una reseña existente en la base de datos.
-        /// </summary>
-        /// <param name="review">La reseña con los datos actualizados.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        public async Task UpdateAsync(Review review)
-        {
-            _context.Reviews.Update(review);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas del sistema.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<IEnumerable<Review>> GetAllAsync()
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .ToListAsync();
-        }
-
         //!REFACTORIZADA
         /// <summary>
         /// Obtiene el conteo de reseñas pendientes para un usuario específico.
@@ -183,19 +68,19 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
         #region Refactored Methods
 
-        public async Task<bool> CreateReviewAsync(NewReview review)
+        public async Task<bool> CreateReviewAsync(Review review)
         {
             await _context.NewReviews.AddAsync(review);
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task CreateReviewsAsync(IEnumerable<NewReview> reviews)
+        public async Task<bool> CreateReviewsAsync(IEnumerable<Review> reviews)
         {
             await _context.NewReviews.AddRangeAsync(reviews);
-            await _context.SaveChangesAsync();
+            return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<NewReview?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null)
+        public async Task<Review?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null)
         {
             var query = _context.NewReviews.AsQueryable();
 
@@ -214,7 +99,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await query.FirstOrDefaultAsync(r => r.Id == reviewId);
         }
 
-        public async Task<List<NewReview>> GetReviewsByOfferIdAsync(int offerId)
+        public async Task<List<Review>> GetReviewsByOfferIdAsync(int offerId)
         {
             return await _context
                 .NewReviews.Include(r => r.Application)
@@ -257,12 +142,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .CountAsync();
         }
 
-        public async Task<(List<NewReview> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
+        public async Task<(List<Review> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
             MyReviewsSearchParamsDTO searchParams,
             int userId
         )
         {
-            IQueryable<NewReview> query = _context
+            IQueryable<Review> query = _context
                 .NewReviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
@@ -316,7 +201,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return (reviews, totalCount);
         }
 
-        public async Task<NewReview?> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
+        public async Task<Review?> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
         {
             var review = await _context
                 .NewReviews.Include(r => r.Application)
@@ -331,12 +216,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return review;
         }
 
-        public async Task<(List<NewReview> reviews, int totalCount)> GetAllReviewsForAdminAsync(
+        public async Task<(List<Review> reviews, int totalCount)> GetAllReviewsForAdminAsync(
             GetReviewsSearchParamsDTO searchParams,
             int adminId
         )
         {
-            IQueryable<NewReview> query = _context
+            IQueryable<Review> query = _context
                 .NewReviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
@@ -400,7 +285,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return (reviews, totalCount);
         }
 
-        public async Task<NewReview?> GetReviewDetailsForAdminByIdAsync(int reviewId)
+        public async Task<Review?> GetReviewDetailsForAdminByIdAsync(int reviewId)
         {
             var review = await _context
                 .NewReviews.Include(r => r.Application)
@@ -413,7 +298,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return review;
         }
 
-        public async Task<List<NewReview>> GetAllForAdminAsync()
+        public async Task<List<Review>> GetAllForAdminAsync()
         {
             return await _context
                 .NewReviews.Include(r => r.Application)
@@ -424,7 +309,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .ToListAsync();
         }
 
-        public async Task<List<NewReview>> GetAllByUserIdAsync(int userId)
+        public async Task<List<Review>> GetAllByUserIdAsync(int userId)
         {
             return await _context
                 .NewReviews.Include(r => r.Application)
@@ -439,7 +324,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 .ToListAsync();
         }
 
-        public async Task<bool> UpdateReviewAsync(NewReview review)
+        public async Task<bool> UpdateReviewAsync(Review review)
         {
             _context.NewReviews.Update(review);
             return await _context.SaveChangesAsync() > 0;

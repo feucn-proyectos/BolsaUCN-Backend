@@ -92,7 +92,7 @@ namespace backend.src.Application.Infrastructure.Data
                     await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
-                if (!await context.Reviews.AnyAsync())
+                if (!await context.NewReviews.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
@@ -1042,7 +1042,7 @@ namespace backend.src.Application.Infrastructure.Data
             }
 
             var now = DateTime.UtcNow;
-            var reviews = new List<NewReview>();
+            var reviews = new List<Review>();
 
             Log.Information("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Log.Information("📋 USUARIOS DISPONIBLES PARA REVIEWS:");
@@ -1076,7 +1076,7 @@ namespace backend.src.Application.Infrastructure.Data
             // });
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[0].Id,
                     Applicant = students[0],
@@ -1097,7 +1097,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = 5,
                     Applicant = students.FirstOrDefault(s => s.Id == 5),
@@ -1118,7 +1118,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = 6,
                     Applicant = students.FirstOrDefault(s => s.Id == 6),
@@ -1139,7 +1139,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = 7,
                     Applicant = students.FirstOrDefault(s => s.Id == 7),
@@ -1160,7 +1160,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[1 % students.Count].Id,
                     Applicant = students[1 % students.Count],
@@ -1181,7 +1181,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[2 % students.Count].Id,
                     Applicant = students[2 % students.Count],
@@ -1202,7 +1202,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[2 % students.Count].Id,
                     Applicant = students[2 % students.Count],
@@ -1223,7 +1223,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[3 % students.Count].Id,
                     Applicant = students[3 % students.Count],
@@ -1246,7 +1246,7 @@ namespace backend.src.Application.Infrastructure.Data
             // REVIEWS INCOMPLETAS (4 en total)
             // Solo oferente evaluo
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[0].Id,
                     Applicant = students[0],
@@ -1266,7 +1266,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[1 % students.Count].Id,
                     Applicant = students[1 % students.Count],
@@ -1286,7 +1286,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
             // Solo estudiante evaluo
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[3 % students.Count].Id,
                     Applicant = students[3 % students.Count],
@@ -1306,7 +1306,7 @@ namespace backend.src.Application.Infrastructure.Data
             );
 
             reviews.Add(
-                new NewReview
+                new Review
                 {
                     ApplicantId = students[2 % students.Count].Id,
                     Applicant = students[2 % students.Count],
@@ -1332,7 +1332,7 @@ namespace backend.src.Application.Infrastructure.Data
             {
                 // Review 1: Solo oferente evaluo, estudiante2 NO ha respondido
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiante2.Id,
                         Applicant = estudiante2,
@@ -1353,7 +1353,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 2: Solo oferente evaluo, estudiante2 NO ha respondido
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiante2.Id,
                         Applicant = estudiante2,
@@ -1374,7 +1374,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 3: Solo oferente evaluo, estudiante2 NO ha respondido
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiante2.Id,
                         Applicant = estudiante2,
@@ -1395,7 +1395,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 4: Solo oferente evaluo, estudiante2 NO ha respondido
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiante2.Id,
                         Applicant = estudiante2,
@@ -1441,7 +1441,7 @@ namespace backend.src.Application.Infrastructure.Data
             {
                 // Review 1: Estudiante SÍ completó su evaluación, Oferente NO
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiantesAleatorios[0].Id,
                         Applicant = estudiantesAleatorios[0],
@@ -1462,7 +1462,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 2: Estudiante SÍ completó su evaluación, Oferente NO
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiantesAleatorios[1].Id,
                         Applicant = estudiantesAleatorios[1],
@@ -1485,7 +1485,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 3: Estudiante NO completó su evaluación, Oferente NO
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiantesAleatorios[2].Id,
                         Applicant = estudiantesAleatorios[2],
@@ -1507,7 +1507,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 4: Estudiante NO completó su evaluación, Oferente NO
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiantesAleatorios[3].Id,
                         Applicant = estudiantesAleatorios[3],
@@ -1529,7 +1529,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 // Review 4: Estudiante NO completó su evaluación, Oferente NO
                 reviews.Add(
-                    new NewReview
+                    new Review
                     {
                         ApplicantId = estudiantesAleatorios[3].Id,
                         Applicant = estudiantesAleatorios[3],
