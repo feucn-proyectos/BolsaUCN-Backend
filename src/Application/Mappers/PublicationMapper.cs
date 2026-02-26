@@ -1,5 +1,6 @@
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -135,6 +136,10 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.AppealCount, src => src.AppealCount)
                 // === OFERTAS DE TRABAJO ===
                 .Map(
+                    dest => dest.OfferStatus,
+                    src => src is Offer ? ((Offer)src).CurrentStatus.ToString() : null
+                )
+                .Map(
                     dest => dest.OfferType,
                     src => src is Offer ? ((Offer)src).OfferType.ToString() : null
                 )
@@ -148,7 +153,7 @@ namespace backend.src.Application.Mappers
                 )
                 .Map(
                     dest => dest.Remuneration,
-                    src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                    src => src is Offer ? ((Offer)src).Remuneration : null
                 )
                 .Map(
                     dest => dest.IsCvRequired,
@@ -328,6 +333,15 @@ namespace backend.src.Application.Mappers
                     src => src is BuySell ? ((BuySell)src).Category : string.Empty
                 )
                 .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null);
+
+            TypeAdapterConfig<Publication, UserPublicationForAdminDTO>
+                .NewConfig()
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.PublicationStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.HasBeenAppealed, src => src.AppealCount > 0);
         }
     }
 

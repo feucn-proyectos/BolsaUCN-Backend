@@ -92,7 +92,7 @@ namespace backend.src.Application.Infrastructure.Data
                     await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
-                if (!await context.Reviews.AnyAsync())
+                if (!await context.NewReviews.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
@@ -132,7 +132,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = "12345678-9",
                 EmailConfirmed = true,
                 IsBlocked = false,
-                Rating = 3.3,
+                Rating = 3.3f,
                 FirstName = "Juan",
                 LastName = "Pérez Estudiante",
                 Disability = Disability.Ninguna,
@@ -174,7 +174,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = "22334455-6",
                 EmailConfirmed = true,
                 IsBlocked = false,
-                Rating = 0.0,
+                Rating = 0.0f,
                 FirstName = "Pedro",
                 LastName = "López Morales",
                 Disability = Disability.Ninguna,
@@ -215,7 +215,7 @@ namespace backend.src.Application.Infrastructure.Data
                 AboutMe = "Empresa comprometida con el cambio y progreso de sus trabajadores",
                 Rut = "76543210-K",
                 EmailConfirmed = true,
-                Rating = 5.4,
+                Rating = 5.4f,
                 IsBlocked = false,
                 FirstName = "Tech Corp SpA",
                 LastName = "Tecnología Corporativa SpA",
@@ -250,7 +250,7 @@ namespace backend.src.Application.Infrastructure.Data
                 AboutMe = "Emprendedor con 5 años de experiencia",
                 Rut = "11222333-4",
                 EmailConfirmed = true,
-                Rating = 6.0,
+                Rating = 6.0f,
                 IsBlocked = false,
                 FirstName = "María",
                 LastName = "González Particular",
@@ -354,7 +354,7 @@ namespace backend.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                     IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Name.FirstName(),
                     LastName = faker.Name.LastName(),
@@ -394,7 +394,7 @@ namespace backend.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                     IsBlocked = faker.Random.Bool(0.3f),
                     FirstName = faker.Company.CompanyName(),
                     LastName = faker.Company.CompanyName() + " S.A.",
@@ -428,7 +428,7 @@ namespace backend.src.Application.Infrastructure.Data
                 Rut = faker.Random.Replace("##.###.###-K"),
                 AboutMe = faker.Random.Replace("################"),
                 EmailConfirmed = true,
-                Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
+                Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
                 IsBlocked = faker.Random.Bool(0.9f),
                 FirstName = faker.Name.FirstName(),
                 LastName = faker.Name.LastName(),
@@ -476,6 +476,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Apoyo en Feria UCN",
                     Desc = "Logística de stands, orientación a asistentes y apoyo en acreditación.",
                     Rem = 55000,
+                    Slots = 5,
                     Type = OfferTypes.Trabajo,
                     Loc = "Campus Antofagasta",
                     Req = "Responsable, trato cordial, disponibilidad el sábado.",
@@ -489,6 +490,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Diseño de flyer (freelance)",
                     Desc = "Diseño de pieza gráfica en formato A4 y versión para RRSS.",
                     Rem = 40000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Remoto",
                     Req = "Portafolio o muestras previas; entrega en 48h.",
@@ -502,11 +504,12 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Tutorías de Cálculo I",
                     Desc = "Tutorías grupales (máx. 8) dos veces por semana durante 1 mes.",
                     Rem = 0,
+                    Slots = 2,
                     Type = OfferTypes.Voluntariado,
                     Loc = "Campus Coquimbo",
                     Req = "Aprobado Cálculo I/II, ganas de explicar.",
                     Contact = "centro.estudiantes@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(9),
                     End = now.AddDays(30),
                 },
@@ -515,11 +518,12 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Community Manager para evento",
                     Desc = "Cobertura en vivo y publicaciones previas del evento (1 semana).",
                     Rem = 80000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Remoto / Híbrido",
                     Req = "Manejo de IG y TikTok; redacción básica.",
                     Contact = "comunicaciones@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(6),
                     End = now.AddDays(12),
                 },
@@ -528,11 +532,12 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Asistente de Laboratorio (química)",
                     Desc = "Apoyo en preparación de materiales y registro de datos.",
                     Rem = 120000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Campus Antofagasta",
                     Req = "Ramos básicos aprobados; EPP al día.",
                     Contact = "lab.quimica@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(10),
                     End = now.AddDays(20),
                 },
@@ -541,6 +546,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Mentorías a mechones (Programa Bienestar)",
                     Desc = "Acompañamiento y resolución de dudas generales 1 vez por semana.",
                     Rem = 0,
+                    Slots = 3,
                     Type = OfferTypes.Voluntariado,
                     Loc = "Campus Coquimbo",
                     Req = "Segundo año o superior; empatía y responsabilidad.",
@@ -570,9 +576,11 @@ namespace backend.src.Application.Infrastructure.Data
                     PublicationType = PublicationType.Oferta,
                     ApprovalStatus = ApprovalStatus.Aceptada,
 
-                    EndDate = s.End,
-                    ApplicationDeadline = s.Deadline,
+                    EndDate = s.End.ToUniversalTime(),
+                    ApplicationDeadline = s.Deadline.ToUniversalTime(),
+                    ReviewDeadline = s.End.AddDays(14).ToUniversalTime(), // Hardcoded a 14 dias como ejemplo para pruebas.
                     Remuneration = s.Rem,
+                    AvailableSlots = s.Slots,
                     OfferType = s.Type,
                     Location = s.Loc,
                     AdditionalContactEmail = s.Contact,
@@ -598,6 +606,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                 EndDate = now.AddMonths(3),
                 ApplicationDeadline = now.AddDays(14),
+                ReviewDeadline = now.AddMonths(3).AddDays(14), // Hardcoded a 14 dias despues del end date para pruebas.
                 Remuneration = 400000, // Remuneración de práctica
                 OfferType = OfferTypes.Trabajo, // Asumiendo que Práctica es un tipo de Trabajo
                 Location = "Remoto (Chile)",
@@ -657,14 +666,6 @@ namespace backend.src.Application.Infrastructure.Data
                     isActive = false;
                 }
 
-                // Ocasionalmente, hacer que una oferta expire o ya no esté activa
-                if (faker.Random.Bool(0.10f))
-                {
-                    endDate = nowForFaker.AddDays(-faker.Random.Int(1, 5)); // Finalizada
-                    isActive = false;
-                    status = ApprovalStatus.Cerrada;
-                }
-
                 var offer = new Offer
                 {
                     UserId = owner.Id,
@@ -678,6 +679,7 @@ namespace backend.src.Application.Infrastructure.Data
 
                     EndDate = endDate,
                     ApplicationDeadline = deadlineDate,
+                    ReviewDeadline = endDate.AddDays(14), // Hardcoded a 14 dias despues del end date para pruebas.
                     Remuneration = remuneration,
                     OfferType = offerType,
                     Location = location,
@@ -931,7 +933,6 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[4],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-2),
-                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -941,7 +942,6 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[3],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-7),
-                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -951,7 +951,6 @@ namespace backend.src.Application.Infrastructure.Data
                         JobOffer = offersForTestStudent[0],
                         Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-5),
-                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -959,9 +958,8 @@ namespace backend.src.Application.Infrastructure.Data
                         Student = studentUser,
                         JobOfferId = offersForTestStudent[1].Id, // offers[1]
                         JobOffer = offersForTestStudent[1],
-                        Status = ApplicationStatus.Aceptada,
+                        Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-3),
-                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                     new JobApplication
                     {
@@ -969,9 +967,8 @@ namespace backend.src.Application.Infrastructure.Data
                         Student = studentUser,
                         JobOfferId = offersForTestStudent[2].Id, // offers[2]
                         JobOffer = offersForTestStudent[2],
-                        Status = ApplicationStatus.Rechazada,
+                        Status = ApplicationStatus.Pendiente,
                         CreatedAt = DateTime.UtcNow.AddDays(-1),
-                        ReviewStatus = ReviewStatus.NoDisponible,
                     },
                 }
             );
@@ -1004,7 +1001,6 @@ namespace backend.src.Application.Infrastructure.Data
                             JobOffer = offerToApply,
                             Status = faker.PickRandom<ApplicationStatus>(),
                             CreatedAt = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
-                            ReviewStatus = ReviewStatus.NoDisponible,
                         }
                     );
                 }
@@ -1035,8 +1031,9 @@ namespace backend.src.Application.Infrastructure.Data
             var students = await userManager.GetUsersInRoleAsync(RoleNames.Applicant);
             var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
             var publications = await context.Offers.ToListAsync();
+            var applications = await context.JobApplications.ToListAsync();
 
-            if (students.Count == 0 || offerents.Count == 0 || publications.Count == 0)
+            if (students.Count == 0 || offerents.Count == 0 || applications.Count == 0)
             {
                 Log.Warning(
                     "DataSeeder: No se pueden crear reviews - faltan usuarios o publicaciones"
@@ -1081,240 +1078,168 @@ namespace backend.src.Application.Infrastructure.Data
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[0].Id,
-                    Student = students[0],
-                    OfferorId = publications[1].UserId,
-                    Offeror = publications[1].User,
-                    PublicationId = publications[1].Id,
-                    Publication = publications[1],
-                    RatingForStudent = 4,
-                    CommentForStudent =
+                    ApplicantId = students[0].Id,
+                    Applicant = students[0],
+                    OfferorId = applications[1].JobOffer!.UserId,
+                    Offeror = applications[1].JobOffer!.User,
+                    ApplicationId = applications[1].Id,
+                    Application = applications[1],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
                         "Buen desempeño, aunque tuvo algunos retrasos menores. Muestra potencial.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = false,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 4,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
                         "Buena experiencia en general. Me permitió aplicar conocimientos universitarios.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = 5,
-                    Student = students.FirstOrDefault(s => s.Id == 5),
-                    OfferorId = publications[1].UserId,
-                    Offeror = publications[1].User,
-                    PublicationId = publications[1].Id,
-                    Publication = publications[1],
-                    RatingForStudent = 5,
-                    CommentForStudent =
+                    ApplicantId = 5,
+                    Applicant = students.FirstOrDefault(s => s.Id == 5),
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
                         "Muy comprometido con las tareas asignadas. Excelente actitud de trabajo.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 5,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
                         "Ambiente profesional y buena coordinación. Aprendí nuevas habilidades.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = 6,
-                    Student = students.FirstOrDefault(s => s.Id == 6),
-                    OfferorId = publications[1].UserId,
-                    Offeror = publications[1].User,
-                    PublicationId = publications[1].Id,
-                    Publication = publications[1],
-                    RatingForStudent = 3,
-                    CommentForStudent =
+                    ApplicantId = 6,
+                    Applicant = students.FirstOrDefault(s => s.Id == 6),
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = 3,
+                    OfferorCommentForApplicant =
                         "Desempeño aceptable pero le faltó proactividad en algunos momentos.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = false,
-                        StudentHasRespectOfferor = false,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 4,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = false,
+                    IsRespectful = false,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
                         "Experiencia positiva. Instrucciones claras y buen trato del equipo.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = 7,
-                    Student = students.FirstOrDefault(s => s.Id == 7),
-                    OfferorId = publications[1].UserId,
-                    Offeror = publications[1].User,
-                    PublicationId = publications[1].Id,
-                    Publication = publications[1],
-                    RatingForStudent = 6,
-                    CommentForStudent =
+                    ApplicantId = 7,
+                    Applicant = students.FirstOrDefault(s => s.Id == 7),
+                    OfferorId = applications[1].JobOffer!.UserId,
+                    Offeror = applications[1].JobOffer!.User,
+                    ApplicationId = applications[1].Id,
+                    Application = applications[1],
+                    OfferorRatingOfApplicant = 6,
+                    OfferorCommentForApplicant =
                         "Estudiante excepcional. Superó todas las expectativas y mostró gran iniciativa.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 6,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 6,
+                    ApplicantCommentForOfferor =
                         "Experiencia formativa increíble. Excelente mentoría y ambiente de aprendizaje.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[1 % students.Count].Id,
-                    Student = students[1 % students.Count],
-                    OfferorId = publications[2].UserId,
-                    Offeror = publications[2].User,
-                    PublicationId = publications[2].Id,
-                    Publication = publications[2],
-                    RatingForStudent = 6,
-                    CommentForStudent =
+                    ApplicantId = students[1 % students.Count].Id,
+                    Applicant = students[1 % students.Count],
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    OfferorRatingOfApplicant = 6,
+                    OfferorCommentForApplicant =
                         "Estudiante sobresaliente. Proactivo, responsable y con excelente actitud.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 5,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
                         "Excelente oportunidad de aprendizaje. Supervisión clara y buen ambiente.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[2 % students.Count].Id,
-                    Student = students[2 % students.Count],
-                    OfferorId = publications[3].UserId,
-                    Offeror = publications[3].User,
-                    PublicationId = publications[3].Id,
-                    Publication = publications[3],
-                    RatingForStudent = 3,
-                    CommentForStudent =
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = 3,
+                    OfferorCommentForApplicant =
                         "Cumplió las tareas asignadas, pero faltó más iniciativa y comunicación.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = false,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 3,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = false,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 3,
+                    ApplicantCommentForOfferor =
                         "Experiencia aceptable, pero faltó claridad en las instrucciones iniciales.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[2 % students.Count].Id,
-                    Student = students[2 % students.Count],
-                    OfferorId = publications[4].UserId,
-                    Offeror = publications[4].User,
-                    PublicationId = publications[4].Id,
-                    Publication = publications[4],
-                    RatingForStudent = 5,
-                    CommentForStudent =
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[4].JobOffer!.UserId,
+                    Offeror = applications[4].JobOffer!.User,
+                    ApplicationId = applications[4].Id,
+                    Application = applications[4],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
                         "Muy buen estudiante. Adaptación rápida y trabajo en equipo destacable.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 6,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 6,
+                    ApplicantCommentForOfferor =
                         "Experiencia excepcional. Organización impecable y excelente mentoría.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[3 % students.Count].Id,
-                    Student = students[3 % students.Count],
-                    OfferorId = publications[5].UserId,
-                    Offeror = publications[5].User,
-                    PublicationId = publications[5].Id,
-                    Publication = publications[5],
-                    RatingForStudent = 4,
-                    CommentForStudent =
+                    ApplicantId = students[3 % students.Count].Id,
+                    Applicant = students[3 % students.Count],
+                    OfferorId = applications[5].JobOffer!.UserId,
+                    Offeror = applications[5].JobOffer!.User,
+                    ApplicationId = applications[5].Id,
+                    Application = applications[5],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
                         "Buen nivel técnico y compromiso. Entregó trabajos de calidad.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = 4,
-                    CommentForOfferor =
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
                         "Buena experiencia. Proyecto interesante y ambiente colaborativo.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = true,
-                    IsClosed = true,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
@@ -1323,112 +1248,81 @@ namespace backend.src.Application.Infrastructure.Data
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[0].Id,
-                    Student = students[0],
-                    OfferorId = publications[6 % publications.Count].UserId,
-                    Offeror = publications[6 % publications.Count].User,
-                    PublicationId = 6,
-                    Publication = publications.FirstOrDefault(p => p.Id == 6),
-                    RatingForStudent = 5,
-                    CommentForStudent =
+                    ApplicantId = students[0].Id,
+                    Applicant = students[0],
+                    OfferorId = applications[6 % applications.Count].JobOffer!.UserId,
+                    Offeror = applications[6 % applications.Count].JobOffer!.User,
+                    ApplicationId = applications[6 % applications.Count].Id,
+                    Application = applications[6 % applications.Count],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
                         "Estudiante confiable y organizado. Muy buena experiencia trabajando juntos.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = true,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = null,
+                    ApplicantCommentForOfferor = null,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[1 % students.Count].Id,
-                    Student = students[1 % students.Count],
-                    OfferorId = publications[0].UserId,
-                    Offeror = publications[0].User,
-                    PublicationId = publications[0].Id,
-                    Publication = publications[0],
-                    RatingForStudent = 4,
-                    CommentForStudent =
+                    ApplicantId = students[1 % students.Count].Id,
+                    Applicant = students[1 % students.Count],
+                    OfferorId = applications[0].JobOffer!.UserId,
+                    Offeror = applications[0].JobOffer!.User,
+                    ApplicationId = applications[0].Id,
+                    Application = applications[0],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
                         "Buen trabajo en general. Cumplió plazos y mostró interés genuino.",
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = false,
-                        GoodPresentation = true,
-                        StudentHasRespectOfferor = true,
-                    },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
+                    IsOnTime = false,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = null,
+                    ApplicantCommentForOfferor = null,
                 }
             );
             // Solo estudiante evaluo
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[3 % students.Count].Id,
-                    Student = students[3 % students.Count],
-                    OfferorId = publications[2].UserId,
-                    Offeror = publications[2].User,
-                    PublicationId = publications[2].Id,
-                    Publication = publications[2],
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = false,
-                        GoodPresentation = false,
-                        StudentHasRespectOfferor = false,
-                    },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = 5,
-                    CommentForOfferor =
-                        "Muy buen ambiente laboral. Aprendí bastante y me trataron bien.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
+                    ApplicantId = students[3 % students.Count].Id,
+                    Applicant = students[3 % students.Count],
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
+                        "Muy buena experiencia. Aprendí mucho y el ambiente fue colaborativo.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    OfferorRatingOfApplicant = null,
+                    OfferorCommentForApplicant = null,
                 }
             );
 
             reviews.Add(
                 new Review
                 {
-                    StudentId = students[2 % students.Count].Id,
-                    Student = students[2 % students.Count],
-                    OfferorId = publications[3].UserId,
-                    Offeror = publications[3].User,
-                    PublicationId = publications[3].Id,
-                    Publication = publications[3],
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues
-                    {
-                        AtTime = false,
-                        GoodPresentation = false,
-                        StudentHasRespectOfferor = false,
-                    },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = 3,
-                    CommentForOfferor =
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = null,
+                    OfferorCommentForApplicant = null,
+
+                    IsOnTime = false,
+                    IsPresentable = false,
+                    IsRespectful = false,
+                    ApplicantRatingOfOfferor = 3,
+                    ApplicantCommentForOfferor =
                         "Experiencia regular. Faltó mejor organización en las tareas asignadas.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
                 }
             );
 
@@ -1440,28 +1334,20 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiante2.Id,
-                        Student = estudiante2,
-                        OfferorId = publications[7 % publications.Count].UserId,
-                        Offeror = publications[7 % publications.Count].User,
-                        PublicationId = publications[7 % publications.Count].Id,
-                        Publication = publications[7 % publications.Count],
-                        RatingForStudent = 5,
-                        CommentForStudent =
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[7 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[7 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[7 % applications.Count].Id,
+                        Application = applications[7 % applications.Count],
+                        OfferorRatingOfApplicant = 5,
+                        OfferorCommentForApplicant =
                             "Buen trabajo en general, cumplió con las expectativas.",
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = true,
-                            GoodPresentation = true,
-                            StudentHasRespectOfferor = true,
-                        },
-                        IsReviewForStudentCompleted = true,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        IsOnTime = true,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1469,27 +1355,20 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiante2.Id,
-                        Student = estudiante2,
-                        OfferorId = publications[8 % publications.Count].UserId,
-                        Offeror = publications[8 % publications.Count].User,
-                        PublicationId = publications[8 % publications.Count].Id,
-                        Publication = publications[8 % publications.Count],
-                        RatingForStudent = 4,
-                        CommentForStudent = "Mostró compromiso, aunque hubo retrasos menores.",
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = false,
-                            GoodPresentation = true,
-                            StudentHasRespectOfferor = true,
-                        },
-                        IsReviewForStudentCompleted = true,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[8 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[8 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[8 % applications.Count].Id,
+                        Application = applications[8 % applications.Count],
+                        OfferorRatingOfApplicant = 4,
+                        OfferorCommentForApplicant =
+                            "Mostró compromiso, aunque hubo retrasos menores.",
+                        IsOnTime = false,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1497,27 +1376,20 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiante2.Id,
-                        Student = estudiante2,
-                        OfferorId = publications[9 % publications.Count].UserId,
-                        Offeror = publications[9 % publications.Count].User,
-                        PublicationId = publications[9 % publications.Count].Id,
-                        Publication = publications[9 % publications.Count],
-                        RatingForStudent = 6,
-                        CommentForStudent = "Excelente desempeño, muy proactivo y responsable.",
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = true,
-                            GoodPresentation = true,
-                            StudentHasRespectOfferor = true,
-                        },
-                        IsReviewForStudentCompleted = true,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[9 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[9 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[9 % applications.Count].Id,
+                        Application = applications[9 % applications.Count],
+                        OfferorRatingOfApplicant = 6,
+                        OfferorCommentForApplicant =
+                            "Excelente desempeño, muy proactivo y responsable.",
+                        IsOnTime = true,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1525,27 +1397,19 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiante2.Id,
-                        Student = estudiante2,
-                        OfferorId = publications[10 % publications.Count].UserId,
-                        Offeror = publications[10 % publications.Count].User,
-                        PublicationId = publications[10 % publications.Count].Id,
-                        Publication = publications[10 % publications.Count],
-                        RatingForStudent = 3,
-                        CommentForStudent = "Desempeño regular, faltó más comunicación.",
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = true,
-                            GoodPresentation = false,
-                            StudentHasRespectOfferor = true,
-                        },
-                        IsReviewForStudentCompleted = true,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[10 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[10 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[10 % applications.Count].Id,
+                        Application = applications[10 % applications.Count],
+                        OfferorRatingOfApplicant = 3,
+                        OfferorCommentForApplicant = "Desempeño regular, faltó más comunicación.",
+                        IsOnTime = true,
+                        IsPresentable = false,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1559,7 +1423,7 @@ namespace backend.src.Application.Infrastructure.Data
             var empresaTechCorp = await context.Users.FirstOrDefaultAsync(u =>
                 u.Email == "empresa@techcorp.cl"
             );
-            var publicacion60 = await context.Publications.FirstOrDefaultAsync(p => p.Id == 60);
+            var postulacion60 = await context.JobApplications.FirstOrDefaultAsync(p => p.Id == 60);
             var estudiantesAleatorios = await context
                 .Users.Where(u =>
                     u.UserType == UserType.Estudiante
@@ -1571,7 +1435,7 @@ namespace backend.src.Application.Infrastructure.Data
 
             if (
                 empresaTechCorp != null
-                && publicacion60 != null
+                && postulacion60 != null
                 && estudiantesAleatorios.Count >= 4
             )
             {
@@ -1579,28 +1443,20 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiantesAleatorios[0].Id,
-                        Student = estudiantesAleatorios[0],
+                        ApplicantId = estudiantesAleatorios[0].Id,
+                        Applicant = estudiantesAleatorios[0],
                         OfferorId = empresaTechCorp.Id,
                         Offeror = empresaTechCorp,
-                        PublicationId = 60,
-                        Publication = publicacion60,
-                        RatingForStudent = null,
-                        CommentForStudent = null,
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = false,
-                            GoodPresentation = false,
-                            StudentHasRespectOfferor = false,
-                        },
-                        IsReviewForStudentCompleted = false,
-                        RatingForOfferor = 5,
-                        CommentForOfferor =
+                        ApplicationId = 60,
+                        Application = postulacion60,
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = 5,
+                        ApplicantCommentForOfferor =
                             "Excelente experiencia laboral, ambiente muy profesional y buena comunicación.",
-                        IsReviewForOfferorCompleted = true,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
                     }
                 );
 
@@ -1608,28 +1464,22 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiantesAleatorios[1].Id,
-                        Student = estudiantesAleatorios[1],
+                        ApplicantId = estudiantesAleatorios[1].Id,
+                        Applicant = estudiantesAleatorios[1],
                         OfferorId = empresaTechCorp.Id,
                         Offeror = empresaTechCorp,
-                        PublicationId = 60,
-                        Publication = publicacion60,
-                        RatingForStudent = null,
-                        CommentForStudent = null,
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = false,
-                            GoodPresentation = false,
-                            StudentHasRespectOfferor = false,
-                        },
-                        IsReviewForStudentCompleted = false,
-                        RatingForOfferor = 6,
-                        CommentForOfferor =
+                        ApplicationId = 61,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 61
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = 6,
+                        ApplicantCommentForOfferor =
                             "Muy buena empresa para trabajar, aprendí mucho y el equipo es muy colaborativo.",
-                        IsReviewForOfferorCompleted = true,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
                     }
                 );
 
@@ -1637,27 +1487,21 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiantesAleatorios[2].Id,
-                        Student = estudiantesAleatorios[2],
+                        ApplicantId = estudiantesAleatorios[2].Id,
+                        Applicant = estudiantesAleatorios[2],
                         OfferorId = empresaTechCorp.Id,
                         Offeror = empresaTechCorp,
-                        PublicationId = 60,
-                        Publication = publicacion60,
-                        RatingForStudent = null,
-                        CommentForStudent = null,
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = false,
-                            GoodPresentation = false,
-                            StudentHasRespectOfferor = false,
-                        },
-                        IsReviewForStudentCompleted = false,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        ApplicationId = 62,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 62
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1665,27 +1509,43 @@ namespace backend.src.Application.Infrastructure.Data
                 reviews.Add(
                     new Review
                     {
-                        StudentId = estudiantesAleatorios[3].Id,
-                        Student = estudiantesAleatorios[3],
+                        ApplicantId = estudiantesAleatorios[3].Id,
+                        Applicant = estudiantesAleatorios[3],
                         OfferorId = empresaTechCorp.Id,
                         Offeror = empresaTechCorp,
-                        PublicationId = 60,
-                        Publication = publicacion60,
-                        RatingForStudent = null,
-                        CommentForStudent = null,
-                        ReviewChecklistValues = new ReviewChecklistValues
-                        {
-                            AtTime = false,
-                            GoodPresentation = false,
-                            StudentHasRespectOfferor = false,
-                        },
-                        IsReviewForStudentCompleted = false,
-                        RatingForOfferor = null,
-                        CommentForOfferor = null,
-                        IsReviewForOfferorCompleted = false,
-                        IsCompleted = false,
-                        HasReviewForStudentBeenDeleted = false,
-                        HasReviewForOfferorBeenDeleted = false,
+                        ApplicationId = 63,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 63
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
+
+                // Review 4: Estudiante NO completó su evaluación, Oferente NO
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[3].Id,
+                        Applicant = estudiantesAleatorios[3],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 64,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 64
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
                     }
                 );
 
@@ -1694,7 +1554,7 @@ namespace backend.src.Application.Infrastructure.Data
                 );
             }
 
-            await context.Reviews.AddRangeAsync(reviews);
+            await context.NewReviews.AddRangeAsync(reviews);
             await context.SaveChangesAsync();
             Log.Information(
                 "DataSeeder: {Count} reviews creadas exitosamente (6 completas, 12 incompletas - 4 para estudiante2, 4 para empresa@techcorp.cl)",
@@ -1706,7 +1566,7 @@ namespace backend.src.Application.Infrastructure.Data
             var allUserIds = new HashSet<int>();
             foreach (var review in reviews)
             {
-                allUserIds.Add(review.StudentId);
+                allUserIds.Add(review.ApplicantId);
                 allUserIds.Add(review.OfferorId);
             }
 
@@ -1720,20 +1580,28 @@ namespace backend.src.Application.Infrastructure.Data
                 if (user.UserType == UserType.Estudiante)
                 {
                     var studentReviews = await context
-                        .Reviews.Where(r => r.StudentId == userId && r.RatingForStudent.HasValue)
+                        .NewReviews.Where(r =>
+                            r.ApplicantId == userId && r.OfferorRatingOfApplicant.HasValue
+                        )
                         .ToListAsync();
-                    if (studentReviews.Any())
-                        averageRating = studentReviews.Average(r => r.RatingForStudent!.Value);
+                    if (studentReviews.Count != 0)
+                        averageRating = studentReviews.Average(r =>
+                            r.OfferorRatingOfApplicant!.Value
+                        );
                 }
                 else if (user.UserType == UserType.Empresa || user.UserType == UserType.Particular)
                 {
                     var offerorReviews = await context
-                        .Reviews.Where(r => r.OfferorId == userId && r.RatingForOfferor.HasValue)
+                        .NewReviews.Where(r =>
+                            r.OfferorId == userId && r.ApplicantRatingOfOfferor.HasValue
+                        )
                         .ToListAsync();
-                    if (offerorReviews.Any())
-                        averageRating = offerorReviews.Average(r => r.RatingForOfferor!.Value);
+                    if (offerorReviews.Count != 0)
+                        averageRating = offerorReviews.Average(r =>
+                            r.ApplicantRatingOfOfferor!.Value
+                        );
                 }
-                user.Rating = averageRating ?? 0.0;
+                user.Rating = (float?)averageRating ?? 0.0f;
                 context.Users.Update(user);
             }
 

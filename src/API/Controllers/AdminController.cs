@@ -1,6 +1,8 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
 using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -15,16 +17,22 @@ namespace backend.src.API.Controllers
         private readonly IAdminService _adminService;
         private readonly IPublicationService _publicationService;
         private readonly IOfferApplicationService _applicationService;
+        private readonly IReviewService _reviewService;
+        private readonly IPdfGeneratorService _pdfGeneratorService;
 
         public AdminController(
             IAdminService adminService,
             IPublicationService publicationService,
-            IOfferApplicationService applicationService
+            IOfferApplicationService applicationService,
+            IReviewService reviewService,
+            IPdfGeneratorService pdfGeneratorService
         )
         {
             _adminService = adminService;
             _publicationService = publicationService;
             _applicationService = applicationService;
+            _reviewService = reviewService;
+            _pdfGeneratorService = pdfGeneratorService;
         }
 
         #region User Management
@@ -169,12 +177,115 @@ namespace backend.src.API.Controllers
         )
         {
             int parsedAdminId = GetUserIdFromToken();
-            var result = await _publicationService.ClosePublicationManuallyAsync(
+            var result = await _publicationService.CancelOfferManuallyAsync(
                 publicationId,
                 parsedAdminId,
                 requestDTO
             );
             return Ok(new GenericResponse<string>("Oferta cerrada exitosamente.", result));
+        }
+
+        [HttpGet("users/{userId}/publications")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetPublicationByUserId(
+            int userId,
+            [FromQuery] UserPublicationsSearchParamsDTO searchParams
+        )
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var publication = await _publicationService.GetPublicationByUserIdAsync(
+                parsedAdminId,
+                userId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<UserPublicationsForAdminDTO>(
+                    "Publicación obtenida exitosamente.",
+                    publication
+                )
+            );
+        }
+
+        #endregion
+        #region Review Management
+
+        [HttpGet("reviews")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetAllReviews(
+            [FromQuery] GetReviewsSearchParamsDTO searchParams
+        )
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var reviews = await _reviewService.GetAllReviewsForAdminAsync(
+                parsedAdminId,
+                searchParams
+            );
+            return Ok(
+                new GenericResponse<GetReviewsDTO>("Reseñas obtenidas exitosamente.", reviews)
+            );
+        }
+
+        [HttpGet("reviews/{reviewId}")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetReviewDetailsById(int reviewId)
+        {
+            var parsedAdminId = GetUserIdFromToken();
+            var reviewDetails = await _reviewService.GetReviewDetailsForAdminByIdAsync(
+                reviewId,
+                parsedAdminId
+            );
+            return Ok(
+                new GenericResponse<GetReviewDetailsDTO>(
+                    "Detalles de la reseña obtenidos exitosamente.",
+                    reviewDetails
+                )
+            );
+        }
+
+        [HttpPatch("reviews/{reviewId}/hide")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> HideReviewInfo(
+            int reviewId,
+            [FromBody] HideReviewInfoDTO requestDTO
+        )
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var result = await _reviewService.HideReviewInfoAsync(
+                parsedAdminId,
+                reviewId,
+                requestDTO
+            );
+            return Ok(
+                new GenericResponse<string>(
+                    "Información de la reseña ocultada exitosamente.",
+                    result
+                )
+            );
+        }
+
+        [HttpGet("reviews/pdf")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetSystemReviewsPdf()
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var pdfBytes = await _pdfGeneratorService.GenerateSystemReviewsPdfAsync(parsedAdminId);
+            return File(pdfBytes, "application/pdf", $"system_reviews_{DateTime.Now:yyyyMMdd}.pdf");
+        }
+
+        [HttpGet("reviews/pdf/{userId}")]
+        [Authorize(Roles = RoleNames.Admin)]
+        public async Task<IActionResult> GetUserReviewsPdf(int userId)
+        {
+            int parsedAdminId = GetUserIdFromToken();
+            var pdfBytes = await _pdfGeneratorService.GenerateUserReviewsPdfAsync(
+                parsedAdminId,
+                userId
+            );
+            return File(
+                pdfBytes,
+                "application/pdf",
+                $"reviews_{userId}_{DateTime.Now:yyyyMMdd}.pdf"
+            );
         }
 
         #endregion

@@ -17,17 +17,6 @@ namespace backend.src.Domain.Models
         Aceptada, // Aprobado y publicado por un administrador
         Pendiente, // En revisión administrativa
         Rechazada, // Rechazado por un administrador
-        Cerrada, // Cerrado por el usuario o administrador, o automaticamente cuando llega a la fecha de finalización.
-    }
-
-    /// <summary>
-    /// Enum que define la visibilidad de una publicación, usada pricipalmente por administradores para manejar casos de publicaciones que necesitan ser ocultadas temporalmente por motivos administrativos
-    /// o por oferentes que quieren guardar borradores de sus publicaciones sin que sean visibles para otros usuarios. Esto solo maneja visibilidad, en caso de ofertas la logica de aprovacion, apelacion, y reseñas sigue activa.
-    /// </summary>
-    public enum Visibility
-    {
-        Publica, // Visible para todos los usuarios
-        Privada, // Visible solo para el usuario que creó la publicación (usada principalmente para borradores)
     }
 
     /// <summary>

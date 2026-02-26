@@ -1,11 +1,16 @@
-using backend.src.Application.DTOs.ReviewDTO.ReviewReport;
+using backend.src.Application.DTOs.ReviewDTO.ReviewReportDTO;
 using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Serilog;
 
 namespace backend.src.Application.Services.Implements
 {
@@ -14,12 +19,18 @@ namespace backend.src.Application.Services.Implements
     /// </summary>
     public class PdfGeneratorService : IPdfGeneratorService
     {
-        private readonly AppDbContext _context;
+        private readonly IUserRepository _userRepository;
+        private readonly IReviewRepository _reviewRepository;
         private readonly IReviewService _reviewService;
 
-        public PdfGeneratorService(AppDbContext context, IReviewService reviewService)
+        public PdfGeneratorService(
+            IUserRepository userRepository,
+            IReviewRepository reviewRepository,
+            IReviewService reviewService
+        )
         {
-            _context = context;
+            _userRepository = userRepository;
+            _reviewRepository = reviewRepository;
             _reviewService = reviewService;
 
             // Configuración de licencia QuestPDF (Community - gratuita para uso educativo)
@@ -29,68 +40,97 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Genera un PDF con todas las reviews del usuario
         /// </summary>
-        public async Task<byte[]> GenerateUserReviewsPdfAsync(int userId)
+        public async Task<byte[]> GenerateUserReviewsPdfAsync(
+            int requestingUserId,
+            int? targetUserId = null
+        )
         {
+            // Validar usuario solicitante
+            bool requestingUserExists = await _userRepository.ExistsByIdAsync(requestingUserId);
+            if (!requestingUserExists)
+            {
+                Log.Error(
+                    "Usuario solicitante con ID {RequestingUserId} no encontrado para generación de PDF",
+                    requestingUserId
+                );
+                throw new KeyNotFoundException(
+                    $"Usuario solicitante con ID {requestingUserId} no encontrado"
+                );
+            }
+            if (targetUserId != null)
+            {
+                bool isAdmin = await _userRepository.CheckRoleAsync(
+                    requestingUserId,
+                    RoleNames.Admin
+                );
+                if (!isAdmin)
+                {
+                    Log.Error(
+                        "Usuario con ID {RequestingUserId} no tiene permisos de administrador para generar PDF de otro usuario",
+                        requestingUserId
+                    );
+                    throw new UnauthorizedAccessException(
+                        $"Usuario con ID {requestingUserId} no tiene permisos de administrador para generar PDF de otro usuario"
+                    );
+                }
+            }
+            targetUserId ??= requestingUserId;
             // 1. Obtener usuario
-            var user =
-                await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
-                ?? throw new KeyNotFoundException($"Usuario {userId} no encontrado");
+            User? user = await _userRepository.GetByIdAsync((int)targetUserId);
+            if (user == null)
+            {
+                Log.Error(
+                    "Usuario con ID {UserId} no encontrado para generación de PDF",
+                    targetUserId
+                );
+                throw new KeyNotFoundException($"Usuario con ID {targetUserId} no encontrado");
+            }
 
-            // 2. Determinar si es estudiante u oferente
-            var isStudent = user.UserType == UserType.Estudiante;
-
-            // 3. Obtener reviews
-            var reviewsDto = isStudent
-                ? await _reviewService.GetReviewsByStudentAsync(userId)
-                : await _reviewService.GetReviewsByOfferorAsync(userId);
-
-            // 4. Obtener datos detallados de reviews desde la BD
-            var reviewIds = reviewsDto.Select(r => r.Review.IdReview).ToList();
-            var reviews = await _context
-                .Reviews.Include(r => r.Publication)
-                .Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .Where(r => reviewIds.Contains(r.Id))
-                .ToListAsync();
+            List<Review> reviews = await _reviewRepository.GetAllByUserIdAsync((int)targetUserId);
 
             // 5. Construir DTO para el reporte
-            var reportData = new ReviewReportDTO
+            ReviewReportDTO reportData = new()
             {
-                UserName = user.UserName ?? "Usuario",
+                UserName = user.FullName ?? "Usuario",
                 UserEmail = user.Email ?? "N/A",
                 AverageRating = user.Rating, // Obtenido directamente del usuario
-                TotalReviews = reviewsDto.Count(),
+                TotalReviews = reviews.Count,
                 GeneratedAt = DateTime.UtcNow,
                 Reviews = reviews
                     .Select(r => new ReviewDetailDTO
                     {
                         ReviewId = r.Id,
-                        PublicationTitle = r.Publication?.Title ?? "Publicación no disponible",
-                        Rating = isStudent ? r.RatingForStudent : r.RatingForOfferor,
-                        Comment = isStudent ? r.CommentForStudent : r.CommentForOfferor,
+                        IsApplicant = r.ApplicantId == user.Id,
+                        PublicationTitle =
+                            r.Application?.JobOffer!.Title ?? "Publicación no disponible",
+                        Rating =
+                            r.ApplicantId == user.Id
+                                ? r.OfferorRatingOfApplicant
+                                : r.ApplicantRatingOfOfferor,
+                        Comment =
+                            r.ApplicantId == user.Id
+                                ? r.OfferorCommentForApplicant
+                                : r.ApplicantCommentForOfferor,
                         ReviewDate = r.CreatedAt,
-                        ReviewerName = isStudent
-                            ? (r.Offeror?.UserName ?? "Oferente")
-                            : (r.Student?.UserName ?? "Estudiante"),
-                        AtTime = isStudent ? r.ReviewChecklistValues.AtTime : null,
-                        GoodPresentation = isStudent
-                            ? r.ReviewChecklistValues.GoodPresentation
-                            : null,
-                        StudentHasRespectOfferor = isStudent
-                            ? r.ReviewChecklistValues.StudentHasRespectOfferor
-                            : null,
+                        ReviewerName =
+                            r.ApplicantId == user.Id
+                                ? (r.Offeror?.FullName ?? "Oferente")
+                                : (r.Applicant?.FullName ?? "Estudiante"),
+                        IsOnTime = r.ApplicantId == user.Id ? r.IsOnTime : null,
+                        IsPresentable = r.ApplicantId == user.Id ? r.IsPresentable : null,
+                        IsRespectful = r.ApplicantId == user.Id ? r.IsRespectful : null,
                     })
                     .ToList(),
             };
 
             // 6. Generar PDF
-            return GeneratePdfDocument(reportData, isStudent);
+            return GeneratePdfDocument(reportData);
         }
 
         /// <summary>
         /// Genera el documento PDF con QuestPDF
         /// </summary>
-        private byte[] GeneratePdfDocument(ReviewReportDTO data, bool isStudent)
+        private byte[] GeneratePdfDocument(ReviewReportDTO data)
         {
             var document = Document.Create(container =>
             {
@@ -104,7 +144,7 @@ namespace backend.src.Application.Services.Implements
                     page.Header().Element(c => ComposeHeader(c, data));
 
                     // Content
-                    page.Content().Element(c => ComposeContent(c, data, isStudent));
+                    page.Content().Element(c => ComposeContent(c, data));
 
                     // Footer
                     page.Footer()
@@ -143,7 +183,7 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Compone el contenido principal del PDF
         /// </summary>
-        private void ComposeContent(IContainer container, ReviewReportDTO data, bool isStudent)
+        private void ComposeContent(IContainer container, ReviewReportDTO data)
         {
             container
                 .PaddingVertical(20)
@@ -159,7 +199,7 @@ namespace backend.src.Application.Services.Implements
                                 {
                                     col.Item().Text("Promedio General").FontSize(12).SemiBold();
                                     col.Item()
-                                        .Text($"{data.AverageRating:F2}/6.0")
+                                        .Text($"{data.AverageRating?.ToString("F2") ?? "n/a "}/6.0")
                                         .FontSize(24)
                                         .Bold()
                                         .FontColor(GetRatingColor(data.AverageRating));
@@ -200,10 +240,7 @@ namespace backend.src.Application.Services.Implements
                         // Lista de reviews
                         foreach (var review in data.Reviews)
                         {
-                            column
-                                .Item()
-                                .PaddingTop(15)
-                                .Element(c => ComposeReviewCard(c, review, isStudent));
+                            column.Item().PaddingTop(15).Element(c => ComposeReviewCard(c, review));
                         }
                     }
                 });
@@ -212,7 +249,7 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Compone una tarjeta individual de review
         /// </summary>
-        private void ComposeReviewCard(IContainer container, ReviewDetailDTO review, bool isStudent)
+        private void ComposeReviewCard(IContainer container, ReviewDetailDTO review)
         {
             container
                 .Border(1)
@@ -262,42 +299,42 @@ namespace backend.src.Application.Services.Implements
                     }
 
                     // Campos específicos para estudiantes
-                    if (isStudent)
+                    if (review.IsApplicant)
                     {
                         column
                             .Item()
                             .PaddingTop(5)
                             .Row(row =>
                             {
-                                if (review.AtTime.HasValue)
+                                if (review.IsOnTime.HasValue)
                                 {
                                     row.AutoItem().Text("• Puntualidad: ").FontSize(9);
                                     row.AutoItem()
-                                        .Text(review.AtTime.Value ? "Sí" : "No")
+                                        .Text(review.IsOnTime.Value ? "Sí" : "No")
                                         .FontSize(9)
                                         .FontColor(
-                                            review.AtTime.Value
+                                            review.IsOnTime.Value
                                                 ? Colors.Green.Medium
                                                 : Colors.Red.Medium
                                         );
                                     row.AutoItem().PaddingLeft(15);
                                 }
 
-                                if (review.GoodPresentation.HasValue)
+                                if (review.IsPresentable.HasValue)
                                 {
                                     row.AutoItem().Text("• Presentación: ").FontSize(9);
                                     row.AutoItem()
-                                        .Text(review.GoodPresentation.Value ? "Buena" : "Regular")
+                                        .Text(review.IsPresentable.Value ? "Buena" : "Regular")
                                         .FontSize(9)
                                         .FontColor(
-                                            review.GoodPresentation.Value
+                                            review.IsPresentable.Value
                                                 ? Colors.Green.Medium
                                                 : Colors.Orange.Medium
                                         );
                                 }
                             });
 
-                        if (review.StudentHasRespectOfferor.HasValue)
+                        if (review.IsRespectful.HasValue)
                         {
                             column
                                 .Item()
@@ -306,10 +343,10 @@ namespace backend.src.Application.Services.Implements
                                 {
                                     row.AutoItem().Text("• Respeto al oferente: ").FontSize(9);
                                     row.AutoItem()
-                                        .Text(review.StudentHasRespectOfferor.Value ? "Sí" : "No")
+                                        .Text(review.IsRespectful.Value ? "Sí" : "No")
                                         .FontSize(9)
                                         .FontColor(
-                                            review.StudentHasRespectOfferor.Value
+                                            review.IsRespectful.Value
                                                 ? Colors.Green.Medium
                                                 : Colors.Red.Medium
                                         );
@@ -330,66 +367,69 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Obtiene el color según el rating
         /// </summary>
-        private static string GetRatingColor(double rating)
+        private static string GetRatingColor(float? rating)
         {
-            if (rating >= 5.5)
+            if (rating >= 5.5f)
                 return Colors.Green.Darken2;
-            if (rating >= 4.5)
+            if (rating >= 4.5f)
                 return Colors.Green.Medium;
-            if (rating >= 4.0)
+            if (rating >= 4.0f)
                 return Colors.Blue.Medium;
-            if (rating >= 3.0)
+            if (rating >= 3.0f)
                 return Colors.Orange.Medium;
+            if (rating == null)
+                return Colors.Grey.Medium;
             return Colors.Red.Medium;
         }
 
         /// <summary>
         /// Genera un PDF con todas las reviews del sistema
         /// </summary>
-        public async Task<byte[]> GenerateSystemReviewsPdfAsync()
+        public async Task<byte[]> GenerateSystemReviewsPdfAsync(int requestingUserId)
         {
-            // 1. Obtener todas las reviews del sistema con includes
-            var reviews = await _context
-                .Reviews.Include(r => r.Publication)
-                .Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .OrderByDescending(r => r.CreatedAt) // Más recientes primero
-                .ToListAsync();
+            // Validar administrador
+            bool adminExists = await _userRepository.ExistsByIdAsync(requestingUserId);
+            if (!adminExists)
+            {
+                Log.Error(
+                    "Administrador con ID {AdminId} no encontrado para generación de PDF",
+                    requestingUserId
+                );
+                throw new KeyNotFoundException(
+                    $"Administrador con ID {requestingUserId} no encontrado"
+                );
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(requestingUserId, RoleNames.Admin);
+            if (!isAdmin)
+            {
+                Log.Error(
+                    "Usuario con ID {AdminId} no tiene permisos de administrador para generación de PDF",
+                    requestingUserId
+                );
+                throw new UnauthorizedAccessException(
+                    $"Usuario con ID {requestingUserId} no tiene permisos de administrador"
+                );
+            }
+
+            // Obtener todas las reviews del sistema con includes
+            List<Review> reviews = await _reviewRepository.GetAllForAdminAsync();
 
             // 2. Calcular estadísticas del sistema
-            var totalReviews = reviews.Count;
+            int totalReviews = reviews.Count;
 
             // Contar usuarios únicos que tienen reviews
             var usersWithReviews = reviews
-                .SelectMany(r => new[] { r.StudentId, r.OfferorId })
+                .SelectMany(r => new[] { r.ApplicantId, r.OfferorId })
                 .Distinct()
                 .Count();
 
             // 3. Construir DTO para el reporte
-            var reportData = new SystemReviewReportDTO
+            SystemReviewReportDTO reportData = new()
             {
+                Reviews = reviews.Adapt<List<SystemReviewDetailDTO>>(),
                 TotalReviews = totalReviews,
                 TotalUsersWithReviews = usersWithReviews,
                 GeneratedAt = DateTime.UtcNow,
-                Reviews = reviews
-                    .Select(r => new SystemReviewDetailDTO
-                    {
-                        ReviewId = r.Id,
-                        PublicationTitle = r.Publication?.Title ?? "Publicación no disponible",
-                        StudentName = r.Student?.UserName ?? "Estudiante",
-                        OfferorName = r.Offeror?.UserName ?? "Oferente",
-                        RatingForStudent = r.RatingForStudent,
-                        CommentForStudent = r.CommentForStudent,
-                        RatingForOfferor = r.RatingForOfferor,
-                        CommentForOfferor = r.CommentForOfferor,
-                        ReviewDate = r.CreatedAt,
-                        AtTime = r.ReviewChecklistValues.AtTime,
-                        GoodPresentation = r.ReviewChecklistValues.GoodPresentation,
-                        StudentHasRespectOfferor = r.ReviewChecklistValues.StudentHasRespectOfferor,
-                        IsCompleted = r.IsCompleted,
-                        IsClosed = r.IsClosed,
-                    })
-                    .ToList(),
             };
 
             // 4. Generar PDF
@@ -570,7 +610,7 @@ namespace backend.src.Application.Services.Implements
                         .Row(row =>
                         {
                             row.AutoItem()
-                                .Text($"Estudiante: {review.StudentName}")
+                                .Text($"Estudiante: {review.ApplicantName}")
                                 .FontSize(10)
                                 .SemiBold();
                             row.AutoItem()
@@ -631,46 +671,44 @@ namespace backend.src.Application.Services.Implements
 
                             // Campos específicos
                             if (
-                                review.AtTime.HasValue
-                                || review.GoodPresentation.HasValue
-                                || review.StudentHasRespectOfferor.HasValue
+                                review.IsOnTime.HasValue
+                                || review.IsPresentable.HasValue
+                                || review.IsRespectful.HasValue
                             )
                             {
                                 col.Item()
                                     .PaddingTop(3)
                                     .Row(r =>
                                     {
-                                        if (review.AtTime.HasValue)
+                                        if (review.IsOnTime.HasValue)
                                         {
                                             r.AutoItem().Text("Puntualidad: ");
                                             r.AutoItem()
-                                                .Text(review.AtTime.Value ? "Sí" : "No")
+                                                .Text(review.IsOnTime.Value ? "Sí" : "No")
                                                 .FontColor(
-                                                    review.AtTime.Value
+                                                    review.IsOnTime.Value
                                                         ? Colors.Green.Medium
                                                         : Colors.Red.Medium
                                                 );
                                             r.AutoItem().PaddingLeft(10);
                                         }
 
-                                        if (review.GoodPresentation.HasValue)
+                                        if (review.IsPresentable.HasValue)
                                         {
                                             r.AutoItem().Text("Presentación: ");
                                             r.AutoItem()
                                                 .Text(
-                                                    review.GoodPresentation.Value
-                                                        ? "Buena"
-                                                        : "Regular"
+                                                    review.IsPresentable.Value ? "Buena" : "Regular"
                                                 )
                                                 .FontColor(
-                                                    review.GoodPresentation.Value
+                                                    review.IsPresentable.Value
                                                         ? Colors.Green.Medium
                                                         : Colors.Orange.Medium
                                                 );
                                         }
                                     });
 
-                                if (review.StudentHasRespectOfferor.HasValue)
+                                if (review.IsRespectful.HasValue)
                                 {
                                     col.Item()
                                         .PaddingTop(2)
@@ -678,13 +716,9 @@ namespace backend.src.Application.Services.Implements
                                         {
                                             r.AutoItem().Text("Respeto al oferente: ");
                                             r.AutoItem()
-                                                .Text(
-                                                    review.StudentHasRespectOfferor.Value
-                                                        ? "Sí"
-                                                        : "No"
-                                                )
+                                                .Text(review.IsRespectful.Value ? "Sí" : "No")
                                                 .FontColor(
-                                                    review.StudentHasRespectOfferor.Value
+                                                    review.IsRespectful.Value
                                                         ? Colors.Green.Medium
                                                         : Colors.Red.Medium
                                                 );

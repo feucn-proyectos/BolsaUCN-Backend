@@ -2,6 +2,7 @@ using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -13,7 +14,6 @@ namespace backend.src.Application.Services.Interfaces
     {
         Task<string> CreateOfferAsync(CreateOfferDTO publicationDTO, int userId);
         Task<string> CreateBuySellAsync(CreateBuySellDTO publicationDTO, int userId);
-        Task<GenericResponse<string>> AppealPublicationAsync(int publicationId, int userId);
 
         #region New Methods
 
@@ -25,6 +25,12 @@ namespace backend.src.Application.Services.Interfaces
         Task<MyPublicationsDTO> GetMyPublicationsAsync(
             int userId,
             MyPublicationsSeachParamsDTO searchParamsDTO
+        );
+
+        Task<UserPublicationsForAdminDTO> GetPublicationByUserIdAsync(
+            int adminId,
+            int userId,
+            UserPublicationsSearchParamsDTO searchParams
         );
 
         Task<OffersForApplicantDTO> GetOffersAsync(
@@ -71,11 +77,55 @@ namespace backend.src.Application.Services.Interfaces
             AppealRejectionDTO appealDTO
         );
 
-        Task<string> ClosePublicationManuallyAsync(
+        /// <summary>
+        /// Permite al oferente cerrar manualmente una oferta que está en estado "Realizando Trabajo", o "Recibiendo Postulaciones".
+        /// Este metodo llama a los mismos metodos llamados por los trabajos programados para cerrar las postulaciones, finalizar el trabajo e inicializar las reseñas, y finalizar las reseñas, dependiendo del estado actual de la publicación, pero lo hace de forma inmediata al cancelar los trabajos programados correspondientes y ejecutando manualmente los métodos necesarios para avanzar la publicación al siguiente estado.
+        /// </summary>
+        /// <param name="publicationId">Id de la publicación a cerrar manualmente</param>
+        /// <param name="requestingUserId">Id del usuario que solicita el cierre manual</param>
+        /// <returns>Mensaje de éxito o error</returns>
+        Task<string> AdvanceOfferManuallyAsync(int publicationId, int requestingUserId);
+
+        /// <summary>
+        /// Permite al oferente (o a un administrador) cancelar manualmente una oferta antes de que se cierre para postulaciones, cambiando su estado a "CanceladaAntesDelTrabajo" y evitando que sea visible para usuarios regulares.
+        /// Esto es útil para casos en los que el oferente ya no puede cumplir con la oferta o desea retirarla por cualquier motivo antes de que se cierre oficialmente.
+        /// A diferencia del cierre manual estándar, esta acción no activa el flujo de reseñas ni calificaciones, ya que la oferta no llega a la etapa de realización del trabajo o voluntariado.
+        /// </summary>
+        /// <param name="publicationId">Id de la publicación a cancelar manualmente</param>
+        /// <param name="requestingUserId">Id del usuario que solicita la cancelación manual</param>
+        /// <param name="requestDTO">Datos adicionales de la solicitud de cancelación (opcional)</param>
+        /// <returns>Mensaje de éxito o error</returns>
+        Task<string> CancelOfferManuallyAsync(
             int publicationId,
             int requestingUserId,
             ClosePublicationRequestDTO? requestDTO = null
         );
+        #endregion
+
+        #region Background Jobs
+
+        /// <summary>
+        /// Cierra una oferta para nuevas postulaciones, cambiando su estado a "CerradaParaPostulaciones" y evitando que nuevos usuarios puedan postularse.
+        /// Resuelve tambien algunos casos especiales: Si la oferta no tiene postulantes aceptados, se marca como "CanceladaAntesDelTrabajo". Si la oferta aun esta en "Pendiente", se marca como "Rechazada" para evitar que quede en un estado inconsistente.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a cerrar para postulaciones</param>
+        /// <returns></returns>
+        Task CloseOfferForApplicationsAsync(int offerId);
+
+        /// <summary>
+        /// Marca una oferta como "Realizando Trabajo" y crea las reseñas correspondientes para el proceso de evaluación, permitiendo que los usuarios que postularon puedan dejar sus reseñas una vez que la oferta se haya cerrado para postulaciones.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a marcar como "Realizando Trabajo"</param>
+        /// <returns></returns>
+        Task CompleteAndInitializeReviewsAsync(int offerId);
+
+        /// <summary>
+        /// Marca una oferta como "Finalizada" y cierra las reseñas correspondientes, evitando que los usuarios puedan dejar nuevas reseñas después de un tiempo definido desde el cierre de la oferta.
+        /// </summary>
+        /// <param name="offerId">Id de la oferta a marcar como "Finalizada"</param>
+        /// <returns></returns>
+        Task FinalizeAndCloseReviewsAsync(int offerId);
+
         #endregion
     }
 }

@@ -1,103 +1,78 @@
 namespace backend.src.Domain.Models
 {
-    /// <summary>
-    /// Representa una reseña bidireccional entre un oferente y un estudiante.
-    /// Permite que ambas partes evalúen mutuamente su experiencia laboral.
-    /// </summary>
+    public enum ReviewStatus
+    {
+        Pendiente,
+        OferenteEvaluoEstudiante,
+        EstudianteEvaluoOferente,
+        Completada,
+        Cerrada,
+    }
+
     public class Review : ModelBase
     {
-        /// <summary>
-        /// Calificación otorgada por el oferente al estudiante (1-6).
-        /// Null si el oferente aún no ha completado su evaluación.
-        /// </summary>
-        public int? RatingForStudent { get; set; }
+        // === Atributos de navegación principales ===
+        //  Sirven para relacionar la revisión con la solicitud de trabajo que se está revisando.
+        // La solicitud es donde se encuentra el "contrato" con toda la informacion necesaria.
+        public JobApplication? Application { get; set; }
+        public required int ApplicationId { get; set; }
 
-        /// <summary>
-        /// Comentario del oferente sobre el desempeño del estudiante.
-        /// </summary>
-        public string? CommentForStudent { get; set; }
-
-        /// <summary>
-        /// Calificación otorgada por el estudiante al oferente (1-6).
-        /// Null si el estudiante aún no ha completado su evaluación.
-        /// </summary>
-        public int? RatingForOfferor { get; set; }
-
-        /// <summary>
-        /// Comentario del estudiante sobre su experiencia con el oferente.
-        /// </summary>
-        public string? CommentForOfferor { get; set; }
-
-        /// <summary>
-        /// Contiene los valores del checklist de evaluación para la reseña.
-        /// </summary>
-        /// <returns></returns>
-        public ReviewChecklistValues ReviewChecklistValues { get; set; } =
-            new ReviewChecklistValues();
-
-        /// <summary>
-        /// Referencia de navegación al estudiante evaluado.
-        /// </summary>
-        public User? Student { get; set; }
-
-        /// <summary>
-        /// Identificador del estudiante evaluado.
-        /// </summary>
-        public required int StudentId { get; set; }
-
-        /// <summary>
-        /// Referencia de navegación al oferente evaluado.
-        /// </summary>
+        // === Atributos de navegacion extras ===
+        // Sirven para facilitar la consulta de datos relacionados a la revisión.
         public User? Offeror { get; set; }
-
-        /// <summary>
-        /// Identificador del oferente evaluado.
-        /// </summary>
         public required int OfferorId { get; set; }
+        public User? Applicant { get; set; }
+        public required int ApplicantId { get; set; }
 
-        /// <summary>
-        /// Indica si las evaluaciones hacia el estudiante han sido completadas.
-        /// </summary>
-        public bool IsReviewForStudentCompleted { get; set; } = false;
+        // === Atributos de la revisión ===
+        public float? OfferorRatingOfApplicant { get; set; }
+        public string? OfferorCommentForApplicant { get; set; }
+        public float? ApplicantRatingOfOfferor { get; set; }
+        public string? ApplicantCommentForOfferor { get; set; }
+        public bool IsOnTime { get; set; } = false;
+        public bool IsPresentable { get; set; } = false;
+        public bool IsRespectful { get; set; } = false;
 
-        //todo: valor calculado
+        // === Atributos de auditoria ===
+        // Estos atributos son para llevar un registro de cuando se crean o actualizan las reseñas.
+        public DateTime? OfferorReviewCompletedAt { get; set; }
+        public DateTime? ApplicantReviewCompletedAt { get; set; }
+        public DateTime? ReviewClosedAt { get; set; }
 
-        /// <summary>
-        /// Indica si las evaluaciones hacia el oferente han sido completadas.
-        /// </summary>
-        public bool IsReviewForOfferorCompleted { get; set; } = false;
+        // Estos atributos son para que el frontend sepa si los comentarios has sido accionados por los administradores y actue acorde
+        public bool IsOfferorReviewForApplicantHidden { get; set; } = false;
+        public DateTime? OfferorReviewHiddenAt { get; set; }
+        public string? OfferorReviewHiddenReason { get; set; }
+        public bool IsApplicantReviewForOfferorHidden { get; set; } = false;
+        public DateTime? ApplicantReviewHiddenAt { get; set; }
+        public string? ApplicantReviewHiddenReason { get; set; }
+        public bool IsReviewActionedByAdmin =>
+            OfferorReviewHiddenAt.HasValue
+            || IsOfferorReviewForApplicantHidden
+            || IsApplicantReviewForOfferorHidden
+            || ApplicantReviewHiddenAt.HasValue;
 
-        /// <summary>
-        /// Indica si ambas partes han completado sus respectivas evaluaciones.
-        /// </summary>
-        public bool IsCompleted { get; set; } = false;
+        // === Atributos auxiliares ===
+        public bool IsPending => !HasOfferorEvaluatedApplicant || !HasApplicantEvaluatedOfferor;
+        public bool HasOfferorEvaluatedApplicant => OfferorRatingOfApplicant.HasValue;
+        public bool HasApplicantEvaluatedOfferor => ApplicantRatingOfOfferor.HasValue;
+        public bool IsCompleted => HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor;
+        public bool IsClosed => ReviewClosedAt.HasValue;
 
-        /// <summary>
-        /// Indica si la review ha sido cerrada (no se permiten más cambios).
-        /// </summary>
-        public bool IsClosed { get; set; } = false;
-
-        /// <summary>
-        /// Referencia de navegación a la publicación asociada.
-        /// </summary>
-        public Publication? Publication { get; set; }
-
-        /// <summary>
-        /// Identificador de la publicación asociada a esta reseña.
-        /// Requerido - cada reseña debe estar asociada a una publicación específica.
-        /// </summary>
-        public required int PublicationId { get; set; }
-
-        /// <summary>
-        /// Indica si la reseña del estudiante ha sido eliminada.
-        /// </summary>
-        /// <value></value>
-        public bool HasReviewForStudentBeenDeleted { get; set; } = false;
-
-        /// <summary>
-        /// Indica si la reseña del oferente ha sido eliminada.
-        /// </summary>
-        /// <value></value>
-        public bool HasReviewForOfferorBeenDeleted { get; set; } = false;
+        public ReviewStatus CurrentStatus
+        {
+            get
+            {
+                if (IsClosed)
+                    return ReviewStatus.Cerrada;
+                if (IsCompleted)
+                    return ReviewStatus.Completada;
+                if (HasOfferorEvaluatedApplicant && !HasApplicantEvaluatedOfferor)
+                    return ReviewStatus.OferenteEvaluoEstudiante;
+                if (!HasOfferorEvaluatedApplicant && HasApplicantEvaluatedOfferor)
+                    return ReviewStatus.EstudianteEvaluoOferente;
+                return ReviewStatus.Pendiente;
+            }
+        }
     }
 }

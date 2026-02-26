@@ -27,6 +27,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public required int AppealCount { get; set; }
 
         // === OFERTAS DE TRABAJO ===
+        public string? OfferStatus { get; set; }
         public string? OfferType { get; set; }
         public DateTime? EndDate { get; set; }
         public DateTime? ApplicationDeadline { get; set; }

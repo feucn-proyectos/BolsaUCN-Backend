@@ -125,10 +125,10 @@ namespace backend.src.Application.Services.Implements
                     "Se requiere un CV para postular a esta oferta"
                 );
             }
-            // Validar que el usuario no tenga más de 3 reseñas pendientes
+            // Validar que el usuario no tenga más de 3 reseñas pendientes como postulante
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
                 user,
-                RoleNames.Applicant // Ya que solo los Applicants pueden postular
+                RoleNames.Applicant
             );
             if (pendingReviewsCount >= 3)
             {
@@ -179,7 +179,6 @@ namespace backend.src.Application.Services.Implements
                 Status = ApplicationStatus.Pendiente,
                 CoverLetter = coverLetter.CoverLetter,
                 CreatedAt = DateTime.UtcNow,
-                ReviewStatus = ReviewStatus.NoDisponible,
             };
 
             bool result = await _applicationRepository.AddAsync(jobApplication);
@@ -210,7 +209,15 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Obtener la postulación
-            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(
+                applicationId,
+                new JobApplicationOptions
+                {
+                    TrackChanges = true,
+                    IncludeStudent = true,
+                    IncludeJobOffer = true,
+                }
+            );
             if (application == null)
             {
                 Log.Error(
@@ -318,7 +325,10 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Validar que la solicitud existe y pertenece a la oferta
-            JobApplication? application = await _applicationRepository.GetByIdAsync(applicationId);
+            JobApplication? application = await _applicationRepository.GetByIdAsync(
+                applicationId,
+                new JobApplicationOptions { IncludeStudent = true, IncludeJobOffer = true }
+            );
             if (application == null)
             {
                 Log.Error(
@@ -511,7 +521,10 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Obtener la postulación
-            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(
+                applicationId,
+                new JobApplicationOptions { IncludeStudent = true, IncludeJobOffer = true }
+            );
             if (application == null)
             {
                 Log.Error(
@@ -616,7 +629,15 @@ namespace backend.src.Application.Services.Implements
                 throw new SecurityException("No tienes permiso para actualizar esta postulación");
             }
             // Validacion de la solicitud
-            JobApplication? application = await _applicationRepository.GetByIdAsync(applicationId);
+            JobApplication? application = await _applicationRepository.GetByIdAsync(
+                applicationId,
+                new JobApplicationOptions
+                {
+                    TrackChanges = true,
+                    IncludeStudent = true,
+                    IncludeJobOffer = true,
+                }
+            );
             if (application == null)
             {
                 Log.Error(
@@ -682,7 +703,10 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Verificar espacios disponibles en la oferta
-            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(offerId);
+            Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
+                offerId,
+                new PublicationQueryOptions { TrackChanges = true }
+            );
             if (offer == null)
             {
                 Log.Error(
@@ -702,25 +726,23 @@ namespace backend.src.Application.Services.Implements
             application.Status = parsedStatus;
             if (parsedStatus == ApplicationStatus.Aceptada)
                 offer.AvailableSlots -= 1; // Reducir espacios disponibles si se acepta la postulación
-            bool applicationUpdateResult = await _applicationRepository.UpdateAsync(application);
-            bool offerUpdateResult = await _publicationRepository.UpdateAsync(offer);
-            if (!applicationUpdateResult || !offerUpdateResult)
-            {
-                Log.Error(
-                    "Error al actualizar estado de postulación ID: {ApplicationId} para oferente ID: {OfferorId}",
-                    applicationId,
-                    offerorId
-                );
-                throw new Exception("No se pudo actualizar el estado de la postulación");
-            }
+
             // Enviar notificación al postulante
             //TODO: Personalizar el mensaje de la notificación según el nuevo estado
 
-            // TODO:Cerrar publicacion si no quedan espacios.
             if (offer.AvailableSlots <= 0)
             {
-                offer.ApprovalStatus = ApprovalStatus.Cerrada;
-                await _publicationRepository.UpdateAsync(offer);
+                offer.StartWork();
+            }
+            // Un solo SaveChangesAsync para actualizar ambos la postulación y la oferta (en caso de aceptar la postulación)
+            bool updateResult = await _applicationRepository.SaveChangesAsync();
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al guardar los cambios realizados al actualizar estado de postulación ID: {ApplicationId}",
+                    applicationId
+                );
+                throw new Exception("No se pudo actualizar el estado de la postulación");
             }
             return "El estado de la postulación ha sido actualizado con éxito.";
         }
@@ -742,7 +764,10 @@ namespace backend.src.Application.Services.Implements
                 throw new KeyNotFoundException("El usuario no existe");
             }
             // Obtener la postulación
-            var application = await _applicationRepository.GetByIdAsync(applicationId);
+            var application = await _applicationRepository.GetByIdAsync(
+                applicationId,
+                new JobApplicationOptions { TrackChanges = true, IncludeStudent = true }
+            );
             if (application == null)
             {
                 Log.Error(

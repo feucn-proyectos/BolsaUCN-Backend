@@ -30,7 +30,11 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Availability, src => src.Availability)
                 .Map(dest => dest.Condition, src => src.Condition)
                 .Map(dest => dest.Location, src => src.Location)
-                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail);
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                );
 
             TypeAdapterConfig<BuySell, BuySellSummaryDto>
                 .NewConfig()

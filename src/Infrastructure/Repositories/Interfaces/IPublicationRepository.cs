@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Domain.Models;
@@ -21,7 +22,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <summary>
         /// Crea una nueva publicación en la base de datos.
         /// </summary>
-        Task<bool> CreatePublicationAsync<T>(T publication)
+        Task<(T, bool)> CreatePublicationAsync<T>(T publication)
             where T : Publication;
 
         /// <summary>
@@ -52,6 +53,11 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
             PublicationQueryOptions? options = null
         )
             where T : Publication;
+
+        Task<(List<Publication> publications, int totalCount)> GetPublicationsByUserIdFilteredAsync(
+            int userId,
+            UserPublicationsSearchParamsDTO searchParams
+        );
 
         /// <summary>
         /// Obtiene publicaciones filtradas por criterios de búsqueda, paginación y ordenamiento.
@@ -95,5 +101,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<(IEnumerable<Publication>?, int)> GetAllPublicationsFilteredForAdminAsync(
             PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
+
+        Task<int> SaveChangesAsync();
     }
 }

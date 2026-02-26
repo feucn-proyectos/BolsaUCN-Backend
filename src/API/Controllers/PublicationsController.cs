@@ -37,12 +37,26 @@ namespace backend.src.API.Controllers
         /// <param name="offerDto">Datos de la oferta a crear</param>
         /// <returns>Resultado de la creación de la oferta con el ID generado</returns>
         [HttpPost("offers")]
-        [Authorize]
+        [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> CreateOffer([FromBody] CreateOfferDTO offerDto)
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _publicationService.CreateOfferAsync(offerDto, parsedUserId);
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
+        }
+
+        [HttpPost("buysells")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO buySellDto)
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.CreateBuySellAsync(buySellDto, parsedUserId);
+            return Ok(
+                new GenericResponse<string>(
+                    "Publicación de Compra/Venta creada exitosamente.",
+                    result
+                )
+            );
         }
         #endregion
 
@@ -81,7 +95,9 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
+        #region Punto de vista del postulante
         [HttpGet("explore/offers")]
         public async Task<IActionResult> ExploreOffers(
             [FromQuery] ExploreOffersSearchParamsDTO searchParams
@@ -161,7 +177,9 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
+        #region Postulaciones
         [HttpGet("my-publications/{offerId}/applications")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> GetAllApplicationsByOfferId(
@@ -217,17 +235,31 @@ namespace backend.src.API.Controllers
                 )
             );
         }
+        #endregion
 
-        [HttpPatch("my-publications/{publicationId}/close")]
+        #region Manejo manual de publicaciones (avance, cierre, apelación)
+        [HttpPatch("my-publications/{publicationId}/advance")]
         [Authorize(Roles = RoleNames.Offeror)]
-        public async Task<IActionResult> ClosePublicationManually(int publicationId)
+        public async Task<IActionResult> AdvancePublicationManually(int publicationId)
         {
             int parsedOffererId = GetUserIdFromToken();
-            var result = await _publicationService.ClosePublicationManuallyAsync(
+            var result = await _publicationService.AdvanceOfferManuallyAsync(
                 publicationId,
                 parsedOffererId
             );
-            return Ok(new GenericResponse<string>("Publicación cerrada exitosamente.", result));
+            return Ok(new GenericResponse<string>("Publicación avanzada exitosamente.", result));
+        }
+
+        [HttpPatch("my-publications/{publicationId}/cancel")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> CancelPublicationManually(int publicationId)
+        {
+            int parsedOffererId = GetUserIdFromToken();
+            var result = await _publicationService.CancelOfferManuallyAsync(
+                publicationId,
+                parsedOffererId
+            );
+            return Ok(new GenericResponse<string>("Publicación cancelada exitosamente.", result));
         }
 
         [HttpPost("my-publications/{publicationId}/appeal")]

@@ -1,5 +1,8 @@
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 using backend.src.Infrastructure.Data;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -13,131 +16,21 @@ namespace backend.src.Infrastructure.Repositories.Implements
     public class ReviewRepository : IReviewRepository
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly int _defaultPageSize;
 
         /// <summary>
         /// Inicializa una nueva instancia del repositorio de reseñas.
         /// </summary>
         /// <param name="context">El contexto de base de datos de la aplicación.</param>
-        public ReviewRepository(AppDbContext context)
+        public ReviewRepository(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
+            _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
         }
 
-        /// <summary>
-        /// Agrega una nueva reseña a la base de datos.
-        /// </summary>
-        /// <param name="review">La reseña a agregar.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        public async Task AddAsync(Review review)
-        {
-            _context.Reviews.Add(review);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un oferente específico.
-        /// Incluye la información del estudiante relacionado.
-        /// </summary>
-        /// <param name="offerorId">El identificador del oferente.</param>
-        /// <returns>Una colección de reseñas del oferente con información del estudiante.</returns>
-        public async Task<IEnumerable<Review>> GetByOfferorIdAsync(int offerorId)
-        {
-            return await _context
-                .Reviews.Where(r => r.OfferorId == offerorId)
-                .Include(r => r.Student)
-                .ToListAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un estudiante específico.
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>Una colección de reseñas del estudiante.</returns>
-        public async Task<IEnumerable<Review>> GetByStudentIdAsync(int studentId)
-        {
-            return await _context
-                .Reviews.Where(r => r.StudentId == studentId)
-                .Include(r => r.Offeror)
-                .ToListAsync();
-        }
-
-        /// <summary>
-        /// Calcula el promedio de calificaciones de un oferente.
-        /// Solo considera las calificaciones completadas (RatingForOfferor no null).
-        /// </summary>
-        /// <param name="offerorId">El identificador del oferente.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        public async Task<double?> GetOfferorAverageRatingAsync(int offerorId)
-        {
-            return await _context
-                .Reviews.Where(r => r.OfferorId == offerorId)
-                .AverageAsync(r => (double?)r.RatingForOfferor);
-        }
-
-        /// <summary>
-        /// Calcula el promedio de calificaciones de un estudiante.
-        /// Solo considera las calificaciones completadas (RatingForStudent no null).
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        public async Task<double?> GetStudentAverageRatingAsync(int studentId)
-        {
-            return await _context
-                .Reviews.Where(r => r.StudentId == studentId)
-                .AverageAsync(r => (double?)r.RatingForStudent);
-        }
-
-        /// <summary>
-        /// Obtiene una reseña asociada a una publicación específica.
-        /// </summary>
-        /// <param name="publicationId">El identificador de la publicación.</param>
-        /// <returns>La reseña asociada a la publicación, o null si no existe.</returns>
-        public async Task<Review?> GetByPublicationIdAsync(int publicationId)
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .Where(r => r.PublicationId == publicationId)
-                .FirstOrDefaultAsync();
-        }
-
-        /// <summary>
-        /// Obtiene una reseña por su identificador único.
-        /// </summary>
-        /// <param name="reviewId">El identificador de la reseña.</param>
-        /// <returns>La reseña solicitada, o null si no existe.</returns>
-        public async Task<Review?> GetByIdAsync(int reviewId)
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .Where(r => r.Id == reviewId)
-                .FirstOrDefaultAsync();
-        }
-
-        /// <summary>
-        /// Actualiza una reseña existente en la base de datos.
-        /// </summary>
-        /// <param name="review">La reseña con los datos actualizados.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        public async Task UpdateAsync(Review review)
-        {
-            _context.Reviews.Update(review);
-            await _context.SaveChangesAsync();
-        }
-
-        /// <summary>
-        /// Obtiene todas las reseñas del sistema.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<IEnumerable<Review>> GetAllAsync()
-        {
-            return await _context
-                .Reviews.Include(r => r.Student)
-                .Include(r => r.Offeror)
-                .ToListAsync();
-        }
-
+        //!REFACTORIZADA
         /// <summary>
         /// Obtiene el conteo de reseñas pendientes para un usuario específico.
         /// </summary>
@@ -149,26 +42,20 @@ namespace backend.src.Infrastructure.Repositories.Implements
             string? role = null
         )
         {
-            var pendingCountQuery = _context.Reviews.AsQueryable();
-            switch (role)
+            var pendingCountQuery = _context.NewReviews.AsQueryable();
+            pendingCountQuery = role switch
             {
-                case RoleNames.Offeror:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        r.OfferorId == userId && r.IsReviewForStudentCompleted == false
-                    );
-                    break;
-                case RoleNames.Applicant:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        r.StudentId == userId && r.IsReviewForOfferorCompleted == false
-                    );
-                    break;
-                default:
-                    pendingCountQuery = pendingCountQuery.Where(r =>
-                        (r.OfferorId == userId && r.IsReviewForStudentCompleted == false)
-                        || (r.StudentId == userId && r.IsReviewForOfferorCompleted == false)
-                    );
-                    break;
-            }
+                RoleNames.Offeror => pendingCountQuery.Where(r =>
+                    r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant
+                ),
+                RoleNames.Applicant => pendingCountQuery.Where(r =>
+                    r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor
+                ),
+                _ => pendingCountQuery.Where(r =>
+                    (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
+                    || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
+                ),
+            };
             return await pendingCountQuery.CountAsync();
         }
 
@@ -178,5 +65,271 @@ namespace backend.src.Infrastructure.Repositories.Implements
         {
             return await _context.Publications.Where(p => p.Id == publicationId).ToListAsync();
         }
+
+        #region Refactored Methods
+
+        public async Task<bool> CreateReviewAsync(Review review)
+        {
+            await _context.NewReviews.AddAsync(review);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> CreateReviewsAsync(IEnumerable<Review> reviews)
+        {
+            await _context.NewReviews.AddRangeAsync(reviews);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<Review?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null)
+        {
+            var query = _context.NewReviews.AsQueryable();
+
+            if (options != null)
+            {
+                if (options.IncludeApplication)
+                    query = query.Include(r => r.Application);
+                if (options.IncludeOfferor)
+                    query = query.Include(r => r.Offeror);
+                if (options.IncludeApplicant)
+                    query = query.Include(r => r.Applicant);
+                if (!options.TrackChanges)
+                    query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync(r => r.Id == reviewId);
+        }
+
+        public async Task<List<Review>> GetReviewsByOfferIdAsync(int offerId)
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .Where(r => r.Application!.JobOfferId == offerId)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .ToListAsync();
+        }
+
+        public async Task CalculateUserRating(User user)
+        {
+            List<float> ratingsAsOfferor = await _context
+                .NewReviews.Where(r => r.OfferorId == user.Id && r.HasApplicantEvaluatedOfferor)
+                .Select(r => r.ApplicantRatingOfOfferor!.Value)
+                .ToListAsync();
+
+            List<float> ratingsAsApplicant = await _context
+                .NewReviews.Where(r => r.ApplicantId == user.Id && r.HasOfferorEvaluatedApplicant)
+                .Select(r => r.OfferorRatingOfApplicant!.Value)
+                .ToListAsync();
+
+            List<float> allRatings = [.. ratingsAsOfferor, .. ratingsAsApplicant];
+
+            if (allRatings.Count > 0)
+            {
+                user.Rating = allRatings.Average();
+            }
+        }
+
+        public async Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId)
+        {
+            return await _context
+                .NewReviews.Where(r =>
+                    r.Application!.JobOfferId == offerId
+                    && (
+                        !r.OfferorReviewCompletedAt.HasValue
+                        || !r.ApplicantReviewCompletedAt.HasValue
+                    )
+                )
+                .CountAsync();
+        }
+
+        public async Task<(List<Review> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
+            MyReviewsSearchParamsDTO searchParams,
+            int userId
+        )
+        {
+            IQueryable<Review> query = _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .Where(r => r.OfferorId == userId || r.ApplicantId == userId);
+
+            // Filtro por estado de la review
+            if (!string.IsNullOrEmpty(searchParams.ReviewStatus))
+            {
+                query = searchParams.ReviewStatus switch
+                {
+                    "Pendiente" => query.Where(r =>
+                        (r.OfferorId == userId && !r.OfferorRatingOfApplicant.HasValue)
+                        || (r.ApplicantId == userId && !r.ApplicantRatingOfOfferor.HasValue)
+                    ),
+                    "Completada" => query.Where(r =>
+                        (r.OfferorRatingOfApplicant.HasValue && r.ApplicantRatingOfOfferor.HasValue)
+                        || (r.OfferorId == userId && r.OfferorRatingOfApplicant.HasValue)
+                        || (r.ApplicantId == userId && r.ApplicantRatingOfOfferor.HasValue)
+                    ),
+                    "Cerrada" => query.Where(r => r.ReviewClosedAt.HasValue),
+                    _ => query,
+                };
+            }
+            // Busqueda por titulo de publicacion
+            if (!string.IsNullOrEmpty(searchParams.PublicationTitle))
+            {
+                string searchTerm = searchParams.PublicationTitle.ToLower();
+                query = query.Where(r =>
+                    r.Application!.JobOffer!.Title.ToLower().Contains(searchTerm)
+                );
+            }
+            // Ordenamiento por fecha de creacion de la review
+            bool ascending = true; // Orden por defecto.
+            if (!string.IsNullOrEmpty(searchParams.SortOrder))
+            {
+                ascending = searchParams.SortOrder == "asc";
+            }
+            query = ascending
+                ? query.OrderBy(r => r.CreatedAt)
+                : query.OrderByDescending(r => r.CreatedAt);
+
+            // Paginacion
+            int totalCount = await query.CountAsync();
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            var reviews = await query
+                .Skip((searchParams.PageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .AsNoTracking()
+                .ToListAsync();
+            return (reviews, totalCount);
+        }
+
+        public async Task<Review?> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
+        {
+            var review = await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r =>
+                    r.Id == reviewId && (r.OfferorId == userId || r.ApplicantId == userId)
+                );
+
+            return review;
+        }
+
+        public async Task<(List<Review> reviews, int totalCount)> GetAllReviewsForAdminAsync(
+            GetReviewsSearchParamsDTO searchParams,
+            int adminId
+        )
+        {
+            IQueryable<Review> query = _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .Where(r => r.OfferorId != adminId);
+
+            // Filtro por estado de la review
+            if (!string.IsNullOrEmpty(searchParams.FilterByReviewStatus))
+            {
+                query = searchParams.FilterByReviewStatus switch
+                {
+                    "Pendiente" => query.Where(r =>
+                        !r.OfferorRatingOfApplicant.HasValue || !r.ApplicantRatingOfOfferor.HasValue
+                    ),
+                    "OferenteEvaluoEstudiante" => query.Where(r =>
+                        r.OfferorRatingOfApplicant.HasValue && !r.ApplicantRatingOfOfferor.HasValue
+                    ),
+                    "EstudianteEvaluoOferente" => query.Where(r =>
+                        r.ApplicantRatingOfOfferor.HasValue && !r.OfferorRatingOfApplicant.HasValue
+                    ),
+                    "Completada" => query.Where(r =>
+                        r.OfferorRatingOfApplicant.HasValue && r.ApplicantRatingOfOfferor.HasValue
+                    ),
+                    "Cerrada" => query.Where(r => r.ReviewClosedAt.HasValue),
+                    _ => query,
+                };
+            }
+            // Busqueda por titulo de publicacion
+            if (!string.IsNullOrEmpty(searchParams.SearchTerm))
+            {
+                string searchTerm = searchParams.SearchTerm.ToLower();
+                query = query.Where(r =>
+                    r.Application!.JobOffer!.Title.ToLower().Contains(searchTerm)
+                );
+            }
+            // Ordenamiento por fecha de creacion de la review
+            bool ascending = true; // Orden por defecto.
+            if (!string.IsNullOrEmpty(searchParams.SortOrder))
+            {
+                ascending = searchParams.SortOrder == "asc";
+            }
+            query = searchParams.SortBy switch
+            {
+                "JobOfferTitle" => ascending
+                    ? query.OrderBy(r => r.Application!.JobOffer!.Title)
+                    : query.OrderByDescending(r => r.Application!.JobOffer!.Title),
+                "OpenUntil" => ascending
+                    ? query.OrderBy(r => r.Application!.JobOffer!.ReviewDeadline)
+                    : query.OrderByDescending(r => r.Application!.JobOffer!.ReviewDeadline),
+                _ => query.OrderByDescending(r => r.CreatedAt),
+            };
+
+            // Paginacion
+            int totalCount = await query.CountAsync();
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            var reviews = await query
+                .Skip((searchParams.PageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .AsNoTracking()
+                .ToListAsync();
+            return (reviews, totalCount);
+        }
+
+        public async Task<Review?> GetReviewDetailsForAdminByIdAsync(int reviewId)
+        {
+            var review = await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == reviewId);
+
+            return review;
+        }
+
+        public async Task<List<Review>> GetAllForAdminAsync()
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<Review>> GetAllByUserIdAsync(int userId)
+        {
+            return await _context
+                .NewReviews.Include(r => r.Application)
+                .ThenInclude(a => a!.JobOffer)
+                .Include(r => r.Offeror)
+                .Include(r => r.Applicant)
+                .Where(r =>
+                    (r.OfferorId == userId && r.ApplicantRatingOfOfferor.HasValue)
+                    || (r.ApplicantId == userId && r.OfferorRatingOfApplicant.HasValue)
+                )
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateReviewAsync(Review review)
+        {
+            _context.NewReviews.Update(review);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        #endregion
     }
 }

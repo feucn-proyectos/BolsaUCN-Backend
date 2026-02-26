@@ -44,6 +44,14 @@ namespace backend.src.Domain.Models
         public required string LastName { get; set; }
 
         /// <summary>
+        /// Nombre completo del usuario.
+        /// Estudiante/Particular/Administrador: "Nombre Apellido".
+        /// Empresa: "Nombre de la empresa".
+        /// </summary>
+        public string FullName =>
+            UserType == UserType.Empresa ? FirstName : $"{FirstName} {LastName}";
+
+        /// <summary>
         /// Tipo de usuario en el sistema.
         /// </summary>
         public required UserType UserType { get; set; }
@@ -61,7 +69,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Calificación promedio del usuario (de 1.0 a 6.0).
         /// </summary>
-        public double Rating { get; set; } = 6.0;
+        public float? Rating { get; set; }
 
         // === PROPIEDADES DE ESTUDIANTES ===
 
