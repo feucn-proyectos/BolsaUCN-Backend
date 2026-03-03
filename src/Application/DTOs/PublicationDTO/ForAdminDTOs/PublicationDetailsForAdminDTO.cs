@@ -29,10 +29,16 @@ namespace backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs
         public string? OfferType { get; set; }
         public int? ApplicantsCount { get; set; }
         public bool? IsCvRequired { get; set; }
+        public string? CurrentStatus { get; set; }
 
         // === ATRIBUTOS DE COMPRA/VENTA ===
-        public required List<string> Images { get; set; }
-        public string? Category { get; set; }
+        public string[]? ImageUrls { get; set; }
         public int? Price { get; set; }
+        public string? Category { get; set; }
+        public int? Quantity { get; set; }
+        public string? Availability { get; set; }
+        public string? Condition { get; set; }
+        public bool? ShowEmail { get; set; }
+        public bool? ShowPhoneNumber { get; set; }
     }
 }

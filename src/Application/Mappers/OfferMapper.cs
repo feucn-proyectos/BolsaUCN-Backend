@@ -37,23 +37,6 @@ public class OfferMapper
             .Map(dest => dest.AdditionalContactPhoneNumber, src => src.AdditionalContactPhoneNumber)
             .Map(dest => dest.AvailableSlots, src => src.RequiredApplicants)
             .Map(dest => dest.IsCvRequired, src => src.IsCvRequired);
-
-        // Map Offer to OfferSummaryDto (used for lists)
-        TypeAdapterConfig<Offer, OfferSummaryDto>
-            .NewConfig()
-            .Map(dest => dest.Title, src => src.Title)
-            .Map(dest => dest.CompanyName, src => src.User.FirstName);
-
-        // Map Offer to OfferDetailDto (full details)
-        TypeAdapterConfig<Offer, OfferDetailDto>
-            .NewConfig()
-            .Map(dest => dest.Title, src => src.Title)
-            .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.PostDate, src => src.CreatedAt)
-            .Map(dest => dest.EndDate, src => src.EndDate)
-            .Map(dest => dest.Remuneration, src => src.Remuneration)
-            .Map(dest => dest.OfferType, src => src.OfferType.ToString())
-            .Map(dest => dest.CompanyName, src => src.User.FirstName);
     }
 
     public void ConfigureExploreOffersMappings()
@@ -64,7 +47,7 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.AuthorName, src => src.User.UserName)
+            .Map(dest => dest.AuthorName, src => src.User.FullName)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.ApplicationDeadline, src => src.ApplicationDeadline)
             .Map(dest => dest.AvailableSlots, src => src.AvailableSlots)
@@ -76,7 +59,7 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.AuthorName, src => src.User.UserName)
+            .Map(dest => dest.AuthorName, src => src.User.FullName)
             .Map(dest => dest.Location, src => src.Location)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.Remuneration, src => src.Remuneration)
@@ -88,7 +71,7 @@ public class OfferMapper
             .Map(dest => dest.OfferType, src => src.OfferType.ToString())
             .Map(dest => dest.Title, src => src.Title)
             .Map(dest => dest.Description, src => src.Description)
-            .Map(dest => dest.AuthorName, src => src.User.UserName)
+            .Map(dest => dest.AuthorName, src => src.User.FullName)
             .Map(dest => dest.Location, src => src.Location)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.Remuneration, src => src.Remuneration)

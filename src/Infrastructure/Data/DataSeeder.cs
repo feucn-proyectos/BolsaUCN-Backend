@@ -1,7 +1,9 @@
+using backend.src.Application.Jobs.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
 using backend.src.Infrastructure.Data;
 using Bogus;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -16,6 +18,7 @@ namespace backend.src.Application.Infrastructure.Data
         )
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
+            var backgroundJobs = serviceProvider.GetRequiredService<IOfferJobs>();
             try
             {
                 var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
@@ -73,7 +76,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Log.Information(
                         "DataSeeder: No se encontraron ofertas, creando ofertas de prueba..."
                     );
-                    await SeedOffers(context, userManager);
+                    await SeedOffers(context, backgroundJobs, userManager);
                     Log.Information("DataSeeder: Ofertas de prueba creadas exitosamente.");
                 }
                 if (!await context.BuySells.AnyAsync())
@@ -459,7 +462,11 @@ namespace backend.src.Application.Infrastructure.Data
             Log.Information("DataSeeder: Todos los usuarios creados exitosamente.");
         }
 
-        private static async Task SeedOffers(AppDbContext context, UserManager<User> userManager)
+        private static async Task SeedOffers(
+            AppDbContext context,
+            IOfferJobs backgroundJobs,
+            UserManager<User> userManager
+        )
         {
             var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
 
@@ -614,17 +621,10 @@ namespace backend.src.Application.Infrastructure.Data
                 IsCvRequired = true,
             };
             context.Offers.Add(inProcessOffer);
-            // <<< FIN: OFERTA "INPROCESS" SOLICITADA >>>
 
-            await context.SaveChangesAsync();
-
-            Log.Information(
-                "DataSeeder: Ofertas de ejemplo cargadas ({Count})",
-                samples.Length + 1
-            );
-
+            // Ofertas aleatorias
             var faker = new Faker("es");
-            var randomOffersCount = 50;
+            var randomOffersCount = 15;
             Log.Information(
                 $"DataSeeder: Creando {randomOffersCount} ofertas aleatorias con Faker..."
             );
@@ -652,7 +652,6 @@ namespace backend.src.Application.Infrastructure.Data
                 var endDate = nowForFaker.AddDays(daysUntilEnd);
                 var publicationDate = nowForFaker.AddDays(-daysSincePost);
 
-                var isActive = true;
                 var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
@@ -663,7 +662,6 @@ namespace backend.src.Application.Infrastructure.Data
                 if (faker.Random.Bool(0.15f))
                 {
                     status = ApprovalStatus.Rechazada;
-                    isActive = false;
                 }
 
                 var offer = new Offer
@@ -688,7 +686,48 @@ namespace backend.src.Application.Infrastructure.Data
                 };
 
                 context.Offers.Add(offer);
-            } // +1 por la nueva
+            }
+
+            await context.SaveChangesAsync();
+            await ScheduleLifetimeTrackingJobs(context, backgroundJobs);
+
+            Log.Information(
+                "DataSeeder: Ofertas de ejemplo cargadas ({Count})",
+                samples.Length + randomOffersCount + 1
+            );
+        }
+
+        private static async Task ScheduleLifetimeTrackingJobs(
+            AppDbContext context,
+            IOfferJobs backgroundJobs
+        )
+        {
+            var activeOffers = await context
+                .Offers.Where(o => o.ApprovalStatus != ApprovalStatus.Rechazada)
+                .ToListAsync();
+
+            foreach (var offer in activeOffers)
+            {
+                var closeApplicationsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsCloseForApplicationsAsync(offer.Id),
+                    offer.ApplicationDeadline
+                );
+                var completeAndInitReviewsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsCompleteAndInitializeReviewsAsync(offer.Id),
+                    offer.EndDate
+                );
+                var finalizeAndCloseReviewsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsFinalizedAndCloseReviewsAsync(offer.Id),
+                    offer.ReviewDeadline // Hardcoded a 14 dias, solo como ejemplo para pruebas.
+                );
+                offer.CloseApplicationsJobId = closeApplicationsId;
+                offer.FinishWorkAndInitializeReviewsJobId = completeAndInitReviewsId;
+                offer.FinalizeAndCloseReviewsJobId = finalizeAndCloseReviewsId;
+            }
+            await context.SaveChangesAsync();
+            Log.Information(
+                "DataSeeder: Trabajos programados para seguimiento de ciclo de vida de ofertas."
+            );
         }
 
         private static async Task SeedBuySells(AppDbContext context, UserManager<User> userManager)
@@ -712,7 +751,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Venta libro Cálculo I (Stewart 7ma)",
                     Desc = "En buen estado, pocas marcas.",
                     Price = 12000,
-                    Category = "Libros",
+                    Category = Category.Libros,
                     Loc = "Antofagasta",
                     Contact = "ignacio@ucn.cl",
                 },
@@ -721,7 +760,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Teclado mecánico Redragon K552",
                     Desc = "Switch blue, 1 año de uso.",
                     Price = 18000,
-                    Category = "Tecnología",
+                    Category = Category.Electronica,
                     Loc = "Coquimbo",
                     Contact = "+56987654321",
                 },
@@ -730,7 +769,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Bata laboratorio talla M",
                     Desc = "Lavada y desinfectada, casi nueva.",
                     Price = 8000,
-                    Category = "Laboratorio",
+                    Category = Category.Ropa,
                     Loc = "Antofagasta",
                     Contact = "c.labs@ucn.cl",
                 },
@@ -739,7 +778,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Calculadora científica Casio fx-82",
                     Desc = "Funciona perfecto, con pilas nuevas.",
                     Price = 9000,
-                    Category = "Accesorios",
+                    Category = Category.Electronica,
                     Loc = "Remoto",
                     Contact = "ventas@ucn.cl",
                 },
@@ -748,7 +787,7 @@ namespace backend.src.Application.Infrastructure.Data
                     Title = "Pack cuadernos + destacadores",
                     Desc = "5 cuadernos college + 6 destacadores.",
                     Price = 6000,
-                    Category = "Útiles",
+                    Category = Category.Otros,
                     Loc = "Coquimbo",
                     Contact = "j.vende@ucn.cl",
                 },
@@ -775,6 +814,8 @@ namespace backend.src.Application.Infrastructure.Data
                     Condition = Condition.Nuevo,
                     Category = it.Category,
                     Location = it.Loc,
+                    IsEmailAvailable = true,
+                    IsPhoneAvailable = false,
                     AdditionalContactEmail = it.Contact,
                 };
 
@@ -798,8 +839,10 @@ namespace backend.src.Application.Infrastructure.Data
                 Quantity = 1,
                 Availability = Availability.Disponible,
                 Condition = Condition.Nuevo,
-                Category = "Útiles",
+                Category = Category.Otros,
                 Location = "Digital (PDF)",
+                IsEmailAvailable = true,
+                IsPhoneAvailable = false,
                 AdditionalContactEmail = "apuntes.pendientes@ucn.cl",
             };
             context.BuySells.Add(inProcessBuySell);
@@ -809,24 +852,8 @@ namespace backend.src.Application.Infrastructure.Data
 
             var faker = new Faker("es");
             var randomBuySellsCount = 50;
-            var categories = new[]
-            {
-                "Libros",
-                "Tecnología",
-                "Laboratorio",
-                "Útiles",
-                "Deportes",
-                "Mobiliario",
-                "Servicios",
-            };
-            var locations = new[]
-            {
-                "Antofagasta",
-                "Coquimbo",
-                "Digital",
-                "UCN Campus",
-                "La Serena",
-            };
+
+            var locations = new[] { "Antofagasta", "Digital", "UCN Campus" };
             Log.Information(
                 $"DataSeeder: Creando {randomBuySellsCount} publicaciones de compra/venta aleatorias con Faker..."
             );
@@ -835,14 +862,26 @@ namespace backend.src.Application.Infrastructure.Data
             {
                 var owner = sellers[k % sellersCount];
                 var nowForFaker = DateTime.UtcNow;
-                var category = faker.PickRandom(categories);
+                var category = faker.PickRandom(
+                    Category.Electronica,
+                    Category.Ropa,
+                    Category.Hogar,
+                    Category.Vehiculos,
+                    Category.Deportes,
+                    Category.Libros,
+                    Category.Musica,
+                    Category.Juguetes,
+                    Category.Mascotas,
+                    Category.Servicios,
+                    Category.Otros
+                );
 
                 var title =
-                    category == "Servicios"
+                    category == Category.Servicios
                         ? $"Servicio de {faker.Commerce.ProductName().ToLower()} (Freelance)"
                         : $"{category}: {faker.Commerce.ProductName()}";
 
-                var isActive = true;
+                var availability = Availability.Disponible;
                 var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
@@ -853,7 +892,6 @@ namespace backend.src.Application.Infrastructure.Data
                 if (faker.Random.Bool(0.15f))
                 {
                     status = ApprovalStatus.Rechazada;
-                    isActive = false;
                 }
 
                 var bs = new BuySell
@@ -869,10 +907,12 @@ namespace backend.src.Application.Infrastructure.Data
 
                     Price = faker.Random.Int(5000, 100000),
                     Quantity = 1,
-                    Availability = Availability.Disponible,
+                    Availability = availability,
                     Condition = Condition.Nuevo,
                     Category = category,
                     Location = faker.PickRandom(locations),
+                    IsEmailAvailable = faker.Random.Bool(0.8f),
+                    IsPhoneAvailable = faker.Random.Bool(0.5f),
                     AdditionalContactEmail = faker.Random.Bool(0.7f)
                         ? faker.Phone.PhoneNumber("+569########")
                         : faker.Internet.Email(),

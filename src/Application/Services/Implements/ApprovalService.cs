@@ -136,7 +136,7 @@ namespace backend.src.Application.Services.Implements
             Log.Information(
                 "El usuario con ID: {UserId} ha obtenido {Count} publicaciones para validación.",
                 userId,
-                pendingPublications.Count()
+                totalCount
             );
 
             var publicationsDto = new PublicationsAwaitingApprovalDTO

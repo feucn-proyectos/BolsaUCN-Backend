@@ -87,18 +87,24 @@ namespace backend.src.Application.Mappers
                 // Atributos de Compra/Venta
                 .Map(
                     dest => dest.Category,
-                    src => src is BuySell ? ((BuySell)src).Category : string.Empty
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : string.Empty
                 )
                 .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
-                // Legacy
                 .Map(
                     dest => dest.ImageUrls,
                     src =>
                         src is BuySell
-                            ? ((BuySell)src).Images.Select(i => i.Url).ToList()
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
                             : new List<string>()
                 )
-                .Map(dest => dest.CompanyName, src => src.User.FirstName);
+                .Map(
+                    dest => dest.Quantity,
+                    src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
+                )
+                .Map(
+                    dest => dest.Condition,
+                    src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                );
         }
 
         public void ConfigurePublicationsForOfferor()
@@ -111,7 +117,11 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.PublicationType, src => src.PublicationType)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
                 .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
-                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0);
+                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0)
+                .Map(
+                    dest => dest.Availability,
+                    src => src is BuySell ? ((BuySell)src).Availability.ToString() : null
+                );
 
             // Mapeo para detalles de publicación del offerente
             TypeAdapterConfig<Publication, MyPublicationDetailsDTO>
@@ -176,7 +186,10 @@ namespace backend.src.Application.Mappers
                             : null
                 )
                 .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
-                .Map(dest => dest.Category, src => src is BuySell ? ((BuySell)src).Category : null)
+                .Map(
+                    dest => dest.Category,
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : null
+                )
                 .Map(
                     dest => dest.Quantity,
                     src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
@@ -188,6 +201,14 @@ namespace backend.src.Application.Mappers
                 .Map(
                     dest => dest.Condition,
                     src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                )
+                .Map(
+                    dest => dest.ShowEmail,
+                    src => src is BuySell ? ((BuySell)src).IsEmailAvailable : (bool?)null
+                )
+                .Map(
+                    dest => dest.ShowPhoneNumber,
+                    src => src is BuySell ? ((BuySell)src).IsPhoneAvailable : (bool?)null
                 );
 
             // Mapeos para actualizar publicaciones a partir de una apelación de rechazo
@@ -297,6 +318,10 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.Rating, src => src.User.Rating)
                 // === ATRIBUTOS DE OFERTA ===
                 .Map(
+                    dest => dest.CurrentStatus,
+                    src => src is Offer ? ((Offer)src).CurrentStatus.ToString() : string.Empty
+                )
+                .Map(
                     dest => dest.EndDate,
                     src => src is Offer ? ((Offer)src).EndDate.ToString() : string.Empty
                 )
@@ -322,7 +347,7 @@ namespace backend.src.Application.Mappers
                 )
                 // === ATRIBUTOS DE COMPRA/VENTA ===
                 .Map(
-                    dest => dest.Images,
+                    dest => dest.ImageUrls,
                     src =>
                         src is BuySell
                             ? ((BuySell)src).Images.Select(img => img.Url).ToList()
@@ -330,9 +355,29 @@ namespace backend.src.Application.Mappers
                 )
                 .Map(
                     dest => dest.Category,
-                    src => src is BuySell ? ((BuySell)src).Category : string.Empty
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : string.Empty
                 )
-                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null);
+                .Map(
+                    dest => dest.Condition,
+                    src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                )
+                .Map(
+                    dest => dest.Quantity,
+                    src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
+                )
+                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
+                .Map(
+                    dest => dest.Availability,
+                    src => src is BuySell ? ((BuySell)src).Availability.ToString() : null
+                )
+                .Map(
+                    dest => dest.ShowEmail,
+                    src => src is BuySell ? ((BuySell)src).IsEmailAvailable : (bool?)null
+                )
+                .Map(
+                    dest => dest.ShowPhoneNumber,
+                    src => src is BuySell ? ((BuySell)src).IsPhoneAvailable : (bool?)null
+                );
 
             TypeAdapterConfig<Publication, UserPublicationForAdminDTO>
                 .NewConfig()

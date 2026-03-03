@@ -177,12 +177,12 @@ namespace backend.src.API.Controllers
         )
         {
             int parsedAdminId = GetUserIdFromToken();
-            var result = await _publicationService.CancelOfferManuallyAsync(
+            var result = await _publicationService.CancelPublicationManuallyAsync(
                 publicationId,
                 parsedAdminId,
                 requestDTO
             );
-            return Ok(new GenericResponse<string>("Oferta cerrada exitosamente.", result));
+            return Ok(new GenericResponse<string>("Publicación cerrada exitosamente.", result));
         }
 
         [HttpGet("users/{userId}/publications")]

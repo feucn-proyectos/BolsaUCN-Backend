@@ -217,10 +217,21 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Intento de subir una lista de imágenes nula o vacía");
                 throw new ArgumentException("Lista de imágenes inválida");
             }
-            if (images.Count > 3)
+            if (images.Count > _maxBuySellImages)
             {
                 Log.Error($"Número de imágenes excede el máximo permitido: {images.Count}");
-                throw new ArgumentException("No se pueden subir más de 3 imágenes");
+                throw new ArgumentException(
+                    $"No se pueden subir más de {_maxBuySellImages} imágenes"
+                );
+            }
+            if (buySell.Images.Count + images.Count > _maxBuySellImages)
+            {
+                Log.Error(
+                    $"Número total de imágenes para BuySellId {buySell.Id} excede el máximo permitido: {buySell.Images.Count + images.Count}"
+                );
+                throw new ArgumentException(
+                    $"No se pueden subir las imágenes porque el número total de imágenes para esta publicación de compra/venta excede el máximo permitido de {_maxBuySellImages}"
+                );
             }
             foreach (var imageFile in images)
             {
@@ -245,7 +256,8 @@ namespace backend.src.Application.Services.Implements
                     };
 
                     Log.Information(
-                        $"Optimizando imagen: {imageFile.FileName} antes de subir a la nube"
+                        "Optimizando imagen: {imageFile.FileName} antes de subir a la nube",
+                        imageFile.FileName
                     );
                     uploadParams.Transformation = new Transformation()
                         .Width(_transformationWidth)
@@ -254,12 +266,16 @@ namespace backend.src.Application.Services.Implements
                         .Quality(_transformationQuality)
                         .Chain()
                         .FetchFormat(_transformationFetchFormat);
-                    Log.Information($"Subiendo imagen: {imageFile.FileName} a Cloudinary");
+                    Log.Information(
+                        "Subiendo imagen: {imageFile.FileName} a Cloudinary",
+                        imageFile.FileName
+                    );
                     var uploadResult = await _cloudinary.UploadAsync(uploadParams);
                     if (uploadResult.Error != null)
                     {
                         Log.Error(
-                            $"Hubo un error al subir la imagen: {uploadResult.Error.Message}"
+                            "Hubo un error al subir la imagen: {uploadResult.Error.Message}",
+                            uploadResult.Error.Message
                         );
                         throw new Exception(
                             $"Error al subir la imagen: {uploadResult.Error.Message}"
@@ -284,20 +300,74 @@ namespace backend.src.Application.Services.Implements
                     throw new Exception("Error al guardar las imágenes en la base de datos");
                 }
                 Log.Information(
-                    $"Todas las imágenes subidas y guardadas exitosamente para BuySellId: {buySell.Id}"
+                    "Todas las imágenes subidas y guardadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
                 );
                 return true;
             }
             catch (Exception ex)
             {
                 Log.Error(
-                    $"Error durante la carga de imágenes para BuySellId: {buySell.Id}: {ex.Message}"
+                    "Error durante la carga de imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
                 );
                 if (uploadedPublicIds.Count > 0)
                 {
                     await RollbackCloudinaryUploads(uploadedPublicIds);
                 }
                 throw;
+            }
+        }
+
+        public async Task<bool> RemoveImagesFromBuySellAsync(
+            List<string> imagesToDelete,
+            BuySell buySell
+        )
+        {
+            // Por seguridad, validamos que las imágenes a eliminar existan y estén asociadas a la publicación de compra/venta
+            var publicIdsToDelete = await _fileRepository.GetPublicIdsByBuySellIdAsync(
+                buySell.Id,
+                imagesToDelete
+            );
+            if (publicIdsToDelete.Count != imagesToDelete.Count)
+            {
+                Log.Error(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta con ID {buySell.Id}",
+                    buySell.Id
+                );
+                throw new Exception(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta"
+                );
+            }
+            try
+            {
+                var deleteTasks = publicIdsToDelete.Select(DeleteInCloudinaryAsync);
+                var deleteResults = await Task.WhenAll(deleteTasks);
+
+                if (!deleteResults.All(r => r))
+                {
+                    Log.Error(
+                        "Error al eliminar algunas imágenes de Cloudinary para BuySellId: {buySell.Id}",
+                        buySell.Id
+                    );
+                    throw new Exception("Error al eliminar algunas imágenes de Cloudinary");
+                }
+                await _fileRepository.DeleteBatchAsync(publicIdsToDelete);
+                Log.Information(
+                    "Imágenes eliminadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    "Error al eliminar imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
+                );
+                throw new Exception("Error al eliminar las imágenes");
             }
         }
 
@@ -703,7 +773,7 @@ namespace backend.src.Application.Services.Implements
 
         private async Task RollbackCloudinaryUploads(List<string> publicIds)
         {
-            var deletionTasks = publicIds.Select(publicId => DeleteInCloudinaryAsync(publicId));
+            var deletionTasks = publicIds.Select(DeleteInCloudinaryAsync);
             await Task.WhenAll(deletionTasks);
             Log.Information(
                 $"Rollback de uploads a Cloudinary completado para PublicIds: {string.Join(", ", publicIds)}"

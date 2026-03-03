@@ -24,6 +24,8 @@ namespace backend.src.Application.Services.Interfaces
         /// <returns>True si todas las imágenes se cargaron exitosamente, de lo contrario False.</returns>
         Task<bool> UploadBatchAsync(List<IFormFile> images, BuySell buySell);
 
+        Task<bool> RemoveImagesFromBuySellAsync(List<string> imagesToDelete, BuySell buySell);
+
         /// <summary>
         /// Sube una imagen de usuario a Cloudinary.
         /// </summary>

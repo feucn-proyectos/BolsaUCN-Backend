@@ -1,4 +1,5 @@
 using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.BuySells;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
@@ -36,12 +37,24 @@ namespace backend.src.Application.Services.Interfaces
             int? userId = null
         );
 
+        Task<BuySellsForApplicantDTO> GetBuySellsAsync(
+            ExploreBuySellsSearchParamsDTO searchParams,
+            int? userId = null
+        );
+
         Task<OfferDetailsForApplicantDTO> GetOfferDetailsForApplicantAsync(
             int publicationId,
             int applicantId
         );
 
+        Task<BuySellDetailsForApplicantDTO> GetBuySellDetailsForApplicantAsync(
+            int publicationId,
+            int applicantId
+        );
+
         Task<OfferDetailsForPublicDTO> GetOfferDetailsForPublicAsync(int publicationId);
+
+        Task<BuySellDetailsForPublicDTO> GetBuySellDetailsForPublicAsync(int publicationId);
 
         /// <summary>
         /// Obtiene los detalles de una publicación específica del usuario autenticado
@@ -75,6 +88,12 @@ namespace backend.src.Application.Services.Interfaces
             AppealRejectionDTO appealDTO
         );
 
+        Task<string> CancelPublicationManuallyAsync(
+            int publicationId,
+            int requestingUserId,
+            ClosePublicationRequestDTO? requestDTO = null
+        );
+
         /// <summary>
         /// Permite al oferente cerrar manualmente una oferta que está en estado "Realizando Trabajo", o "Recibiendo Postulaciones".
         /// Este metodo llama a los mismos metodos llamados por los trabajos programados para cerrar las postulaciones, finalizar el trabajo e inicializar las reseñas, y finalizar las reseñas, dependiendo del estado actual de la publicación, pero lo hace de forma inmediata al cancelar los trabajos programados correspondientes y ejecutando manualmente los métodos necesarios para avanzar la publicación al siguiente estado.
@@ -84,20 +103,13 @@ namespace backend.src.Application.Services.Interfaces
         /// <returns>Mensaje de éxito o error</returns>
         Task<string> AdvanceOfferManuallyAsync(int publicationId, int requestingUserId);
 
-        /// <summary>
-        /// Permite al oferente (o a un administrador) cancelar manualmente una oferta antes de que se cierre para postulaciones, cambiando su estado a "CanceladaAntesDelTrabajo" y evitando que sea visible para usuarios regulares.
-        /// Esto es útil para casos en los que el oferente ya no puede cumplir con la oferta o desea retirarla por cualquier motivo antes de que se cierre oficialmente.
-        /// A diferencia del cierre manual estándar, esta acción no activa el flujo de reseñas ni calificaciones, ya que la oferta no llega a la etapa de realización del trabajo o voluntariado.
-        /// </summary>
-        /// <param name="publicationId">Id de la publicación a cancelar manualmente</param>
-        /// <param name="requestingUserId">Id del usuario que solicita la cancelación manual</param>
-        /// <param name="requestDTO">Datos adicionales de la solicitud de cancelación (opcional)</param>
-        /// <returns>Mensaje de éxito o error</returns>
-        Task<string> CancelOfferManuallyAsync(
+        Task<string> EditBuySellDetailsAsync(
             int publicationId,
-            int requestingUserId,
-            ClosePublicationRequestDTO? requestDTO = null
+            int applicantId,
+            EditMyBuySellDetailsDTO detailsDTO
         );
+
+        Task<string> ToggleBuySellVisibilityAsync(int publicationId, int offerorId);
         #endregion
 
         #region Background Jobs

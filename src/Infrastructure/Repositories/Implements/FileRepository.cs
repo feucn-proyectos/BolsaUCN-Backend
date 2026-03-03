@@ -86,17 +86,25 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return null;
         }
 
-        /// <summary>
-        /// Elimina un archivo de imagen de la base de datos.
-        /// </summary>
-        /// <param name="publicId">El identificador público del archivo a eliminar.</param>
-        /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si la imagen no existe.</returns>
         public async Task<bool?> DeleteAsync(string publicId)
         {
             var image = await _context.Images.FirstOrDefaultAsync(i => i.PublicId == publicId);
             if (image != null)
             {
                 _context.Images.Remove(image);
+                return await _context.SaveChangesAsync() > 0;
+            }
+            return null;
+        }
+
+        public async Task<bool?> DeleteBatchAsync(List<string> publicIds)
+        {
+            var images = await _context
+                .Images.Where(i => publicIds.Contains(i.PublicId))
+                .ToListAsync();
+            if (images.Count != 0)
+            {
+                _context.Images.RemoveRange(images);
                 return await _context.SaveChangesAsync() > 0;
             }
             return null;
@@ -122,6 +130,17 @@ namespace backend.src.Infrastructure.Repositories.Implements
                 return await _context.SaveChangesAsync() > 0;
             }
             return false;
+        }
+
+        public async Task<List<string>> GetPublicIdsByBuySellIdAsync(
+            int buySellId,
+            List<string> urls
+        )
+        {
+            return await _context
+                .Images.Where(i => i.BuySellId == buySellId && urls.Contains(i.Url))
+                .Select(i => i.PublicId)
+                .ToListAsync();
         }
     }
 }

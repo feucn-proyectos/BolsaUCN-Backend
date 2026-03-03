@@ -43,5 +43,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public int? Quantity { get; set; }
         public string? Availability { get; set; }
         public string? Condition { get; set; }
+        public bool? ShowEmail { get; set; }
+        public bool? ShowPhoneNumber { get; set; }
     }
 }

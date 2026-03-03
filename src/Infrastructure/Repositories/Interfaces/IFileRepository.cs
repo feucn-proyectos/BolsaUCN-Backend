@@ -51,6 +51,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si la imagen no existe.</returns>
         Task<bool?> DeleteAsync(string publicId);
 
+        Task<bool?> DeleteBatchAsync(List<string> publicIds);
+
         /// <summary>
         /// Elimina un archivo de imagen de usuario de la base de datos.
         /// </summary>
@@ -64,5 +66,13 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         /// <param name="publicId">El identificador público del archivo a eliminar.</param>
         /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si el CV no existe.</returns>
         Task<bool> DeleteCVAsync(string publicId);
+
+        /// <summary>
+        /// Obtiene los identificadores públicos de las imágenes asociadas a una publicación de compra/venta.
+        /// </summary>
+        /// <param name="buySellId">El identificador de la publicación de compra/venta.</param>
+        /// <param name="urls">La lista de URLs de las imágenes a buscar.</param>
+        /// <returns>Una lista de identificadores públicos de las imágenes asociadas a la publicación.</returns>
+        Task<List<string>> GetPublicIdsByBuySellIdAsync(int buySellId, List<string> urls);
     }
 }

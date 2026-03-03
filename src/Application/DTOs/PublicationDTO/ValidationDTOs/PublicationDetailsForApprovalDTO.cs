@@ -30,13 +30,10 @@ namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
         public string? OfferType { get; set; }
 
         // === ATRIBUTOS DE COMPRA/VENTA ===
+        public List<string>? ImageUrls { get; set; }
         public string? Category { get; set; }
         public int? Price { get; set; }
-
-        // === LEGACY ATTRIBUTES FOR FRONTEND ===
-        public required bool Active { get; set; }
-        public required bool IsActive { get; set; }
-        public required List<string> ImageUrls { get; set; }
-        public required string CompanyName { get; set; }
+        public int? Quantity { get; set; }
+        public string? Condition { get; set; }
     }
 }
