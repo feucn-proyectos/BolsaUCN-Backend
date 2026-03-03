@@ -50,7 +50,9 @@ namespace backend.src.Application.Mappers
                 .Map(dest => dest.PublicationId, src => src.Id)
                 .Map(dest => dest.UserId, src => src.User.Id)
                 .Map(dest => dest.UserEmail, src => src.User.Email)
-                .Map(dest => dest.UserName, src => src.User.UserName)
+                .Map(dest => dest.UserName, src => src.User.FullName)
+                .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
                 .Map(dest => dest.Title, src => src.Title)
                 .Map(dest => dest.Description, src => src.Description)
                 .Map(dest => dest.PublicationDate, src => src.CreatedAt)
@@ -67,18 +69,24 @@ namespace backend.src.Application.Mappers
                 )
                 .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
                 .Map(dest => dest.Rating, src => src.User.Rating)
+                .Map(dest => dest.NumberOfAppeals, src => src.AppealCount)
+                .Map(dest => dest.LastRejectionReason, src => src.RejectedByAdminReason)
                 // Atributos de Oferta
                 .Map(
                     dest => dest.EndDate,
                     src => src is Offer ? ((Offer)src).EndDate.ToString() : string.Empty
                 )
                 .Map(
-                    dest => dest.DeadlineDate,
+                    dest => dest.ApplicationDeadline,
                     src => src is Offer ? ((Offer)src).ApplicationDeadline.ToString() : string.Empty
                 )
                 .Map(
                     dest => dest.Remuneration,
                     src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                )
+                .Map(
+                    dest => dest.IsCVRequired,
+                    src => src is Offer ? ((Offer)src).IsCvRequired : (bool?)null
                 )
                 .Map(
                     dest => dest.OfferType,
@@ -95,7 +103,7 @@ namespace backend.src.Application.Mappers
                     src =>
                         src is BuySell
                             ? ((BuySell)src).Images.Select(img => img.Url).ToList()
-                            : new List<string>()
+                            : null
                 )
                 .Map(
                     dest => dest.Quantity,

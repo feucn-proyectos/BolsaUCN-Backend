@@ -37,9 +37,12 @@ namespace backend.src.Application.Services.Implements
             ApprovalActionDTO actionDTO
         )
         {
-            User? admin =
-                await _userRepository.GetByIdAsync(userId)
-                ?? throw new KeyNotFoundException("Usuario no encontrado.");
+            bool adminExists = await _userRepository.ExistsByIdAsync(userId);
+            if (!adminExists)
+            {
+                Log.Error("El usuario con ID: {AdminUserId} no existe.", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
             bool adminResult = await _userRepository.CheckRoleAsync(userId, RoleNames.Admin);
             if (!adminResult)
             {
@@ -70,6 +73,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             ApprovalStatus newStatus;
+            string? rejectionReason = null;
             if (actionDTO.Action == "publish")
             {
                 newStatus = ApprovalStatus.Aceptada;
@@ -84,7 +88,7 @@ namespace backend.src.Application.Services.Implements
                     );
                 }
                 newStatus = ApprovalStatus.Rechazada;
-                publication.RejectedByAdminReason = actionDTO.RejectionReason;
+                rejectionReason = actionDTO.RejectionReason;
             }
             else
             {
@@ -92,7 +96,11 @@ namespace backend.src.Application.Services.Implements
                 throw new ArgumentException("Acción inválida. Debe ser 'publish' o 'reject'.");
             }
 
-            await _publicationService.UpdatePublicationStatusAsync(publication, newStatus);
+            await _publicationService.UpdatePublicationStatusAsync(
+                publication,
+                newStatus,
+                rejectionReason
+            );
             return new PublicationApprovalResultDTO
             {
                 PublicationId = publication.Id,

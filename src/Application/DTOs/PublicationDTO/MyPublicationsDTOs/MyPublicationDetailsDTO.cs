@@ -11,6 +11,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public required string Title { get; set; }
         public required string Description { get; set; }
         public required string Location { get; set; }
+        public int? MaxAppeals { get; set; }
 
         // Informacion de contacto
         public required string ContactEmail { get; set; }

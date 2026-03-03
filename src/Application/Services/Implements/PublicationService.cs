@@ -631,6 +631,8 @@ namespace backend.src.Application.Services.Implements
             MyPublicationDetailsDTO publicationDetails =
                 publication.Adapt<MyPublicationDetailsDTO>();
 
+            publicationDetails.MaxAppeals = _maxAppeals;
+
             return publicationDetails;
         }
 
