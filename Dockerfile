@@ -23,6 +23,7 @@ RUN dotnet publish "backend.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /app/Migrations ./Migrations
 
 # Expone el puerto 8080
 EXPOSE 8080

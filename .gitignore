@@ -44,7 +44,6 @@ appsettings.*.local.json
 secrets.json
 
 # Entity Framework
-Migrations/
 *.sqlite
 *.db
 *.mdf
