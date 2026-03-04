@@ -95,7 +95,7 @@ namespace backend.src.Application.Infrastructure.Data
                     await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
-                if (!await context.NewReviews.AnyAsync())
+                if (!await context.Reviews.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
@@ -1594,7 +1594,7 @@ namespace backend.src.Application.Infrastructure.Data
                 );
             }
 
-            await context.NewReviews.AddRangeAsync(reviews);
+            await context.Reviews.AddRangeAsync(reviews);
             await context.SaveChangesAsync();
             Log.Information(
                 "DataSeeder: {Count} reviews creadas exitosamente (6 completas, 12 incompletas - 4 para estudiante2, 4 para empresa@techcorp.cl)",
@@ -1620,7 +1620,7 @@ namespace backend.src.Application.Infrastructure.Data
                 if (user.UserType == UserType.Estudiante)
                 {
                     var studentReviews = await context
-                        .NewReviews.Where(r =>
+                        .Reviews.Where(r =>
                             r.ApplicantId == userId && r.OfferorRatingOfApplicant.HasValue
                         )
                         .ToListAsync();
@@ -1632,7 +1632,7 @@ namespace backend.src.Application.Infrastructure.Data
                 else if (user.UserType == UserType.Empresa || user.UserType == UserType.Particular)
                 {
                     var offerorReviews = await context
-                        .NewReviews.Where(r =>
+                        .Reviews.Where(r =>
                             r.OfferorId == userId && r.ApplicantRatingOfOfferor.HasValue
                         )
                         .ToListAsync();

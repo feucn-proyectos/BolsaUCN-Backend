@@ -18,7 +18,7 @@ namespace backend.src.Application.Mappers
             applicationMapper?.ConfigureAllMappings();
             var profileMapper = serviceProvider.GetService<ProfileMapper>();
             profileMapper?.ConfigureAllMappings();
-            var reviewMapper = serviceProvider.GetService<NewReviewMapper>();
+            var reviewMapper = serviceProvider.GetService<ReviewMapper>();
             reviewMapper?.ConfigureAllMappings();
 
             TypeAdapterConfig.GlobalSettings.Default.IgnoreNullValues(true);

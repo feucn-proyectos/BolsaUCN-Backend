@@ -27,6 +27,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IFileService _fileService;
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
+        private readonly int _maxPendingReviewsAllowed;
 
         public OfferApplicationService(
             IOfferApplicationRepository applicationRepository,
@@ -46,6 +47,9 @@ namespace backend.src.Application.Services.Implements
             _fileService = fileService;
             _configuration = configuration;
             _defaultPageSize = _configuration.GetValue<int>("Pagination:DefaultPageSize");
+            _maxPendingReviewsAllowed = _configuration.GetValue<int>(
+                "PublicationSettings:MaxPendingReviewsAllowed"
+            );
         }
 
         public async Task<string> CreateApplicationAsync(
@@ -131,7 +135,7 @@ namespace backend.src.Application.Services.Implements
                 user,
                 RoleNames.Applicant
             );
-            if (pendingReviewsCount >= 3)
+            if (pendingReviewsCount >= _maxPendingReviewsAllowed)
             {
                 Log.Warning(
                     "Usuario {UserId} intentó postular a oferta con {PendingCount} reseñas pendientes",
@@ -139,7 +143,7 @@ namespace backend.src.Application.Services.Implements
                     pendingReviewsCount
                 );
                 throw new UnauthorizedAccessException(
-                    "No puedes postular a nuevas ofertas hasta que completes todas tus reseñas pendientes"
+                    $"No puedes postular a nuevas ofertas porque tienes al menos {_maxPendingReviewsAllowed} reseñas pendientes"
                 );
             }
 

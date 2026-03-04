@@ -42,18 +42,18 @@ namespace backend.src.Infrastructure.Repositories.Implements
             string? role = null
         )
         {
-            var pendingCountQuery = _context.NewReviews.AsQueryable();
+            var pendingCountQuery = _context.Reviews.AsQueryable();
             pendingCountQuery = role switch
             {
                 RoleNames.Offeror => pendingCountQuery.Where(r =>
-                    r.OfferorId == userId && !r.OfferorReviewCompletedAt.HasValue
+                    r.OfferorId == userId && !r.OfferorRatingOfApplicant.HasValue
                 ),
                 RoleNames.Applicant => pendingCountQuery.Where(r =>
-                    r.ApplicantId == userId && !r.ApplicantReviewCompletedAt.HasValue
+                    r.ApplicantId == userId && !r.ApplicantRatingOfOfferor.HasValue
                 ),
                 _ => pendingCountQuery.Where(r =>
-                    (r.OfferorId == userId && !r.OfferorReviewCompletedAt.HasValue)
-                    || (r.ApplicantId == userId && !r.ApplicantReviewCompletedAt.HasValue)
+                    (r.OfferorId == userId && !r.OfferorRatingOfApplicant.HasValue)
+                    || (r.ApplicantId == userId && !r.ApplicantRatingOfOfferor.HasValue)
                 ),
             };
             return await pendingCountQuery.CountAsync();
@@ -70,19 +70,19 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
         public async Task<bool> CreateReviewAsync(Review review)
         {
-            await _context.NewReviews.AddAsync(review);
+            await _context.Reviews.AddAsync(review);
             return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<bool> CreateReviewsAsync(IEnumerable<Review> reviews)
         {
-            await _context.NewReviews.AddRangeAsync(reviews);
+            await _context.Reviews.AddRangeAsync(reviews);
             return await _context.SaveChangesAsync() > 0;
         }
 
         public async Task<Review?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null)
         {
-            var query = _context.NewReviews.AsQueryable();
+            var query = _context.Reviews.AsQueryable();
 
             if (options != null)
             {
@@ -102,7 +102,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<List<Review>> GetReviewsByOfferIdAsync(int offerId)
         {
             return await _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .Where(r => r.Application!.JobOfferId == offerId)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -112,16 +112,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task CalculateUserRating(User user)
         {
             List<float> ratingsAsOfferor = await _context
-                .NewReviews.Where(r =>
-                    r.OfferorId == user.Id && r.ApplicantRatingOfOfferor.HasValue
-                )
+                .Reviews.Where(r => r.OfferorId == user.Id && r.ApplicantRatingOfOfferor.HasValue)
                 .Select(r => r.ApplicantRatingOfOfferor!.Value)
                 .ToListAsync();
 
             List<float> ratingsAsApplicant = await _context
-                .NewReviews.Where(r =>
-                    r.ApplicantId == user.Id && r.OfferorRatingOfApplicant.HasValue
-                )
+                .Reviews.Where(r => r.ApplicantId == user.Id && r.OfferorRatingOfApplicant.HasValue)
                 .Select(r => r.OfferorRatingOfApplicant!.Value)
                 .ToListAsync();
 
@@ -136,7 +132,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId)
         {
             return await _context
-                .NewReviews.Where(r =>
+                .Reviews.Where(r =>
                     r.Application!.JobOfferId == offerId
                     && (
                         !r.OfferorReviewCompletedAt.HasValue
@@ -152,7 +148,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         )
         {
             IQueryable<Review> query = _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -208,7 +204,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<Review?> GetMyReviewDetailsByIdAsync(int reviewId, int userId)
         {
             var review = await _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -226,7 +222,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         )
         {
             IQueryable<Review> query = _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -292,7 +288,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<Review?> GetReviewDetailsForAdminByIdAsync(int reviewId)
         {
             var review = await _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -305,7 +301,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<List<Review>> GetAllForAdminAsync()
         {
             return await _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -316,7 +312,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task<List<Review>> GetAllByUserIdAsync(int userId)
         {
             return await _context
-                .NewReviews.Include(r => r.Application)
+                .Reviews.Include(r => r.Application)
                 .ThenInclude(a => a!.JobOffer)
                 .Include(r => r.Offeror)
                 .Include(r => r.Applicant)
@@ -330,7 +326,7 @@ namespace backend.src.Infrastructure.Repositories.Implements
 
         public async Task<bool> UpdateReviewAsync(Review review)
         {
-            _context.NewReviews.Update(review);
+            _context.Reviews.Update(review);
             return await _context.SaveChangesAsync() > 0;
         }
 

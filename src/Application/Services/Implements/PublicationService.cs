@@ -34,6 +34,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IFileService _fileService;
         private readonly IReviewRepository _reviewRepository;
         private readonly int _daysUntilReviewAutoClose;
+        private readonly int _maxPendingReviewsAllowed;
 
         public PublicationService(
             IPublicationRepository publicationRepository,
@@ -54,6 +55,9 @@ namespace backend.src.Application.Services.Implements
             _maxAppeals = _configuration.GetValue<int>("PublicationSettings:MaxAppeals");
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
+            );
+            _maxPendingReviewsAllowed = _configuration.GetValue<int>(
+                "PublicationSettings:MaxPendingReviewsAllowed"
             );
         }
 
@@ -91,13 +95,16 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
+                currentUser,
+                RoleNames.Offeror
+            );
             Log.Information(
                 "Reseñas pendientes para el usuario {userId}: {pendingReviewsCount}",
                 userId,
                 pendingReviewsCount
             );
-            if (pendingReviewsCount >= 3)
+            if (pendingReviewsCount >= _maxPendingReviewsAllowed)
             {
                 Log.Warning(
                     "Usuario {userId} intentó crear una oferta con {pendingReviewsCount} reseñas pendientes",
@@ -105,7 +112,7 @@ namespace backend.src.Application.Services.Implements
                     pendingReviewsCount
                 );
                 throw new InvalidOperationException(
-                    "No se puede crear una oferta mientras se tengan 3 o más reseñas pendientes."
+                    $"No se puede crear una oferta mientras se tengan {_maxPendingReviewsAllowed} o más reseñas pendientes."
                 );
             }
 
@@ -192,7 +199,7 @@ namespace backend.src.Application.Services.Implements
                 currentUser,
                 RoleNames.Offeror
             );
-            if (pendingReviewsCount >= 999)
+            if (pendingReviewsCount >= _maxPendingReviewsAllowed)
             {
                 Log.Warning(
                     "Usuario {userId} intentó crear publicación de compra/venta con {PendingCount} reseñas pendientes",
@@ -200,7 +207,7 @@ namespace backend.src.Application.Services.Implements
                     pendingReviewsCount
                 );
                 throw new InvalidOperationException(
-                    "No se puede crear una publicacion de compra/venta mientras se tengan 3 o más reseñas pendientes."
+                    $"No se puede crear una publicacion de compra/venta mientras se tengan {_maxPendingReviewsAllowed} o más reseñas pendientes."
                 );
             }
 

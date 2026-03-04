@@ -26,7 +26,7 @@ namespace backend.src.Infrastructure.Data
         public DbSet<BuySell> BuySells { get; set; }
         public DbSet<NotificationDTO> Notifications { get; set; }
         public DbSet<JobApplication> JobApplications { get; set; }
-        public DbSet<Review> NewReviews { get; set; }
+        public DbSet<Review> Reviews { get; set; }
         public DbSet<AdminNotification> AdminNotifications { get; set; }
 
         /// <summary>

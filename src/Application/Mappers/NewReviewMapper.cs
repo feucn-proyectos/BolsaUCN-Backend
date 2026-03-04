@@ -7,7 +7,7 @@ using Mapster;
 
 namespace backend.src.Application.Mappers
 {
-    public class NewReviewMapper
+    public class ReviewMapper
     {
         public void ConfigureAllMappings()
         {
