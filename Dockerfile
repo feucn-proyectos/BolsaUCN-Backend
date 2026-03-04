@@ -16,7 +16,7 @@ COPY . .
 # --- ARREGLO AQUÍ ---
 # 1. NO nos movemos a /app/src
 # 2. Le decimos a 'publish' DÓNDE está el proyecto
-RUN dotnet publish "bolsafeucn_back.csproj" -c Release -o /app/publish
+RUN dotnet publish "backend.csproj" -c Release -o /app/publish
 
 # --- Etapa 2: Imagen Final (Runtime) ---
 # CAMBIO: Usamos el runtime de ASP.NET 9.0 (Preview)
@@ -28,4 +28,4 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 
 # Comando para iniciar tu app
-ENTRYPOINT ["dotnet", "bolsafeucn_back.dll"]
+ENTRYPOINT ["dotnet", "backend.dll"]
