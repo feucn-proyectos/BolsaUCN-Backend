@@ -1335,6 +1335,15 @@ namespace backend.src.Application.Services.Implements
             else
             {
                 offer.StartWork();
+                // Rechazar automáticamente a los postulantes que no fueron aceptados para liberarles cupo y enviarles notificación de rechazo.
+                var rejectedApplications = offer
+                    .Applications.Where(a => a.Status == ApplicationStatus.Pendiente)
+                    .ToList();
+                foreach (var application in rejectedApplications)
+                {
+                    application.Status = ApplicationStatus.Rechazada;
+                    //TODO: Enviar correo de notificación a los postulantes rechazados informando que no fueron aceptados y que la oferta ya se encuentra en proceso de realización.
+                }
             }
             bool updateResult = await _publicationRepository.UpdateAsync(offer);
             if (!updateResult)

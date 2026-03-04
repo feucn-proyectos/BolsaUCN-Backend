@@ -11,6 +11,7 @@ using backend.src.Domain.Models;
 using backend.src.Domain.Models.Options;
 using backend.src.Domain.Options;
 using backend.src.Infrastructure.Repositories.Interfaces;
+using Hangfire;
 using Mapster;
 using Serilog;
 
@@ -732,7 +733,7 @@ namespace backend.src.Application.Services.Implements
 
             if (offer.AvailableSlots <= 0)
             {
-                offer.StartWork();
+                BackgroundJob.Reschedule(offer.CloseApplicationsJobId!.ToString(), DateTime.UtcNow);
             }
             // Un solo SaveChangesAsync para actualizar ambos la postulación y la oferta (en caso de aceptar la postulación)
             bool updateResult = await _applicationRepository.SaveChangesAsync();
