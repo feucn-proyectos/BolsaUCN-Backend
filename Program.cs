@@ -107,16 +107,17 @@ try
             "Frontend",
             policy =>
             {
+                var allowedOrigins =
+                    builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ??
+                    [
+                        "http://localhost:3000", // Valor por defecto si no se encuentra en configuración
+                    ];
                 policy
-                    .WithOrigins(
-                        "http://localhost:3000" // Next.js dev
-                    // ,"https://localhost:3000"  // agrega si usas https en front
-                    // ,"https://localhost:7129"  // agrega si llamas al backend en https y navegas desde https
-                    )
+                    .WithOrigins(allowedOrigins)
                     .WithHeaders(HeaderNames.ContentType, HeaderNames.Authorization, "Accept")
                     .WithExposedHeaders(HeaderNames.ContentDisposition) // para que el front pueda leer el header Content-Disposition en la respuesta (nombre del archivo al descargar CV)
                     .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                    .AllowCredentials(); // opcional si luego usas cookies
+                    .AllowCredentials();
             }
         );
     });
