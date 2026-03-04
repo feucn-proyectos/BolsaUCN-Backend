@@ -10,6 +10,7 @@ using backend.src.Infrastructure.Repositories.Implements;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -144,15 +145,40 @@ try
     #endregion
 
     #region Hangfire
-    // Hangfire - usa MemoryStorage por simplicidad
-    builder.Services.AddHangfire(configuration => configuration.UseMemoryStorage());
+    // =========================
+    // 6) Hangfire (background jobs)
+    // =========================
+    if (builder.Environment.IsDevelopment())
+    {
+        Log.Information(
+            "Configurando Hangfire con almacenamiento en memoria (MemoryStorage) para desarrollo"
+        );
+        builder.Services.AddHangfire(configuration => configuration.UseMemoryStorage());
+    }
+    else
+    {
+        Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
+        builder.Services.AddHangfire(configuration =>
+            configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(options =>
+                {
+                    options.UseNpgsqlConnection(
+                        builder.Configuration.GetConnectionString("DefaultConnection")
+                    );
+                })
+        );
+    }
     builder.Services.AddHangfireServer();
+
     #endregion
 
 
     #region DI
     // =========================
-    // 6) DI (repos/services/mappers/jobs)
+    // 7) DI (repos/services/mappers/jobs)
     // =========================
     builder.Services.AddScoped<UserMapper>();
     builder.Services.AddScoped<PublicationMapper>();
@@ -205,13 +231,6 @@ try
     {
         app.UseHangfireDashboard();
         // === Trabajos recurrentes ===
-        /*
-        RecurringJob.AddOrUpdate<IReviewService>(
-            "CloseExpiredReviews",
-            service => service.CloseExpiredReviewsAsync(),
-            Cron.Hourly
-        );
-        */
         // User Jobs
         RecurringJob.AddOrUpdate<IUserJobs>(
             nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
@@ -255,6 +274,10 @@ try
         app.UseSwagger();
         app.UseSwaggerUI();
         Log.Information("Swagger UI habilitado en modo desarrollo");
+    }
+    else
+    {
+        Log.Information("Servidor en modo producción, Swagger UI deshabilitado");
     }
 
     // Si te genera líos en local (http->https), puedes comentar mientras desarrollas:

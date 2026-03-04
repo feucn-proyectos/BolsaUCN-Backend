@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.BuySells;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
@@ -73,9 +74,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         );
 
         Task<(IEnumerable<BuySell>?, int)> GetBuySellsFilteredAsync(
-            //TODO ExploreBuySellSearchParamsDTO searchParams,
-            int pageNumber,
-            int pageSize
+            ExploreBuySellsSearchParamsDTO searchParams,
+            int? userId = null
         );
 
         /// <summary>
@@ -101,6 +101,8 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<(IEnumerable<Publication>?, int)> GetAllPublicationsFilteredForAdminAsync(
             PublicationsForAdminSearchParamsDTO searchParamsDTO
         );
+
+        Task RollbackCreatedBuySellAsync(int buySellId);
 
         Task<int> SaveChangesAsync();
     }

@@ -8,5 +8,6 @@ namespace backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs
         public required DateTime PublicationDate { get; set; }
         public required string ApprovalStatus { get; set; }
         public required bool HasAppealed { get; set; }
+        public string? Availability { get; set; }
     }
 }

@@ -15,6 +15,7 @@ namespace backend.src.Application.Services.Implements
         private readonly Cloudinary _cloudinary;
         private readonly string[] _allowedExtensions;
         private readonly int _maxFileSizeInBytes;
+        private readonly int _maxBuySellImages;
         private readonly IFileRepository _fileRepository;
         private readonly IUserRepository _userRepository;
         private readonly string _cloudName;
@@ -70,6 +71,12 @@ namespace backend.src.Application.Services.Implements
                 ?? throw new InvalidOperationException(
                     "La configuración del formato de la transformación es obligatoria"
                 );
+            if (!int.TryParse(_configuration["Images:MaxBuySellImages"], out _maxBuySellImages))
+            {
+                throw new InvalidOperationException(
+                    "La configuración del número máximo de imágenes por publicación de compra/venta es obligatoria"
+                );
+            }
             if (
                 !int.TryParse(_configuration["Images:ImageMaxSizeInBytes"], out _maxFileSizeInBytes)
             )
@@ -95,14 +102,14 @@ namespace backend.src.Application.Services.Implements
         /// Sube un archivo a Cloudinary.
         /// </summary>
         /// <param name="file">El archivo a subir.</param>
-        /// <param name="procationId">El ID de la publicación al que pertenece la imagen.</param>
+        /// <param name="buySellId">El ID de la publicación de compra/venta al que pertenece la imagen.</param>
         /// <returns>True si la carga fue exitosa, de lo contrario False.</returns>
-        public async Task<bool> UploadAsync(IFormFile file, int publicationId)
+        public async Task<bool> UploadAsync(IFormFile file, int buySellId)
         {
-            if (publicationId <= 0)
+            if (buySellId <= 0)
             {
-                Log.Error($"ProductId inválido: {publicationId}");
-                throw new ArgumentException("ProductId debe ser mayor a 0");
+                Log.Error($"BuySellId inválido: {buySellId}");
+                throw new ArgumentException("BuySellId debe ser mayor a 0");
             }
 
             if (file == null || file.Length == 0)
@@ -136,7 +143,7 @@ namespace backend.src.Application.Services.Implements
                 Log.Error($"El archivo {file.FileName} no es una imagen válida");
                 throw new ArgumentException("El archivo no es una imagen válida");
             }
-            var folder = $"product/{publicationId}/images";
+            var folder = $"product/{buySellId}/images";
             using var stream = file.OpenReadStream();
 
             var uploadParams = new ImageUploadParams()
@@ -169,7 +176,7 @@ namespace backend.src.Application.Services.Implements
             {
                 PublicId = uploadResult.PublicId,
                 Url = uploadResult.SecureUrl.ToString(),
-                PublicationId = publicationId,
+                BuySellId = buySellId,
             };
 
             var result = await _fileRepository.CreateAsync(image);
@@ -196,6 +203,172 @@ namespace backend.src.Application.Services.Implements
 
             Log.Information($"Imagen subida exitosamente: {uploadResult.SecureUrl}");
             return true;
+        }
+
+        public async Task<bool> UploadBatchAsync(List<IFormFile> images, BuySell buySell)
+        {
+            if (buySell.Id <= 0)
+            {
+                Log.Error($"BuySellId inválido: {buySell.Id}");
+                throw new ArgumentException("BuySellId debe ser mayor a 0");
+            }
+            if (images == null || images.Count == 0)
+            {
+                Log.Error("Intento de subir una lista de imágenes nula o vacía");
+                throw new ArgumentException("Lista de imágenes inválida");
+            }
+            if (images.Count > _maxBuySellImages)
+            {
+                Log.Error($"Número de imágenes excede el máximo permitido: {images.Count}");
+                throw new ArgumentException(
+                    $"No se pueden subir más de {_maxBuySellImages} imágenes"
+                );
+            }
+            if (buySell.Images.Count + images.Count > _maxBuySellImages)
+            {
+                Log.Error(
+                    $"Número total de imágenes para BuySellId {buySell.Id} excede el máximo permitido: {buySell.Images.Count + images.Count}"
+                );
+                throw new ArgumentException(
+                    $"No se pueden subir las imágenes porque el número total de imágenes para esta publicación de compra/venta excede el máximo permitido de {_maxBuySellImages}"
+                );
+            }
+            foreach (var imageFile in images)
+            {
+                ValidateImageFile(imageFile);
+            }
+
+            var uploadedImages = new List<Image>();
+            var uploadedPublicIds = new List<string>();
+            try
+            {
+                var folder = $"product/{buySell.Id}/images";
+                var uploadTasks = images.Select(async imageFile =>
+                {
+                    using var stream = imageFile.OpenReadStream();
+
+                    var uploadParams = new ImageUploadParams()
+                    {
+                        Folder = folder,
+                        File = new FileDescription(imageFile.FileName, stream),
+                        UseFilename = true,
+                        UniqueFilename = true,
+                    };
+
+                    Log.Information(
+                        "Optimizando imagen: {imageFile.FileName} antes de subir a la nube",
+                        imageFile.FileName
+                    );
+                    uploadParams.Transformation = new Transformation()
+                        .Width(_transformationWidth)
+                        .Crop(_transformationCrop)
+                        .Chain()
+                        .Quality(_transformationQuality)
+                        .Chain()
+                        .FetchFormat(_transformationFetchFormat);
+                    Log.Information(
+                        "Subiendo imagen: {imageFile.FileName} a Cloudinary",
+                        imageFile.FileName
+                    );
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    if (uploadResult.Error != null)
+                    {
+                        Log.Error(
+                            "Hubo un error al subir la imagen: {uploadResult.Error.Message}",
+                            uploadResult.Error.Message
+                        );
+                        throw new Exception(
+                            $"Error al subir la imagen: {uploadResult.Error.Message}"
+                        );
+                    }
+                    return new Image
+                    {
+                        PublicId = uploadResult.PublicId,
+                        Url = uploadResult.SecureUrl.ToString(),
+                        BuySellId = buySell.Id,
+                    };
+                });
+                var cloudinaryResults = await Task.WhenAll(uploadTasks);
+                uploadedImages.AddRange(cloudinaryResults);
+                uploadedPublicIds.AddRange(cloudinaryResults.Select(r => r.PublicId));
+
+                var saveResult = await _fileRepository.CreateBatchAsync(uploadedImages);
+                if (!saveResult)
+                {
+                    Log.Error("Error al guardar las imágenes en la base de datos");
+                    await RollbackCloudinaryUploads(uploadedPublicIds);
+                    throw new Exception("Error al guardar las imágenes en la base de datos");
+                }
+                Log.Information(
+                    "Todas las imágenes subidas y guardadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    "Error durante la carga de imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
+                );
+                if (uploadedPublicIds.Count > 0)
+                {
+                    await RollbackCloudinaryUploads(uploadedPublicIds);
+                }
+                throw;
+            }
+        }
+
+        public async Task<bool> RemoveImagesFromBuySellAsync(
+            List<string> imagesToDelete,
+            BuySell buySell
+        )
+        {
+            // Por seguridad, validamos que las imágenes a eliminar existan y estén asociadas a la publicación de compra/venta
+            var publicIdsToDelete = await _fileRepository.GetPublicIdsByBuySellIdAsync(
+                buySell.Id,
+                imagesToDelete
+            );
+            if (publicIdsToDelete.Count != imagesToDelete.Count)
+            {
+                Log.Error(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta con ID {buySell.Id}",
+                    buySell.Id
+                );
+                throw new Exception(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta"
+                );
+            }
+            try
+            {
+                var deleteTasks = publicIdsToDelete.Select(DeleteInCloudinaryAsync);
+                var deleteResults = await Task.WhenAll(deleteTasks);
+
+                if (!deleteResults.All(r => r))
+                {
+                    Log.Error(
+                        "Error al eliminar algunas imágenes de Cloudinary para BuySellId: {buySell.Id}",
+                        buySell.Id
+                    );
+                    throw new Exception("Error al eliminar algunas imágenes de Cloudinary");
+                }
+                await _fileRepository.DeleteBatchAsync(publicIdsToDelete);
+                Log.Information(
+                    "Imágenes eliminadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    "Error al eliminar imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
+                );
+                throw new Exception("Error al eliminar las imágenes");
+            }
         }
 
         public async Task<bool> UploadUserImageAsync(IFormFile file, User user)
@@ -561,6 +734,50 @@ namespace backend.src.Application.Services.Implements
                 Log.Warning($"Error validando imagen {file.FileName}: {ex.Message}");
                 return false;
             }
+        }
+
+        private void ValidateImageFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                Log.Error("Intento de subir un archivo nulo o vacío");
+                throw new ArgumentException("Archivo inválido");
+            }
+
+            if (file.Length > _maxFileSizeInBytes)
+            {
+                Log.Error(
+                    $"El archivo {file.FileName} excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+                throw new ArgumentException(
+                    $"El archivo excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+            }
+
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+            if (!_allowedExtensions.Contains(fileExtension))
+            {
+                Log.Error($"Extensión de archivo no permitida: {fileExtension}");
+                throw new ArgumentException(
+                    $"Extensión de archivo no permitida. Permitir: {string.Join(", ", _allowedExtensions)}"
+                );
+            }
+
+            if (!IsValidImageFile(file))
+            {
+                Log.Error($"El archivo {file.FileName} no es una imagen válida");
+                throw new ArgumentException("El archivo no es una imagen válida");
+            }
+        }
+
+        private async Task RollbackCloudinaryUploads(List<string> publicIds)
+        {
+            var deletionTasks = publicIds.Select(DeleteInCloudinaryAsync);
+            await Task.WhenAll(deletionTasks);
+            Log.Information(
+                $"Rollback de uploads a Cloudinary completado para PublicIds: {string.Join(", ", publicIds)}"
+            );
         }
     }
 }

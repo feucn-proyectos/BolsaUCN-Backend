@@ -1,16 +1,15 @@
 using backend.src.Application.DTOs.BaseResponse;
-using backend.src.Application.DTOs.PublicationDTO;
 using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
+using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.BuySells;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
-using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
 
 namespace backend.src.API.Controllers
 {
@@ -45,9 +44,14 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Oferta creada exitosamente.", result));
         }
 
+        /// <summary>
+        /// Crea una nueva publicación de compra/venta
+        /// </summary>
+        /// <param name="buySellDto">Los datos de la publicación de compra/venta a crear</param>
+        /// <returns>Resultado de la creación de la publicación con el ID generado</returns>
         [HttpPost("buysells")]
         [Authorize(Roles = RoleNames.Offeror)]
-        public async Task<IActionResult> CreateBuySell([FromBody] CreateBuySellDTO buySellDto)
+        public async Task<IActionResult> CreateBuySell([FromForm] CreateBuySellDTO buySellDto)
         {
             int parsedUserId = GetUserIdFromToken();
             var result = await _publicationService.CreateBuySellAsync(buySellDto, parsedUserId);
@@ -144,13 +148,15 @@ namespace backend.src.API.Controllers
 
         [HttpGet("explore/buysells")]
         public async Task<IActionResult> ExploreBuySells(
-        //TODO [FromQuery] ExploreBuySellSearchParamsDTO searchParams
+            [FromQuery] ExploreBuySellsSearchParamsDTO searchParams
         )
         {
+            int? parsedUserId = GetUserIdFromTokenNullable();
+            var result = await _publicationService.GetBuySellsAsync(searchParams, parsedUserId);
             return Ok(
-                new GenericResponse<string>(
-                    "Funcionalidad de exploración de Compra/Venta aún no implementada.",
-                    null
+                new GenericResponse<BuySellsForApplicantDTO>(
+                    "Publicaciones de Compra/Venta obtenidas exitosamente.",
+                    result
                 )
             );
         }
@@ -158,10 +164,11 @@ namespace backend.src.API.Controllers
         [HttpGet("explore/buysells/{publicationId}/public")]
         public async Task<IActionResult> GetBuySellDetailsPublic(int publicationId)
         {
+            var result = await _publicationService.GetBuySellDetailsForPublicAsync(publicationId);
             return Ok(
-                new GenericResponse<string>(
-                    "Funcionalidad de detalles de Compra/Venta aún no implementada.",
-                    null
+                new GenericResponse<BuySellDetailsForPublicDTO>(
+                    "Detalles de la publicación de Compra/Venta obtenidos exitosamente.",
+                    result
                 )
             );
         }
@@ -170,10 +177,15 @@ namespace backend.src.API.Controllers
         [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> GetBuySellDetailsForApplicant(int publicationId)
         {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.GetBuySellDetailsForApplicantAsync(
+                publicationId,
+                parsedUserId
+            );
             return Ok(
-                new GenericResponse<string>(
-                    "Funcionalidad de detalles de Compra/Venta para usuario aún no implementada.",
-                    null
+                new GenericResponse<BuySellDetailsForApplicantDTO>(
+                    "Detalles de la publicación de Compra/Venta obtenidos exitosamente.",
+                    result
                 )
             );
         }
@@ -237,7 +249,7 @@ namespace backend.src.API.Controllers
         }
         #endregion
 
-        #region Manejo manual de publicaciones (avance, cierre, apelación)
+        #region Manejo manual de publicaciones (avance, editado, cierre, apelación)
         [HttpPatch("my-publications/{publicationId}/advance")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> AdvancePublicationManually(int publicationId)
@@ -250,12 +262,50 @@ namespace backend.src.API.Controllers
             return Ok(new GenericResponse<string>("Publicación avanzada exitosamente.", result));
         }
 
+        [HttpPatch("my-publications/{publicationId}/edit")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> EditBuySellDetails(
+            int publicationId,
+            [FromForm] EditMyBuySellDetailsDTO editDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _publicationService.EditBuySellDetailsAsync(
+                publicationId,
+                parsedUserId,
+                editDTO
+            );
+            return Ok(
+                new GenericResponse<string>(
+                    "Detalles de la publicación de Compra/Venta editados exitosamente.",
+                    result
+                )
+            );
+        }
+
+        [HttpPatch("my-publications/{publicationId}/toggle-visibility")]
+        [Authorize(Roles = RoleNames.Offeror)]
+        public async Task<IActionResult> ToggleBuySellVisibility(int publicationId)
+        {
+            int parsedOffererId = GetUserIdFromToken();
+            var result = await _publicationService.ToggleBuySellVisibilityAsync(
+                publicationId,
+                parsedOffererId
+            );
+            return Ok(
+                new GenericResponse<string>(
+                    "Visibilidad de la publicación de Compra/Venta cambiada exitosamente.",
+                    result
+                )
+            );
+        }
+
         [HttpPatch("my-publications/{publicationId}/cancel")]
         [Authorize(Roles = RoleNames.Offeror)]
         public async Task<IActionResult> CancelPublicationManually(int publicationId)
         {
             int parsedOffererId = GetUserIdFromToken();
-            var result = await _publicationService.CancelOfferManuallyAsync(
+            var result = await _publicationService.CancelPublicationManuallyAsync(
                 publicationId,
                 parsedOffererId
             );

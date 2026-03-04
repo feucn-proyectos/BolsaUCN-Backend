@@ -1,8 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using backend.src.Application.Validators;
-using backend.src.Domain.Models;
 
-namespace backend.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs
 {
     /// <summary>
     /// DTO para la creación de ofertas laborales o de voluntariado

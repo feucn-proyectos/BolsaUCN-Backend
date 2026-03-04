@@ -46,14 +46,14 @@ namespace backend.src.Infrastructure.Repositories.Implements
             pendingCountQuery = role switch
             {
                 RoleNames.Offeror => pendingCountQuery.Where(r =>
-                    r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant
+                    r.OfferorId == userId && !r.OfferorReviewCompletedAt.HasValue
                 ),
                 RoleNames.Applicant => pendingCountQuery.Where(r =>
-                    r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor
+                    r.ApplicantId == userId && !r.ApplicantReviewCompletedAt.HasValue
                 ),
                 _ => pendingCountQuery.Where(r =>
-                    (r.OfferorId == userId && !r.HasOfferorEvaluatedApplicant)
-                    || (r.ApplicantId == userId && !r.HasApplicantEvaluatedOfferor)
+                    (r.OfferorId == userId && !r.OfferorReviewCompletedAt.HasValue)
+                    || (r.ApplicantId == userId && !r.ApplicantReviewCompletedAt.HasValue)
                 ),
             };
             return await pendingCountQuery.CountAsync();
@@ -112,12 +112,16 @@ namespace backend.src.Infrastructure.Repositories.Implements
         public async Task CalculateUserRating(User user)
         {
             List<float> ratingsAsOfferor = await _context
-                .NewReviews.Where(r => r.OfferorId == user.Id && r.HasApplicantEvaluatedOfferor)
+                .NewReviews.Where(r =>
+                    r.OfferorId == user.Id && r.ApplicantRatingOfOfferor.HasValue
+                )
                 .Select(r => r.ApplicantRatingOfOfferor!.Value)
                 .ToListAsync();
 
             List<float> ratingsAsApplicant = await _context
-                .NewReviews.Where(r => r.ApplicantId == user.Id && r.HasOfferorEvaluatedApplicant)
+                .NewReviews.Where(r =>
+                    r.ApplicantId == user.Id && r.OfferorRatingOfApplicant.HasValue
+                )
                 .Select(r => r.OfferorRatingOfApplicant!.Value)
                 .ToListAsync();
 

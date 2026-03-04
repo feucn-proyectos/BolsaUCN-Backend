@@ -24,10 +24,6 @@ namespace backend.src.Application.Services.Implements
         private readonly IReviewRepository _reviewRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPublicationRepository _publicationRepository;
-        private readonly IOfferApplicationRepository _offerApplicationRepository;
-        private readonly IAdminNotificationRepository _adminNotificationRepository;
-        private readonly IEmailService _emailService;
-        private readonly IPublicationService _publicationService;
         private readonly IConfiguration _configuration;
         private readonly int _daysUntilReviewAutoClose;
         private readonly int _defaultPageSize;
@@ -41,18 +37,12 @@ namespace backend.src.Application.Services.Implements
             IReviewRepository repository,
             IUserRepository userRepository,
             IPublicationRepository publicationRepository,
-            IOfferApplicationRepository offerApplicationRepository,
-            IAdminNotificationRepository adminNotificationRepository,
-            IEmailService emailService,
             IConfiguration configuration
         )
         {
             _reviewRepository = repository;
-            _offerApplicationRepository = offerApplicationRepository;
             _userRepository = userRepository;
             _publicationRepository = publicationRepository;
-            _adminNotificationRepository = adminNotificationRepository;
-            _emailService = emailService;
             _configuration = configuration;
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
@@ -238,8 +228,10 @@ namespace backend.src.Application.Services.Implements
                     Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                         offerId
                     );
-                    BackgroundJob.Delete(offer!.FinalizeAndCloseReviewsJobId);
-                    await _publicationService.FinalizeAndCloseReviewsAsync(offer.Id);
+                    BackgroundJob.Reschedule(
+                        offer!.FinalizeAndCloseReviewsJobId,
+                        DateTimeOffset.UtcNow
+                    );
                 }
             }
 
@@ -344,8 +336,10 @@ namespace backend.src.Application.Services.Implements
                     Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                         offerId
                     );
-                    BackgroundJob.Delete(offer!.FinalizeAndCloseReviewsJobId);
-                    await _publicationService.FinalizeAndCloseReviewsAsync(offer.Id);
+                    BackgroundJob.Reschedule(
+                        offer!.FinalizeAndCloseReviewsJobId,
+                        DateTimeOffset.UtcNow
+                    );
                 }
             }
             return "Review creada exitosamente para el postulante.";

@@ -7,6 +7,7 @@ namespace backend.src.Domain.Models
     {
         Disponible,
         Vendido,
+        Cerrado,
     }
 
     /// <summary>
@@ -18,6 +19,21 @@ namespace backend.src.Domain.Models
         ComoNuevo,
         Usado,
         NoAplica,
+    }
+
+    public enum Category
+    {
+        Electronica,
+        Ropa,
+        Hogar,
+        Vehiculos,
+        Deportes,
+        Libros,
+        Musica,
+        Juguetes,
+        Mascotas,
+        Servicios,
+        Otros,
     }
 
     /// <summary>
@@ -39,7 +55,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Categoría del producto o servicio.
         /// </summary>
-        public required string Category { get; set; }
+        public required Category Category { get; set; }
 
         /// <summary>
         /// Cantidad disponible del producto.
@@ -55,5 +71,18 @@ namespace backend.src.Domain.Models
         /// Estado del producto (nuevo o usado).
         /// </summary>
         public required Condition Condition { get; set; }
+
+        /// <summary>
+        /// Indica si el oferente ha optado por mostrar su correo electrónico de contacto en la publicación.
+        /// </summary>
+        public required bool IsEmailAvailable { get; set; }
+
+        /// <summary>
+        /// Indica si el oferente ha optado por mostrar su número de teléfono de contacto en la publicación.
+        /// </summary>
+        public required bool IsPhoneAvailable { get; set; }
+
+        // === Atributos computados para facilitar consultas ===
+        public bool IsAvailable => Availability == Availability.Disponible && Quantity > 0;
     }
 }

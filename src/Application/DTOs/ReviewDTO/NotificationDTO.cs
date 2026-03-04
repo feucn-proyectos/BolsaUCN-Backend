@@ -12,12 +12,12 @@ public class NotificationDTO
     /// <summary>
     /// Recipient user email address.
     /// </summary>
-    public string UserEmail { get; set; }
+    public required string UserEmail { get; set; }
 
     /// <summary>
     /// Notification message content.
     /// </summary>
-    public string Message { get; set; }
+    public required string Message { get; set; }
 
     /// <summary>
     /// Timestamp when the notification was created (UTC).

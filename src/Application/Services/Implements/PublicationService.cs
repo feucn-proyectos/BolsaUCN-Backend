@@ -1,5 +1,7 @@
 using backend.src.Application.DTOs.BaseResponse;
 using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.CreatePublicationDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.BuySells;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
@@ -29,12 +31,14 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly IFileService _fileService;
         private readonly IReviewRepository _reviewRepository;
         private readonly int _daysUntilReviewAutoClose;
 
         public PublicationService(
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
+            IFileService fileService,
             IReviewRepository reviewRepository,
             IUserRepository userRepository,
             IConfiguration configuration
@@ -42,6 +46,7 @@ namespace backend.src.Application.Services.Implements
         {
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
+            _fileService = fileService;
             _reviewRepository = reviewRepository;
             _userRepository = userRepository;
             _configuration = configuration;
@@ -86,7 +91,7 @@ namespace backend.src.Application.Services.Implements
                 );
             }
             // Validar que el usuario no tenga más de 3 reseñas pendientes
-            var pendingReviewsCount = 0; //TODO await _reviewService.GetPendingReviewsCountAsync(currentUser);
+            var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(currentUser);
             Log.Information(
                 "Reseñas pendientes para el usuario {userId}: {pendingReviewsCount}",
                 userId,
@@ -158,24 +163,36 @@ namespace backend.src.Application.Services.Implements
         /// <summary>
         /// Crea una nueva publicación de compra/venta
         /// </summary>
-        public async Task<string> CreateBuySellAsync(CreateBuySellDTO buySellDTO, int currentUserId)
+        public async Task<string> CreateBuySellAsync(
+            CreateBuySellDTO createBuySell,
+            int currentUserId
+        )
         {
             // Obtener y validar el usuario actual
-            var currentUser =
-                await _userRepository.GetByIdAsync(currentUserId)
-                ?? throw new KeyNotFoundException("Usuario no encontrado.");
-            var isAdmin =
-                currentUser.UserType == UserType.Administrador
-                    ? true
-                    : throw new UnauthorizedAccessException(
-                        "Solo los administradores pueden crear publicaciones de compra/venta directamente publicadas."
-                    );
+            User? currentUser = await _userRepository.GetByIdAsync(currentUserId);
+            if (currentUser == null)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", currentUserId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(currentUserId, RoleNames.Admin);
+            bool isOfferor = await _userRepository.CheckRoleAsync(currentUserId, RoleNames.Offeror);
+            if (!isOfferor)
+            {
+                Log.Error(
+                    "El usuario con ID {UserId} no tiene permisos de oferente.",
+                    currentUserId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para crear publicaciones de compra/venta."
+                );
+            }
             // Validar que el usuario no tenga más de 3 reseñas pendientes como oferente
             var pendingReviewsCount = await _reviewService.GetPendingReviewsCountAsync(
                 currentUser,
                 RoleNames.Offeror
             );
-            if (pendingReviewsCount >= 3)
+            if (pendingReviewsCount >= 999)
             {
                 Log.Warning(
                     "Usuario {userId} intentó crear publicación de compra/venta con {PendingCount} reseñas pendientes",
@@ -186,26 +203,182 @@ namespace backend.src.Application.Services.Implements
                     "No se puede crear una publicacion de compra/venta mientras se tengan 3 o más reseñas pendientes."
                 );
             }
+
+            // Validacion de informacion de contacto
+            if (createBuySell.ShowEmail == false && createBuySell.ShowPhoneNumber == false)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} intentó crear una publicación de compra/venta sin mostrar ningún medio de contacto.",
+                    currentUserId
+                );
+                throw new InvalidOperationException(
+                    "Debes seleccionar al menos un medio de contacto para mostrar en la publicación (correo electrónico o número de teléfono)."
+                );
+            }
+
             // Mapeo principal DTO a Entidad
-            BuySell newBuySell = buySellDTO.Adapt<BuySell>();
+            BuySell newBuySell = createBuySell.Adapt<BuySell>();
             // Mapeo adicional y asignaciones
             newBuySell.UserId = currentUser.Id;
+            newBuySell.Images = new List<Image>(); // Inicializar la lista de imágenes vacía, se llenará después con las URLs de Cloudinary
             newBuySell.PublicationType = PublicationType.CompraVenta;
 
             newBuySell.ApprovalStatus = isAdmin
                 ? ApprovalStatus.Aceptada
                 : ApprovalStatus.Pendiente;
 
-            var createdBuySellResult = true; //await _buySellRepository.CreateBuySellAsync(newBuySell);
+            (BuySell createdBuySell, bool isCreated) =
+                await _publicationRepository.CreatePublicationAsync(newBuySell);
+
+            if (!isCreated)
+            {
+                Log.Error(
+                    "Error al crear la publicación de compra/venta para el usuario {UserId}.",
+                    currentUser.Id
+                );
+                throw new Exception(
+                    "No se pudo crear la publicación de compra/venta. Inténtalo de nuevo."
+                );
+            }
+
+            // Manejo de imagenes
+            if (createBuySell.Images != null && createBuySell.Images.Count > 0)
+            {
+                bool uploadResult = await _fileService.UploadBatchAsync(
+                    createBuySell.Images,
+                    createdBuySell
+                );
+                if (!uploadResult)
+                {
+                    Log.Error(
+                        "Error al subir las imágenes para la publicación de compra/venta con ID {BuySellId}.",
+                        createdBuySell.Id
+                    );
+                    await _publicationRepository.RollbackCreatedBuySellAsync(createdBuySell.Id); // Eliminar la publicación creada si las imágenes no se suben correctamente
+                    throw new Exception(
+                        "La publicación de compra/venta se creó, pero ocurrió un error al subir las imágenes. Inténtalo de nuevo."
+                    );
+                }
+            }
 
             Log.Information(
                 "Publicación de compra/venta creada exitosamente. ID: {BuySellId}, Título: {Title}, Usuario: {UserId}",
-                createdBuySellResult,
+                createdBuySell.Id,
                 newBuySell.Title,
                 currentUser.Id
             );
 
-            return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySellResult}";
+            return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySell.Id}";
+        }
+
+        public async Task<BuySellsForApplicantDTO> GetBuySellsAsync(
+            ExploreBuySellsSearchParamsDTO searchParams,
+            int? userId = null
+        )
+        {
+            var (buySells, totalCount) = await _publicationRepository.GetBuySellsFilteredAsync(
+                searchParams,
+                userId
+            );
+
+            int currentPage = searchParams.PageNumber;
+            int pageSize = searchParams.PageSize ?? _defaultPageSize;
+            int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            BuySellsForApplicantDTO buySellsForApplicantDTO = new BuySellsForApplicantDTO
+            {
+                BuySells = buySells.Adapt<List<BuySellForApplicantDTO>>(),
+                TotalPages = totalPages,
+                CurrentPage = currentPage,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+            };
+            return buySellsForApplicantDTO;
+        }
+
+        public async Task<BuySellDetailsForApplicantDTO> GetBuySellDetailsForApplicantAsync(
+            int buySellId,
+            int applicantId
+        )
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(applicantId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", applicantId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isApplicant = await _userRepository.CheckRoleAsync(
+                applicantId,
+                RoleNames.Applicant
+            );
+            if (!isApplicant)
+            {
+                Log.Warning(
+                    "El usuario con ID {UserId} no tiene permisos de postulante.",
+                    applicantId
+                );
+            }
+            // Validacion de oferta y estado
+            var buySell = await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                buySellId,
+                new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+            );
+            if (buySell == null)
+            {
+                Log.Error(
+                    "Publicación de compra/venta con ID {BuySellId} no encontrada.",
+                    buySellId
+                );
+                throw new KeyNotFoundException("Publicación de compra/venta no encontrada.");
+            }
+            if (buySell.IsAvailable == false)
+            {
+                Log.Warning(
+                    "La publicación de compra/venta con ID {BuySellId} no está disponible. Estado actual: {Status}",
+                    buySellId,
+                    buySell.Availability
+                );
+                throw new InvalidOperationException(
+                    "La publicación de compra/venta no está disponible."
+                );
+            }
+
+            BuySellDetailsForApplicantDTO buySellDetails =
+                buySell.Adapt<BuySellDetailsForApplicantDTO>();
+
+            return buySellDetails;
+        }
+
+        public async Task<BuySellDetailsForPublicDTO> GetBuySellDetailsForPublicAsync(int buySellId)
+        {
+            var buySell = await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                buySellId,
+                new PublicationQueryOptions { IncludeUser = true, IncludeImages = true }
+            );
+            if (buySell == null)
+            {
+                Log.Error(
+                    "Publicación de compra/venta con ID {BuySellId} no encontrada.",
+                    buySellId
+                );
+                throw new KeyNotFoundException("Publicación de compra/venta no encontrada.");
+            }
+            if (buySell.ApprovalStatus != ApprovalStatus.Aceptada)
+            {
+                Log.Warning(
+                    "La publicación de compra/venta con ID {BuySellId} no está disponible. Estado actual: {Status}",
+                    buySellId,
+                    buySell.ApprovalStatus
+                );
+                throw new InvalidOperationException(
+                    "La publicación de compra/venta no está disponible."
+                );
+            }
+
+            BuySellDetailsForPublicDTO buySellDetails = buySell.Adapt<BuySellDetailsForPublicDTO>();
+
+            return buySellDetails;
         }
 
         #endregion
@@ -356,12 +529,12 @@ namespace backend.src.Application.Services.Implements
                 Log.Error("Oferta con ID {OfferId} no encontrada.", offerId);
                 throw new KeyNotFoundException("Oferta no encontrada.");
             }
-            if (offer.ApprovalStatus != ApprovalStatus.Aceptada)
+            if (offer.IsAcceptingApplications == false)
             {
                 Log.Warning(
                     "La oferta con ID {OfferId} no está disponible para postulación. Estado actual: {Status}",
                     offerId,
-                    offer.ApprovalStatus
+                    offer.CurrentStatus
                 );
                 throw new InvalidOperationException(
                     "La oferta no está disponible para postulación."
@@ -457,6 +630,8 @@ namespace backend.src.Application.Services.Implements
             }
             MyPublicationDetailsDTO publicationDetails =
                 publication.Adapt<MyPublicationDetailsDTO>();
+
+            publicationDetails.MaxAppeals = _maxAppeals;
 
             return publicationDetails;
         }
@@ -669,6 +844,86 @@ namespace backend.src.Application.Services.Implements
             return result;
         }
 
+        public async Task<string> CancelPublicationManuallyAsync(
+            int publicationId,
+            int requestingUserId,
+            ClosePublicationRequestDTO? requestDTO = null
+        )
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(requestingUserId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", requestingUserId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+            bool isAdmin = await _userRepository.CheckRoleAsync(requestingUserId, RoleNames.Admin);
+            // Validacion de publicacion
+            Publication? publication =
+                await _publicationRepository.GetPublicationByIdAsync<Publication>(publicationId);
+            if (publication == null)
+            {
+                Log.Error("Publicación con ID {PublicationId} no encontrada.", publicationId);
+                throw new KeyNotFoundException("Publicación no encontrada.");
+            }
+            // Validacion de permisos (oferente o algun administrador)
+            if (publication.UserId != requestingUserId && !isAdmin)
+            {
+                Log.Error(
+                    "El usuario con ID {UserId} no tiene permisos para cancelar la publicación con ID {PublicationId}.",
+                    requestingUserId,
+                    publicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos para cancelar esta publicación."
+                );
+            }
+            // Validacion de tipo de publication
+            if (publication is Offer offer)
+            {
+                bool cancelResult = await CancelOfferAsync(offer, isAdmin, requestDTO);
+                if (!cancelResult)
+                {
+                    Log.Error(
+                        "Error al cancelar la oferta con ID {PublicationId} por parte del admin.",
+                        publicationId
+                    );
+                    throw new Exception("No se pudo cancelar la oferta. Inténtalo de nuevo.");
+                }
+                return cancelResult
+                    ? "Oferta cancelada exitosamente."
+                    : "No se pudo cancelar la oferta. Inténtalo de nuevo.";
+            }
+            else if (publication is BuySell sell)
+            {
+                if (sell.Availability == Availability.Cerrado)
+                {
+                    Log.Error(
+                        "La publicación de compra/venta con ID {PublicationId} ya está cerrada. No se realiza ninguna acción.",
+                        publicationId
+                    );
+                    throw new InvalidOperationException(
+                        "La publicación de compra/venta ya está cerrada."
+                    );
+                }
+                bool cancelResult = await CancelBuySellAsync(sell, isAdmin, requestDTO);
+                if (!cancelResult)
+                {
+                    Log.Error(
+                        "Error al cancelar la publicación de compra/venta con ID {PublicationId} por parte del admin.",
+                        publicationId
+                    );
+                    throw new Exception(
+                        "No se pudo cancelar la publicación de compra/venta. Inténtalo de nuevo."
+                    );
+                }
+                return cancelResult
+                    ? "Publicación de compra/venta cancelada exitosamente."
+                    : "No se pudo cancelar la publicación de compra/venta. Inténtalo de nuevo.";
+            }
+            return "Tipo de publicación no reconocido. No se pudo cancelar la publicación.";
+        }
+
         public async Task<string> AdvanceOfferManuallyAsync(int publicationId, int offerorId)
         {
             // Validacion de usuario
@@ -746,85 +1001,45 @@ namespace backend.src.Application.Services.Implements
             return $"Publicación avanzada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
         }
 
-        public async Task<string> CancelOfferManuallyAsync(
-            int publicationId,
-            int offerorId,
+        private async Task<bool> CancelOfferAsync(
+            Offer offer,
+            bool isAdmin,
             ClosePublicationRequestDTO? requestDTO = null
         )
         {
-            // Validacion de usuario
-            bool userExists = await _userRepository.ExistsByIdAsync(offerorId);
-            if (!userExists)
-            {
-                Log.Error("Usuario con ID {UserId} no encontrado.", offerorId);
-                throw new KeyNotFoundException("Usuario no encontrado.");
-            }
-            bool isOfferor = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Offeror);
-            if (!isOfferor)
-            {
-                Log.Error("El usuario con ID {UserId} no tiene permisos de oferente.", offerorId);
-                throw new UnauthorizedAccessException(
-                    "El usuario no tiene permisos para cancelar esta publicación."
-                );
-            }
-            // Validacion de publicacion y propiedad
-            var publication = await _publicationRepository.GetPublicationByIdAsync<Offer>(
-                publicationId,
-                new PublicationQueryOptions { TrackChanges = true, IncludeUser = true }
-            );
-            if (publication == null)
-            {
-                Log.Error(
-                    "Publicación del tipo oferta con ID {PublicationId} no encontrada.",
-                    publicationId
-                );
-                throw new KeyNotFoundException("Publicación no encontrada.");
-            }
-            // Validacion de permisos en caso de que la publicacion no le pertenezca al usuario
-            bool isAdmin = await _userRepository.CheckRoleAsync(offerorId, RoleNames.Admin);
-            if (publication.UserId != offerorId && !isAdmin)
-            {
-                Log.Error(
-                    "Usuario con ID {UserId} no es el propietario de la publicación con ID {PublicationId}.",
-                    offerorId,
-                    publicationId
-                );
-                throw new UnauthorizedAccessException(
-                    "No tienes permiso para cerrar esta publicación."
-                );
-            }
-            // Validacion de estado actual
-            if (!publication.IsAcceptingApplications)
-            {
-                Log.Error(
-                    "La publicación con ID {PublicationId} no está en un estado válido para cancelarse manualmente.",
-                    publicationId
-                );
-                throw new InvalidOperationException(
-                    "Solo se pueden cancelar manualmente las publicaciones que están en estado 'Recibiendo Postulaciones'."
-                );
-            }
             // Cierre de la oferta
-            publication.CancelOffer();
-            if (isAdmin && !string.IsNullOrEmpty(requestDTO!.ClosedByAdminReason))
-                publication.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
-            bool updateResult = await _publicationRepository.UpdateAsync(publication);
-            if (!updateResult)
-            {
-                Log.Error(
-                    "Error al cancelar la publicación con ID {PublicationId}.",
-                    publicationId
-                );
-                throw new Exception("No se pudo cancelar la publicación. Inténtalo de nuevo.");
-            }
+            offer.CancelOffer();
+            if (
+                isAdmin
+                && requestDTO != null
+                && !string.IsNullOrEmpty(requestDTO.ClosedByAdminReason)
+            )
+                offer.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
 
             //TODO: Enviar notificaciones a los postulantes informando de la cancelacion de la oferta.
             //TODO: Enviar notificacion al oferente si la accion fue realizada por un administrador.
             // Cancelar el trabajo programado para crear las calificaciones iniciales ya que el trabajo ya no se realizara
-            BackgroundJob.Delete(publication.FinishWorkAndInitializeReviewsJobId!);
-            BackgroundJob.Delete(publication.FinalizeAndCloseReviewsJobId!);
+            BackgroundJob.Delete(offer.FinishWorkAndInitializeReviewsJobId!);
+            BackgroundJob.Delete(offer.FinalizeAndCloseReviewsJobId!);
 
-            return "Publicación cancelada exitosamente.";
+            return await _publicationRepository.UpdateAsync(offer);
+        }
+
+        private async Task<bool> CancelBuySellAsync(
+            BuySell buySell,
+            bool isAdmin,
+            ClosePublicationRequestDTO? requestDTO = null
+        )
+        {
+            // Cierre de la publicación de compra/venta
+            buySell.Availability = Availability.Cerrado;
+            if (
+                isAdmin
+                && requestDTO != null
+                && !string.IsNullOrEmpty(requestDTO.ClosedByAdminReason)
+            )
+                buySell.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
+            return await _publicationRepository.UpdateAsync(buySell);
         }
         #endregion
 
@@ -912,6 +1127,142 @@ namespace backend.src.Application.Services.Implements
                 throw new Exception("No se pudo actualizar la publicación. Inténtalo de nuevo.");
             }
             return true;
+        }
+
+        public async Task<string> EditBuySellDetailsAsync(
+            int publicationId,
+            int applicantId,
+            EditMyBuySellDetailsDTO detailsDTO
+        )
+        {
+            // Validacion de usuario
+            bool userExists = await _userRepository.ExistsByIdAsync(applicantId);
+            if (!userExists)
+            {
+                Log.Error("Usuario con ID {UserId} no encontrado.", applicantId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            // Validacion de publicacion de compra/venta y estado
+            BuySell? buySell = await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                publicationId,
+                new PublicationQueryOptions { TrackChanges = true, IncludeImages = true }
+            );
+            if (buySell == null)
+            {
+                Log.Error(
+                    "Publicación de compra/venta con ID {PublicationId} no encontrada.",
+                    publicationId
+                );
+                throw new KeyNotFoundException("Publicación de compra/venta no encontrada.");
+            }
+            if (buySell.ApprovalStatus == ApprovalStatus.Rechazada)
+            {
+                Log.Error(
+                    "La publicación de compra/venta con ID {PublicationId} está en estado rechazada y no puede ser editada. Por favor apela la publicación para poder editar los detalles.",
+                    publicationId
+                );
+                throw new InvalidOperationException(
+                    "La publicación no está en estado aceptada. Por favor apela la publicación para poder editar los detalles."
+                );
+            }
+            if (buySell.UserId != applicantId)
+            {
+                Log.Error(
+                    "El usuario con ID {UserId} no es el oferente de la publicación con ID {PublicationId}.",
+                    applicantId,
+                    publicationId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para editar los detalles de esta publicación."
+                );
+            }
+
+            // Actualizar detalles de la publicacion
+            buySell = detailsDTO.Adapt(buySell);
+            // Toggle para volver a poner la publicacion en pendiente. Desactivada por ahora.
+            //buySell.ApprovalStatus = ApprovalStatus.Pendiente;
+
+            // Validar datos de contacto
+            buySell.IsEmailAvailable = detailsDTO.ShowEmail;
+            buySell.IsPhoneAvailable = detailsDTO.ShowPhoneNumber;
+            buySell.AdditionalContactEmail = detailsDTO.AdditionalContactEmail ?? null;
+            buySell.AdditionalContactPhoneNumber = detailsDTO.AdditionalContactPhoneNumber ?? null;
+
+            // Validar que las imagenes existan
+            if (detailsDTO.ImagesToDelete != null && detailsDTO.ImagesToDelete.Count > 0)
+                await _fileService.RemoveImagesFromBuySellAsync(detailsDTO.ImagesToDelete, buySell);
+            if (detailsDTO.ImagesToUpload != null && detailsDTO.ImagesToUpload.Count > 0)
+                await _fileService.UploadBatchAsync(detailsDTO.ImagesToUpload, buySell);
+
+            bool updateResult = await _publicationRepository.UpdateAsync(buySell);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al actualizar los detalles de la publicación con ID {PublicationId}.",
+                    publicationId
+                );
+                throw new Exception(
+                    "No se pudieron actualizar los detalles de la publicación. Inténtalo de nuevo."
+                );
+            }
+            return "Detalles de la publicación actualizados exitosamente.";
+        }
+
+        public async Task<string> ToggleBuySellVisibilityAsync(int buySellId, int offerorId)
+        {
+            // Validar que la publicación de compra/venta exista y sea del tipo correcto
+            var buySell = await _publicationRepository.GetPublicationByIdAsync<BuySell>(
+                buySellId,
+                new PublicationQueryOptions { TrackChanges = true }
+            );
+            if (buySell == null)
+            {
+                Log.Error(
+                    "Publicación de compra/venta con ID {BuySellId} no encontrada.",
+                    buySellId
+                );
+                throw new KeyNotFoundException("Publicación de compra/venta no encontrada.");
+            }
+            if (buySell.Availability == Availability.Cerrado)
+            {
+                Log.Error(
+                    "La publicación de compra/venta con ID {BuySellId} está cerrada y no se puede cambiar su visibilidad.",
+                    buySellId
+                );
+                throw new InvalidOperationException(
+                    "La publicación está cerrada y no se puede cambiar su visibilidad."
+                );
+            }
+            // Validar que el usuario sea el oferente de la publicación
+            if (buySell.UserId != offerorId)
+            {
+                Log.Error(
+                    "El usuario con ID {UserId} no es el oferente de la publicación de compra/venta con ID {BuySellId}.",
+                    offerorId,
+                    buySellId
+                );
+                throw new UnauthorizedAccessException(
+                    "No tienes permiso para cambiar la visibilidad de esta publicación."
+                );
+            }
+            // Cambiar la visibilidad de la publicación
+            buySell.Availability =
+                buySell.Availability == Availability.Disponible
+                    ? Availability.Vendido
+                    : Availability.Disponible;
+            bool updateResult = await _publicationRepository.UpdateAsync(buySell);
+            if (!updateResult)
+            {
+                Log.Error(
+                    "Error al cambiar la visibilidad de la publicación de compra/venta con ID {BuySellId}.",
+                    buySellId
+                );
+                throw new Exception(
+                    "No se pudo cambiar la visibilidad de la publicación. Inténtalo de nuevo."
+                );
+            }
+            return $"Visibilidad de la publicación cambiada exitosamente. Nueva disponibilidad: {buySell.Availability}.";
         }
 
         #region Background Jobs

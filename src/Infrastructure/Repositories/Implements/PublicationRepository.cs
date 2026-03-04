@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.BuySells;
 using backend.src.Application.DTOs.PublicationDTO.ExplorePublicationsDTOs.Offers;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
@@ -78,7 +79,10 @@ public class PublicationRepository : IPublicationRepository
         return await query.FirstOrDefaultAsync(p => p.Id == publicationId);
     }
 
-    public async Task<(List<Publication> publications, int totalCount)> GetPublicationsByUserIdFilteredAsync(
+    public async Task<(
+        List<Publication> publications,
+        int totalCount
+    )> GetPublicationsByUserIdFilteredAsync(
         int userId,
         UserPublicationsSearchParamsDTO searchParams
     )
@@ -149,7 +153,11 @@ public class PublicationRepository : IPublicationRepository
     {
         IQueryable<Offer> query = _context
             .Offers.Where(u => u.UserId != userId)
-            .Where(p => p.ApprovalStatus == ApprovalStatus.Aceptada)
+            .Where(p =>
+                p.ApprovalStatus == ApprovalStatus.Aceptada
+                && DateTime.UtcNow <= p.ApplicationDeadline
+                && p.WorkStartedAt == null
+            )
             .AsQueryable();
 
         // Filtrado
@@ -203,20 +211,53 @@ public class PublicationRepository : IPublicationRepository
     }
 
     public async Task<(IEnumerable<BuySell>?, int)> GetBuySellsFilteredAsync(
-        //TODO ExploreBuySellSearchParamsDTO searchParams,
-        int pageNumber,
-        int pageSize
+        ExploreBuySellsSearchParamsDTO searchParams,
+        int? userId = null
     )
     {
-        IQueryable<BuySell> query = _context.BuySells.AsQueryable();
-
-        //TODO Agregar filtrado, búsqueda y ordenamiento similar a GetOffersFilteredAsync
-
+        IQueryable<BuySell> query = _context
+            .BuySells.Where(bs =>
+                bs.UserId != userId && bs.Availability == Availability.Disponible || bs.Quantity > 0
+            )
+            .AsQueryable();
+        // Filtrado
+        // NO HAY FILTRADO POR AHORA
+        // Busqueda
+        if (!string.IsNullOrEmpty(searchParams.SearchTerm))
+        {
+            var searchTerm = searchParams.SearchTerm.ToLower();
+            query = query.Where(p =>
+                p.Title.ToLower().Contains(searchTerm)
+                || p.Description.ToLower().Contains(searchTerm)
+            );
+        }
+        //Ordenamiento
+        bool ascending = true; // Orden por defecto, true = asc, false = desc
+        if (!string.IsNullOrEmpty(searchParams.SortOrder))
+        {
+            ascending = searchParams.SortOrder == "asc";
+        }
+        if (!string.IsNullOrEmpty(searchParams.SortBy))
+        {
+            query = searchParams.SortBy switch
+            {
+                "Title" => ascending
+                    ? query.OrderBy(p => p.Title)
+                    : query.OrderByDescending(p => p.Title),
+                "CreatedAt" => ascending
+                    ? query.OrderBy(p => p.CreatedAt)
+                    : query.OrderByDescending(p => p.CreatedAt),
+                "Price" => ascending
+                    ? query.OrderBy(p => p.Price)
+                    : query.OrderByDescending(p => p.Price),
+                _ => query.OrderBy(p => p.Id),
+            };
+        }
         // Paginacion
         int totalCount = await query.CountAsync();
-        pageSize = pageSize == 0 ? _defaultPageSize : pageSize;
+        int pageSize = searchParams.PageSize ?? _defaultPageSize;
         var publications = await query
-            .Skip((pageNumber - 1) * pageSize)
+            .Skip((searchParams.PageNumber - 1) * pageSize)
             .Take(pageSize)
             .Include(p => p.User)
             .AsNoTracking()
@@ -415,6 +456,26 @@ public class PublicationRepository : IPublicationRepository
             .AsNoTracking()
             .ToListAsync();
         return (publications, totalCount);
+    }
+
+    public async Task RollbackCreatedBuySellAsync(int buySellId)
+    {
+        var buySell = await _context
+            .BuySells.Include(bs => bs.Images)
+            .FirstOrDefaultAsync(bs => bs.Id == buySellId);
+
+        if (buySell != null)
+        {
+            // Eliminar imágenes asociadas
+            if (buySell.Images != null && buySell.Images.Count != 0)
+            {
+                _context.Images.RemoveRange(buySell.Images);
+            }
+
+            // Eliminar la publicación de compra/venta
+            _context.BuySells.Remove(buySell);
+            await _context.SaveChangesAsync();
+        }
     }
 
     public async Task<int> SaveChangesAsync()
