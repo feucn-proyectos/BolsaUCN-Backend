@@ -122,7 +122,7 @@ namespace backend.src.Domain.Models
         /// <summary>
         /// Marca la oferta como trabajo completado, estableciendo la fecha de finalización del trabajo y permitiendo avanzar al estado de "Calificaciones en Proceso".
         /// </summary>
-        public void CompleteWork()
+        public void CompleteWork(int daysUntilReviewDeadline)
         {
             if (!WorkStartedAt.HasValue)
                 throw new InvalidOperationException("Trabajo no iniciado");
@@ -130,6 +130,7 @@ namespace backend.src.Domain.Models
                 throw new InvalidOperationException("Trabajo ya completado");
 
             WorkCompletedAt = DateTime.UtcNow;
+            ReviewDeadline = WorkCompletedAt.Value.AddDays(daysUntilReviewDeadline);
         }
 
         /// <summary>

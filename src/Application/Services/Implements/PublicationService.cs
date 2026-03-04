@@ -1392,7 +1392,7 @@ namespace backend.src.Application.Services.Implements
                 offerId
             );
             // Finalizar el trabajo y crear las reseñas iniciales
-            offer.CompleteWork();
+            offer.CompleteWork(_daysUntilReviewAutoClose);
             bool updateResult = await _publicationRepository.UpdateAsync(offer);
             if (!updateResult)
             {
