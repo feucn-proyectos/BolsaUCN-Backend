@@ -227,39 +227,39 @@ try
     #endregion
 
     #region Hangfire Dashboard + Recurring Jobs
-    // Asegurar el UI del dashboard de Hangfire sea solo accesible en desarrollo
+    // Hangfire Dashboard (solo en desarrollo)
     if (app.Environment.IsDevelopment())
     {
         app.UseHangfireDashboard();
-        // === Trabajos recurrentes ===
-        // User Jobs
-        RecurringJob.AddOrUpdate<IUserJobs>(
-            nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
-            job => job.DeleteUnconfirmedUserAccountsAsync(),
-            Cron.Weekly(DayOfWeek.Monday),
-            new RecurringJobOptions
-            {
-                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
-            }
-        );
-        // Whitelist Jobs
-        RecurringJob.AddOrUpdate<IWhitelistedTokenJobs>(
-            nameof(IWhitelistedTokenJobs.DeleteExpiredTokensAsync),
-            job => job.DeleteExpiredTokensAsync(),
-            Cron.Daily(),
-            new RecurringJobOptions
-            {
-                TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
-            }
-        );
-        Log.Information(
-            "Hangfire dashboard habilitado y job recurrente para cierre de reviews programado. Servidor en: http://localhost:5185/hangfire"
-        );
+        Log.Information("Hangfire dashboard habilitado en modo desarrollo");
     }
     else
     {
+        app.UseHangfireDashboard(); // TEST
         Log.Information("Servidor en modo producción, Hangfire dashboard deshabilitado");
     }
+    // === Trabajos recurrentes ===
+    // User Jobs
+    RecurringJob.AddOrUpdate<IUserJobs>(
+        nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
+        job => job.DeleteUnconfirmedUserAccountsAsync(),
+        Cron.Weekly(DayOfWeek.Monday),
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    // Whitelist Jobs
+    RecurringJob.AddOrUpdate<IWhitelistedTokenJobs>(
+        nameof(IWhitelistedTokenJobs.DeleteExpiredTokensAsync),
+        job => job.DeleteExpiredTokensAsync(),
+        Cron.Daily(),
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    Log.Information("Trabajos recurrentes de Hangfire (User y Whitelist) configurados");
 
     #endregion
     #region Middleware
