@@ -22,7 +22,7 @@ namespace backend.src.API.Controllers
         /// <returns>HTTP 200 OK when processing completes.</returns>
         [HttpPost("test-status-change")]
         public async Task<IActionResult> TestStatusChange(
-            [FromBody] PostulationStatusChangedEvent evt
+            [FromBody] ApplicationStatusChangedEvent evt
         )
         {
             await _notificationService.SendPostulationStatusChangeAsync(evt);
