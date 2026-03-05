@@ -5,6 +5,7 @@ using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -22,6 +23,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IOfferApplicationRepository _applicationRepository;
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IEventDispatcher _eventDispatcher;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
         private readonly IFileService _fileService;
@@ -33,6 +35,7 @@ namespace backend.src.Application.Services.Implements
             IOfferApplicationRepository applicationRepository,
             IPublicationRepository publicationRepository,
             IUserRepository userRepository,
+            IEventDispatcher eventDispatcher,
             INotificationService notificationService,
             IReviewService reviewService,
             IFileService fileService,
@@ -43,6 +46,7 @@ namespace backend.src.Application.Services.Implements
             _userRepository = userRepository;
             _publicationRepository = publicationRepository;
             _notificationService = notificationService;
+            _eventDispatcher = eventDispatcher;
             _reviewService = reviewService;
             _fileService = fileService;
             _configuration = configuration;
@@ -733,7 +737,23 @@ namespace backend.src.Application.Services.Implements
                 offer.AvailableSlots -= 1; // Reducir espacios disponibles si se acepta la postulación
 
             // Enviar notificación al postulante
-            //TODO: Personalizar el mensaje de la notificación según el nuevo estado
+            await _eventDispatcher.DispatchAsync(
+                new ApplicationStatusChangedEvent
+                {
+                    ApplicationId = application.Id,
+                    NewStatus = application.Status,
+                    OfferName = offer.Title,
+                    OfferorName = offer.User.FullName,
+                    ApplicantName = application.Student!.FullName,
+                    ApplicantEmail = application.Student.Email!,
+                }
+            );
+            Log.Information(
+                "Estado de postulación ID: {ApplicationId} actualizado a {NewStatus} por oferente ID: {OfferorId}",
+                applicationId,
+                parsedStatus,
+                offerorId
+            );
 
             if (offer.AvailableSlots <= 0)
             {

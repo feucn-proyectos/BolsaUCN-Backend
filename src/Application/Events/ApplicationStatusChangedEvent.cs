@@ -12,7 +12,7 @@ namespace backend.src.Application.Events
         /// <summary>
         /// ID de la postulación cuyo estado ha cambiado.
         /// </summary>
-        public int PostulationId { get; set; }
+        public int ApplicationId { get; set; }
 
         /// <summary>
         /// Nuevo estado de la postulación después del cambio.

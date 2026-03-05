@@ -1,3 +1,6 @@
+using backend.src.Application.Events;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Infrastructure.Data;
 using backend.src.Application.Jobs.Implements;
 using backend.src.Application.Jobs.Interfaces;
@@ -179,8 +182,9 @@ try
 
     #region DI
     // =========================
-    // 7) DI (repos/services/mappers/jobs)
+    // 7) DI (repos/services/mappers/jobs/events)
     // =========================
+    // === Mappers ===
     builder.Services.AddScoped<UserMapper>();
     builder.Services.AddScoped<PublicationMapper>();
     builder.Services.AddScoped<OfferMapper>();
@@ -189,6 +193,7 @@ try
     builder.Services.AddScoped<ProfileMapper>();
     builder.Services.AddScoped<ReviewMapper>();
 
+    // === Repositorios ===
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
     builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
@@ -198,7 +203,9 @@ try
     builder.Services.AddScoped<IPublicationRepository, PublicationRepository>();
     builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
     builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+    builder.Services.AddScoped<IEventDispatcher, EventDispatcher>();
 
+    // === Servicios ===
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
@@ -211,9 +218,16 @@ try
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
 
+    // === Jobs ===
     builder.Services.AddScoped<IUserJobs, UserJobs>();
     builder.Services.AddScoped<IOfferJobs, OfferJobs>();
     builder.Services.AddScoped<IWhitelistedTokenJobs, WhitelistedTokenJobs>();
+
+    // === Eventos y handlers ===
+    builder.Services.AddScoped<
+        IEventHandler<ApplicationStatusChangedEvent>,
+        SendEmailOnApplicationStatusChangedHandler
+    >();
 
     builder.Services.AddMapster();
 
