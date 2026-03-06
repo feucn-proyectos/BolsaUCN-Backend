@@ -22,7 +22,7 @@ namespace backend.src.Application.DTOs.PublicationDTO.ValidationDTOs
             ErrorMessage = "La razón de rechazo no puede exceder los 500 caracteres"
         )]
         [RegularExpression(
-            @"^[a-zA-Z0-9\s.,;:!?'""()\-]*$",
+            @"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s.,;:!?'""()\-]*$",
             ErrorMessage = "La razón de rechazo solo puede contener caracteres alfanuméricos y signos de puntuación básicos"
         )]
         public string? RejectionReason { get; set; }

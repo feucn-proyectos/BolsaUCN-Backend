@@ -11,7 +11,7 @@ namespace backend.src.Application.DTOs.ReviewDTO.CreateReviewDTOs
         [Required]
         [StringLength(500, ErrorMessage = "El comentario no puede exceder los 500 caracteres.")]
         [RegularExpression(
-            @"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s]+$",
+            @"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s.,;:!?'""()\-]*$",
             ErrorMessage = "El comentario contiene caracteres no permitidos."
         )]
         public required string Comment { get; set; }
