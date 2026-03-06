@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Actualización de Publicación - Bolsa FEUCN</title>
+  <title>Actualización de Postulación - Bolsa FEUCN</title>
   <style>
     /* Default (light mode) */
     body {
@@ -84,6 +84,40 @@
       font-weight: 500;
     }
 
+    .tips-box {
+      background-color: #FFF9E6;
+      border: 1px solid #FFD166;
+      border-left: 4px solid #FFD166;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .tips-title {
+      color: #856404;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .tip-item {
+      color: #1F2937;
+      margin: 10px 0;
+      padding-left: 24px;
+      position: relative;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .tip-item::before {
+      content: '•';
+      position: absolute;
+      left: 8px;
+      color: #6D5EF7;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
     .footer {
       background-color: #F9FAFB;
       color: #64748B;
@@ -149,6 +183,24 @@
         color: #E5E7EB;
       }
 
+      .tips-box {
+        background-color: rgba(255, 209, 102, 0.15);
+        border-color: #FFD166;
+        border-left-color: #FFD166;
+      }
+
+      .tips-title {
+        color: #FCD34D;
+      }
+
+      .tip-item {
+        color: #E5E7EB;
+      }
+
+      .tip-item::before {
+        color: #8B7EFF;
+      }
+
       .footer {
         background-color: #111827;
         color: #9CA3AF;
@@ -166,51 +218,65 @@
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
     <tr>
       <td align="center">
+        <!-- Main container -->
         <table width="600" cellpadding="0" cellspacing="0" class="container">
 
+          <!-- Header -->
           <tr>
             <td align="center" class="header">
-              <h1>Actualización de Publicación</h1>
+              <h1>Actualización de Postulación</h1>
               <p>Bolsa Estudiantil UCN</p>
             </td>
           </tr>
 
+          <!-- Body -->
           <tr>
             <td class="body-content">
 
               <p style="margin:0 0 20px 0; font-size:18px; font-weight:600; color:#6D5EF7;">
-                ¡Hola! Tu publicación ha sido revisada por un administrador
+                ¡Hola! Tenemos una actualización sobre tu postulación
               </p>
 
               <p style="margin:0 0 24px 0;">
-                El estado de tu publicación ha cambiado. A continuación te mostramos los detalles:
+                El estado de tu postulación ha cambiado. A continuación te mostramos los detalles:
               </p>
 
+              <!-- Offer Info Box -->
               <div class="info-box">
-                <div class="info-label">Título de la Publicación:</div>
-                <div class="info-value">{{PUBLICATION_TITLE}}</div>
+                <div class="info-label">Oferta:</div>
+                <div class="info-value">{{OFFER_NAME}}</div>
               </div>
 
+              <!-- Company Info Box -->
+              <div class="info-box">
+                <div class="info-label">Empresa/Oferente:</div>
+                <div class="info-value">{{COMPANY_NAME}}</div>
+              </div>
+
+              <!-- Status Badge -->
               <div style="text-align:center; margin:28px 0;">
                 <div class="info-label" style="margin-bottom:12px; text-align:center;">Estado Actual:</div>
                 <span class="status-badge">{{NEW_STATUS}}</span>
               </div>
 
-              {{REJECTED_BLOCK}}
-
-              <p style="margin-top: 24px;">
-                Si tu publicación fue <strong>Publicada</strong>, ya está visible para los usuarios en la plataforma.
-                Si fue <strong>Rechazada</strong>, revisa que cumpla con todos los reglamentos.
-              </p>
+              <!-- Tips Section -->
+              <div class="tips-box">
+                <div class="tips-title">Consejos para estudiantes UCN</div>
+                <div class="tip-item">Mantén tu perfil y CV actualizados en la plataforma</div>
+                <div class="tip-item">Revisa regularmente las nuevas ofertas disponibles</div>
+                <div class="tip-item">Postula a múltiples ofertas para aumentar tus oportunidades</div>
+                <div class="tip-item">Prepárate para entrevistas investigando sobre las empresas</div>
+              </div>
 
               <p style="margin:24px 0 0 0; font-size:14px; color:#64748B;">
-                Puedes ver más detalles y gestionar tus publicaciones ingresando a tu perfil en la plataforma de Bolsa
+                Puedes ver más detalles y gestionar tus postulaciones ingresando a tu perfil en la plataforma de Bolsa
                 Estudiantil UCN.
               </p>
 
             </td>
           </tr>
 
+          <!-- Footer -->
           <tr>
             <td class="footer">
               <p style="font-weight:600; color:#64748B;">Bolsa Estudiantil UCN</p>
@@ -220,6 +286,7 @@
                 <a href="mailto:bolsaestudiantil@ucn.cl">bolsaestudiantil@ucn.cl</a>
               </p>
               <p style="margin:16px 0 0 0; font-size:11px; opacity:0.75;">
+                Recibiste este correo porque tienes una postulación activa en nuestra plataforma.<br>
                 Este es un correo automático, por favor no responder.
               </p>
             </td>

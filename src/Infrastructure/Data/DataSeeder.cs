@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace backend.src.Application.Infrastructure.Data
+namespace backend.src.Infrastructure.Data
 {
     public class DataSeeder
     {

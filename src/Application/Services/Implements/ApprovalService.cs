@@ -1,4 +1,6 @@
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -12,6 +14,7 @@ namespace backend.src.Application.Services.Implements
     public class ApprovalService : IApprovalService
     {
         private readonly IPublicationService _publicationService;
+        private readonly IEventDispatcher _eventDispatcher;
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
@@ -19,12 +22,14 @@ namespace backend.src.Application.Services.Implements
 
         public ApprovalService(
             IPublicationService publicationService,
+            IEventDispatcher eventDispatcher,
             IPublicationRepository publicationRepository,
             IUserRepository userRepository,
             IConfiguration configuration
         )
         {
             _publicationService = publicationService;
+            _eventDispatcher = eventDispatcher;
             _publicationRepository = publicationRepository;
             _userRepository = userRepository;
             _configuration = configuration;
@@ -101,6 +106,25 @@ namespace backend.src.Application.Services.Implements
                 newStatus,
                 rejectionReason
             );
+
+            Log.Information(
+                "El administrador con ID: {AdminUserId} ha {Action} la publicación con ID: {PublicationId}.",
+                userId,
+                actionDTO.Action == "publish" ? "publicado" : "rechazado",
+                publicationId
+            );
+
+            // Se le envia una notificacion al oferente sobre la decision tomada por el admin
+            await _eventDispatcher.DispatchAsync(
+                new PublicationStatusChangedEvent
+                {
+                    PublicationId = publication.Id,
+                    PublicationTitle = publication.Title,
+                    NewStatus = newStatus.ToString(),
+                    OfferorEmail = publication.User.Email!,
+                }
+            );
+
             return new PublicationApprovalResultDTO
             {
                 PublicationId = publication.Id,

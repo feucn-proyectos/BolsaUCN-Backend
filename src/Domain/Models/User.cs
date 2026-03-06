@@ -125,6 +125,8 @@ namespace backend.src.Domain.Models
         /// </summary>
         public DateTime? LastLoginAt { get; set; }
 
+        public bool AllowNotifications { get; set; } = true;
+
         // === PUBLICACIONES ===
 
         /// <summary>

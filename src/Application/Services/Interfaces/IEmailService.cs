@@ -1,4 +1,5 @@
 using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Domain.Models;
 
 namespace backend.src.Application.Services.Interfaces
 {
@@ -40,7 +41,10 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="templateName">Template filename without extension.</param>
         /// <param name="code">Optional code to inject into the template.</param>
         /// <returns>Rendered HTML content.</returns>
-        Task<string> LoadTemplateAsync(string templateName, string code);
+        Task<string> LoadTemplateAsync(
+            string templateName,
+            Dictionary<string, string>? templateData = null
+        );
 
         /// <summary>
         /// Sends an email notifying a student that their application status has changed.
@@ -49,7 +53,7 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="offerName">Offer title.</param>
         /// <param name="companyName">Company name.</param>
         /// <param name="newStatus">New application status.</param>
-        Task<bool> SendPostulationStatusChangeEmailAsync(
+        Task<bool> SendApplicationStatusChangeEmailAsync(
             string email,
             string offerName,
             string companyName,
@@ -65,16 +69,63 @@ namespace backend.src.Application.Services.Interfaces
         Task<bool> SendChangeEmailVerificationEmailAsync(string newEmail, string code);
 
         /// <summary>
-        /// Sends an email notifying the user that their publication status has changed (e.g., approved/rejected).
+        /// Envia un correo notificando a los usuarios involucrados que las reseñas iniciales han sido creadas para una oferta, incluyendo detalles relevantes en el correo.
         /// </summary>
-        /// <param name="recipientEmail">Recipient user email.</param>
-        /// <param name="publicationTitle">Publication title.</param>
-        /// <param name="newStatus">New status text (e.g., Publicada, Rechazada).</param>
-        Task<bool> SendPublicationStatusChangeEmailAsync(
-            int? publicationId,
+        /// <param name="recipientEmail">Correo electrónico del destinatario.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendInitialReviewsCreatedEmailAsync(
             string recipientEmail,
-            string publicationTitle,
-            string newStatus
+            Dictionary<string, string> templateData
         );
+
+        /// <summary>
+        /// Envia un correo notificando a los usuarios involucrados que una publicación ha sido cerrada por un administrador, incluyendo detalles relevantes en el correo.
+        /// </summary>
+        /// <param name="recipientEmail">Correo electrónico del destinatario.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendPublicationClosedByAdminEmailAsync(
+            string recipientEmail,
+            Dictionary<string, string> templateData
+        );
+
+        /// <summary>
+        /// Envia un correo notificando a un postulante que la oferta a la que postuló ha sido cancelada.
+        /// </summary>
+        /// <param name="email">Correo electrónico del postulante.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendOfferCancelledForApplicantEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        );
+
+        /// <summary>
+        /// Envia un correo notificando a un usuario que el estado de su publicación ha cambiado (ej: aprobada/rechazada).
+        /// </summary>
+        /// <param name="email">Correo electrónico del usuario.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendPublicationStatusChangedEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        );
+
+        /// <summary>
+        /// Envia un correo con un resumen diario de notificaciones pendientes para un usuario específico.
+        /// </summary>
+        /// <param name="email">Correo electrónico del usuario.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendDailyDigestAsync(string email, Dictionary<string, string> templateData);
+
+        /// <summary>
+        /// Envia un correo con un resumen diario de notificaciones pendientes para los administradores.
+        /// </summary>
+        /// <param name="email">Correo electrónico del administrador.</param>
+        /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
+        /// <returns></returns>
+        Task<bool> SendDailyAdminDigestAsync(string email, Dictionary<string, string> templateData);
     }
 }

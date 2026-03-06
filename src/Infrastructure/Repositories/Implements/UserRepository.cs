@@ -51,6 +51,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await query.FirstOrDefaultAsync(u => u.Id == userId);
         }
 
+        public async Task<IList<User>> GetAllByRoleAsync(string role)
+        {
+            var usersInRole = await _userManager.GetUsersInRoleAsync(role);
+            return usersInRole;
+        }
+
         public async Task<bool> ExistsByIdAsync(int id)
         {
             return await _userManager.Users.AnyAsync(u => u.Id == id);

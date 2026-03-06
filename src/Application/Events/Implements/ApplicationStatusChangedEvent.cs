@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using backend.src.Application.Events.Implements;
 using backend.src.Domain.Models;
 
-namespace backend.src.Application.Events
+namespace backend.src.Application.Events.Implements
 {
     /// <summary>
     /// Evento que se dispara cuando el estado de una postulación cambia, contiene información relevante para notificar al estudiante.

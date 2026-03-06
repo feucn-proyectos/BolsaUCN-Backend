@@ -27,6 +27,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IFileService _fileService;
+        private readonly INotificationService _notificationService;
         private readonly IVerificationCodeRepository _verificationCodeRepository;
         private readonly int _daysOfUnconfirmedUserRetention;
         private readonly int _daysOfUnconfirmedPendingEmailChangeRetention;
@@ -39,7 +40,8 @@ namespace backend.src.Application.Services.Implements
             IVerificationCodeRepository verificationCodeRepository,
             IEmailService emailService,
             ITokenService tokenService,
-            IFileService fileService
+            IFileService fileService,
+            INotificationService notificationService
         )
         {
             _configuration = configuration;
@@ -50,6 +52,7 @@ namespace backend.src.Application.Services.Implements
             _verificationCodeRepository = verificationCodeRepository;
             _tokenService = tokenService;
             _fileService = fileService;
+            _notificationService = notificationService;
             _daysOfUnconfirmedUserRetention = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysOfUnconfirmedUserRetention"
             );
@@ -143,6 +146,12 @@ namespace backend.src.Application.Services.Implements
                     user.Id,
                     user.Email
                 );
+
+                // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se registren muchos usuarios en poco tiempo.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.UsuarioRegistrado,
+                    $"Nuevo usuario registrado: {user.Email}."
+                );
                 return "Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.";
             }
             return "El usuario fue registrado pero ocurrió un error al enviar el correo de verificación. Por favor, solicita un nuevo código de verificación.";
@@ -234,6 +243,12 @@ namespace backend.src.Application.Services.Implements
                     user.Id,
                     user.Email
                 );
+
+                // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se registren muchos usuarios en poco tiempo.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.UsuarioRegistrado,
+                    $"Nuevo usuario registrado: {user.Email}."
+                );
                 return "Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.";
             }
             return "El usuario fue registrado pero ocurrió un error al enviar el correo de verificación. Por favor, solicita un nuevo código de verificación.";
@@ -322,6 +337,12 @@ namespace backend.src.Application.Services.Implements
                     "Empresa registrada exitosamente con ID: {UserId}, Email: {Email}",
                     user.Id,
                     user.Email
+                );
+
+                // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se registren muchos usuarios en poco tiempo.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.UsuarioRegistrado,
+                    $"Nuevo usuario registrado: {user.Email}."
                 );
                 return "Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.";
             }
@@ -450,6 +471,12 @@ namespace backend.src.Application.Services.Implements
                     user.Id,
                     user.Email,
                     role
+                );
+
+                // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se registren muchos usuarios en poco tiempo.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.UsuarioRegistrado,
+                    $"Nuevo usuario registrado: {user.Email}."
                 );
                 return "Usuario registrado exitosamente. Por favor, verifica tu correo electrónico.";
             }
@@ -1628,6 +1655,35 @@ namespace backend.src.Application.Services.Implements
             await _applicationRepository.MarkCvAsInvalidAsync(user.Id);
 
             return "CV eliminado exitosamente";
+        }
+
+        public async Task<string> ToggleAllowNotificationsByIdAsync(int userId)
+        {
+            // Validar usuario
+            Log.Information("Buscando usuario con la ID: {UserId}", userId);
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { TrackChanges = true }
+            );
+            if (user == null)
+            {
+                Log.Error("Usuario no encontrado con la ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            user.AllowNotifications = !user.AllowNotifications;
+            bool result = await _userRepository.UpdateAsync(user);
+            if (!result)
+            {
+                Log.Error(
+                    "Error al actualizar la configuración de notificaciones para el usuario ID: {UserId}",
+                    user.Id
+                );
+                throw new Exception("Error al actualizar la configuración de notificaciones.");
+            }
+
+            string status = user.AllowNotifications ? "habilitadas" : "deshabilitadas";
+            return $"Notificaciones {status} exitosamente.";
         }
         #endregion
 

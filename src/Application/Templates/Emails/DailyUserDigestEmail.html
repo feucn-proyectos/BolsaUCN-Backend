@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevas Postulaciones Recibidas - Bolsa FEUCN</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F9FAFB;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      color: #1F2937;
+    }
+
+    .container {
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 600px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #6D5EF7 0%, #8B7EFF 100%);
+      color: #ffffff;
+      padding: 32px 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 15px;
+      opacity: 0.95;
+    }
+
+    .body-content {
+      padding: 32px 24px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #1F2937;
+    }
+
+    .greeting {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #6D5EF7;
+    }
+
+    .summary-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6D5EF7 0%, #8B7EFF 100%);
+      color: #ffffff;
+      padding: 12px 28px;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 12px 0;
+      box-shadow: 0 2px 4px rgba(109, 94, 247, 0.2);
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      margin: 28px 0;
+      gap: 12px;
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 20px 16px;
+      background-color: #F3F0FF;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #6D5EF7;
+      margin: 0 0 8px 0;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #64748B;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .description {
+      margin: 24px 0;
+      font-size: 15px;
+      color: #64748B;
+      line-height: 1.6;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #6D5EF7 0%, #8B7EFF 100%);
+      color: #ffffff;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 24px 0;
+      box-shadow: 0 4px 6px rgba(109, 94, 247, 0.25);
+      transition: transform 0.2s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(109, 94, 247, 0.35);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #E5E7EB 50%, transparent);
+      margin: 32px 0;
+    }
+
+    .footer {
+      background-color: #F9FAFB;
+      color: #64748B;
+      padding: 24px;
+      font-size: 13px;
+      text-align: center;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .footer p {
+      margin: 0 0 8px 0;
+    }
+
+    .footer p:last-child {
+      margin-bottom: 0;
+    }
+
+    .footer-brand {
+      font-weight: 600;
+      color: #6D5EF7;
+    }
+
+    a {
+      color: #6D5EF7;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #111827;
+        color: #E5E7EB;
+      }
+
+      .container {
+        background-color: #1F2937;
+        border: 1px solid #374151;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #7C6EFF 0%, #9B8FFF 100%);
+      }
+
+      .body-content {
+        color: #E5E7EB;
+      }
+
+      .greeting {
+        color: #8B7EFF;
+      }
+
+      .summary-badge {
+        background: linear-gradient(135deg, #7C6EFF 0%, #9B8FFF 100%);
+        box-shadow: 0 2px 4px rgba(124, 110, 255, 0.3);
+      }
+
+      .stat-box {
+        background-color: rgba(109, 94, 247, 0.15);
+      }
+
+      .stat-number {
+        color: #8B7EFF;
+      }
+
+      .stat-label {
+        color: #9CA3AF;
+      }
+
+      .description {
+        color: #9CA3AF;
+      }
+
+      .cta-button {
+        background: linear-gradient(135deg, #7C6EFF 0%, #9B8FFF 100%);
+        box-shadow: 0 4px 6px rgba(124, 110, 255, 0.3);
+      }
+
+      .cta-button:hover {
+        box-shadow: 0 6px 12px rgba(124, 110, 255, 0.4);
+      }
+
+      .divider {
+        background: linear-gradient(to right, transparent, #374151 50%, transparent);
+      }
+
+      .footer {
+        background-color: #111827;
+        color: #9CA3AF;
+        border-top-color: #374151;
+      }
+
+      .footer-brand {
+        color: #8B7EFF;
+      }
+
+      a {
+        color: #8B7EFF;
+      }
+    }
+
+    @media only screen and (max-width: 600px) {
+      .header h1 {
+        font-size: 20px;
+      }
+
+      .stats-container {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .stat-box {
+        width: 100%;
+      }
+
+      .stat-number {
+        font-size: 32px;
+      }
+
+      .cta-button {
+        display: block;
+        text-align: center;
+        padding: 12px 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" class="container">
+
+          <tr>
+            <td class="header">
+              <h1>Nuevas Postulaciones Recibidas</h1>
+              <p>Bolsa Estudiantil UCN</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="body-content">
+
+              <p class="greeting">¡Hola {{USER_NAME}}!</p>
+
+              <p style="margin:0 0 24px 0;">
+                Has recibido nuevas postulaciones en tus ofertas publicadas. Aquí está tu resumen diario:
+              </p>
+
+              <div style="text-align:center; margin:32px 0;">
+                <div class="stat-box" style="max-width:300px; margin:0 auto;">
+                  <p class="stat-number">{{NEW_APPLICATIONS}}</p>
+                  <p class="stat-label">Nuevas Postulaciones</p>
+                </div>
+              </div>
+
+              <p class="description">
+                Revisa los perfiles de los postulantes y responde a tiempo para no perder talento. Los estudiantes están
+                esperando tu respuesta.
+              </p>
+
+              <div style="text-align:center;">
+                <a href="https://bolsafeucn.cl/offerer/your-publications/{{OFFER_ID}}" class="cta-button">Ver Postulaciones</a>
+              </div>
+
+              <div class="divider"></div>
+
+              <p style="margin:0; font-size:14px; color:#64748B;">
+                Este es un correo automático para mantenerte informado sobre las postulaciones recibidas. Responder
+                rápidamente mejora tu reputación como oferente.
+              </p>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td class="footer">
+              <p class="footer-brand">Bolsa Estudiantil UCN</p>
+              <p style="opacity:0.85;">Universidad Catolica del Norte</p>
+              <p style="margin:12px 0 0 0;">
+                Si tienes preguntas, contactanos en
+                <a href="mailto:bolsaestudiantil@ucn.cl">bolsaestudiantil@ucn.cl</a>
+              </p>
+              <p style="margin:16px 0 0 0; font-size:11px; opacity:0.75;">
+                Recibiste este correo porque has recibido nuevas postulaciones en tus ofertas.<br>
+                Este es un correo automático, por favor no responder.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

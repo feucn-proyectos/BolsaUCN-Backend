@@ -5,6 +5,7 @@ using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
+using backend.src.Application.Events.Implements;
 using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -200,6 +201,12 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("No se pudo crear la postulación");
             }
+
+            // Guardar la notification para el oferente para encolarla
+            await _notificationService.CreateUserNotificationAsync(
+                offer.UserId,
+                UserNotificationType.NuevaPostulacion
+            );
 
             return "Tu postulación ha sido creada exitosamente.";
         }
@@ -736,7 +743,7 @@ namespace backend.src.Application.Services.Implements
             if (parsedStatus == ApplicationStatus.Aceptada)
                 offer.AvailableSlots -= 1; // Reducir espacios disponibles si se acepta la postulación
 
-            // Enviar notificación al postulante
+            // Evento para notificar al estudiante sobre el cambio de estado de su postulación
             await _eventDispatcher.DispatchAsync(
                 new ApplicationStatusChangedEvent
                 {
@@ -748,17 +755,18 @@ namespace backend.src.Application.Services.Implements
                     ApplicantEmail = application.Student.Email!,
                 }
             );
-            Log.Information(
-                "Estado de postulación ID: {ApplicationId} actualizado a {NewStatus} por oferente ID: {OfferorId}",
-                applicationId,
-                parsedStatus,
-                offerorId
-            );
 
+            // Evento para cerrar las postulaciones si se acaban los cupos para que estas no queden huerfanas
             if (offer.AvailableSlots <= 0)
-            {
-                BackgroundJob.Reschedule(offer.CloseApplicationsJobId!.ToString(), DateTime.UtcNow);
-            }
+                await _eventDispatcher.DispatchAsync(
+                    new OfferSlotsFilledEvent
+                    {
+                        OfferId = offer.Id,
+                        OfferTitle = offer.Title,
+                        OfferorId = offer.UserId,
+                        CloseApplicationsJobId = offer.CloseApplicationsJobId!,
+                    }
+                );
             // Un solo SaveChangesAsync para actualizar ambos la postulación y la oferta (en caso de aceptar la postulación)
             bool updateResult = await _applicationRepository.SaveChangesAsync();
             if (!updateResult)
@@ -769,6 +777,12 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("No se pudo actualizar el estado de la postulación");
             }
+            Log.Information(
+                "Estado de postulación ID: {ApplicationId} actualizado a {NewStatus} por oferente ID: {OfferorId}",
+                applicationId,
+                parsedStatus,
+                offerorId
+            );
             return "El estado de la postulación ha sido actualizado con éxito.";
         }
 

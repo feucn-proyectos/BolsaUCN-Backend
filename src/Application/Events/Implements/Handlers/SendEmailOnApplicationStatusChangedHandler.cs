@@ -4,21 +4,16 @@ using backend.src.Domain.Models;
 using backend.src.Infrastructure.Repositories.Interfaces;
 using Serilog;
 
-namespace backend.src.Application.Events.Implements
+namespace backend.src.Application.Events.Implements.Handlers
 {
     public class SendEmailOnApplicationStatusChangedHandler
         : IEventHandler<ApplicationStatusChangedEvent>
     {
         private readonly IEmailService _emailService;
-        private readonly INotificationRepository _notificationRepository;
 
-        public SendEmailOnApplicationStatusChangedHandler(
-            IEmailService emailService,
-            INotificationRepository notificationRepository
-        )
+        public SendEmailOnApplicationStatusChangedHandler(IEmailService emailService)
         {
             _emailService = emailService;
-            _notificationRepository = notificationRepository;
         }
 
         public async Task HandleAsync(
@@ -43,7 +38,7 @@ namespace backend.src.Application.Events.Implements
                     + "Puedes revisar los detalles de tu postulación en tu perfil.\n\n"
                     + "Saludos,\nEquipo de BolsaFeUCN";
 
-                await _emailService.SendPostulationStatusChangeEmailAsync(
+                await _emailService.SendApplicationStatusChangeEmailAsync(
                     evt.ApplicantEmail,
                     evt.OfferName,
                     evt.OfferorName,
@@ -55,7 +50,7 @@ namespace backend.src.Application.Events.Implements
                 Log.Error(
                     ex,
                     "Error al enviar email de cambio de estado para postulación {PostulationId}",
-                    evt.PostulationId
+                    evt.ApplicationId
                 );
                 throw;
             }

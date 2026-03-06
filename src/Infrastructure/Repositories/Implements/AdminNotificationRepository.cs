@@ -1,36 +1,37 @@
+using backend.src.Domain.Models;
 using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace backend.src.Infrastructure.Repositories.Implements;
-
-public class AdminNotificationRepository : IAdminNotificationRepository
+namespace backend.src.Infrastructure.Repositories.Implements
 {
-    private readonly AppDbContext _context;
-
-    public AdminNotificationRepository(AppDbContext context)
+    public class AdminNotificationRepository : IAdminNotificationRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task AddAsync(AdminNotification notification)
-    {
-        _context.AdminNotifications.Add(notification);
-        await _context.SaveChangesAsync();
-    }
+        public AdminNotificationRepository(AppDbContext context)
+        {
+            _context = context;
+        }
 
-    public async Task<IEnumerable<AdminNotification>> GetAllAsync()
-    {
-        return await _context.AdminNotifications.OrderByDescending(n => n.CreatedAt).ToListAsync();
-    }
+        public async Task AddAsync(AdminNotification notification)
+        {
+            _context.AdminNotifications.Add(notification);
+            await _context.SaveChangesAsync();
+        }
 
-    public async Task<AdminNotification?> GetByIdAsync(int id)
-    {
-        return await _context.AdminNotifications.FirstOrDefaultAsync(n => n.Id == id);
-    }
+        public async Task<List<AdminNotification>> GetAllUnsentAsync()
+        {
+            return await _context
+                .AdminNotifications.Where(n => !n.IsSent)
+                .OrderBy(n => n.CreatedAt)
+                .ToListAsync();
+        }
 
-    public async Task UpdateAsync(AdminNotification notification)
-    {
-        _context.AdminNotifications.Update(notification);
-        await _context.SaveChangesAsync();
+        public async Task UpdateRangeAsync(List<AdminNotification> notifications)
+        {
+            _context.AdminNotifications.UpdateRange(notifications);
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oferta Cancelada - Bolsa FEUCN</title>
+    <style>
+        /* Default (light mode) */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F9FAFB;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            color: #1F2937;
+        }
+
+        .container {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 600px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+            color: #ffffff;
+            padding: 32px 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.95;
+        }
+
+        .body-content {
+            padding: 32px 24px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #1F2937;
+        }
+
+        .info-box {
+            background-color: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 16px 20px;
+            margin: 12px 0;
+            border-radius: 6px;
+        }
+
+        .info-label {
+            color: #D97706;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .info-value {
+            color: #1F2937;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .reason-box {
+            background-color: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            border-left: 4px solid #EF4444;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 24px 0;
+        }
+
+        .reason-title {
+            color: #991B1B;
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+
+        .reason-text {
+            color: #1F2937;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .encouragement-box {
+            background-color: #F3F0FF;
+            border-left: 4px solid #6D5EF7;
+            padding: 20px 24px;
+            margin: 24px 0;
+            border-radius: 6px;
+        }
+
+        .encouragement-title {
+            color: #6D5EF7;
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+
+        .encouragement-item {
+            color: #1F2937;
+            margin: 10px 0;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .encouragement-item::before {
+            content: '✓';
+            position: absolute;
+            left: 8px;
+            color: #6D5EF7;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .footer {
+            background-color: #F9FAFB;
+            color: #64748B;
+            padding: 24px;
+            font-size: 13px;
+            text-align: center;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .footer p {
+            margin: 0 0 8px 0;
+        }
+
+        .footer p:last-child {
+            margin-bottom: 0;
+        }
+
+        a {
+            color: #6D5EF7;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #111827;
+                color: #E5E7EB;
+            }
+
+            .container {
+                background-color: #1F2937;
+                border: 1px solid #374151;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            }
+
+            .header {
+                background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+            }
+
+            .body-content {
+                color: #E5E7EB;
+            }
+
+            .info-box {
+                background-color: rgba(245, 158, 11, 0.15);
+                border-left-color: #FBBF24;
+            }
+
+            .info-label {
+                color: #FBBF24;
+            }
+
+            .info-value {
+                color: #E5E7EB;
+            }
+
+            .reason-box {
+                background-color: rgba(239, 68, 68, 0.15);
+                border-color: #FCA5A5;
+                border-left-color: #EF4444;
+            }
+
+            .reason-title {
+                color: #FCA5A5;
+            }
+
+            .reason-text {
+                color: #E5E7EB;
+            }
+
+            .encouragement-box {
+                background-color: rgba(109, 94, 247, 0.15);
+                border-left-color: #8B7EFF;
+            }
+
+            .encouragement-title {
+                color: #8B7EFF;
+            }
+
+            .encouragement-item {
+                color: #E5E7EB;
+            }
+
+            .encouragement-item::before {
+                color: #8B7EFF;
+            }
+
+            .footer {
+                background-color: #111827;
+                color: #9CA3AF;
+                border-top-color: #374151;
+            }
+
+            a {
+                color: #8B7EFF;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+        <tr>
+            <td align="center">
+                <!-- Main container -->
+                <table width="600" cellpadding="0" cellspacing="0" class="container">
+
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" class="header">
+                            <h1>Oferta Cancelada</h1>
+                            <p>Bolsa Estudiantil UCN</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td class="body-content">
+
+                            <p style="margin:0 0 20px 0; font-size:18px; font-weight:600; color:#F59E0B;">
+                                Lamentamos informarte que una oferta a la que postulaste ha sido cancelada
+                            </p>
+
+                            <p style="margin:0 0 24px 0;">
+                                La oferta a la que habías aplicado ha sido cancelada{{CANCELLED_BY_ADMIN_TEXT}}.
+                                Entendemos que esto
+                                puede ser decepcionante, pero queremos que sepas que hay muchas otras oportunidades
+                                disponibles en
+                                nuestra plataforma.
+                            </p>
+
+                            <!-- Offer Info Box -->
+                            <div class="info-box">
+                                <div class="info-label">Oferta Cancelada:</div>
+                                <div class="info-value">{{OFFER_TITLE}}</div>
+                            </div>
+
+                            <!-- Reason Box -->
+                            <div class="reason-box">
+                                <div class="reason-title">Razón de la cancelación</div>
+                                <p class="reason-text">{{CANCEL_REASON}}</p>
+                            </div>
+
+                            <!-- Encouragement Section -->
+                            <div class="encouragement-box">
+                                <div class="encouragement-title">No te desanimes, sigue buscando</div>
+                                <div class="encouragement-item">Esta cancelación no refleja tu perfil ni tus capacidades
+                                </div>
+                                <div class="encouragement-item">Explora otras ofertas activas en la plataforma</div>
+                                <div class="encouragement-item">Mantén tu perfil actualizado para futuras oportunidades
+                                </div>
+                                <div class="encouragement-item">Considera ampliar tus intereses a diferentes áreas</div>
+                            </div>
+
+                            <p style="margin:24px 0 0 0; font-size:14px; color:#64748B;">
+                                Tu postulación ha sido automáticamente cerrada. No necesitas realizar ninguna acción
+                                adicional. Te
+                                invitamos a seguir explorando las ofertas disponibles en Bolsa Estudiantil UCN.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer">
+                            <p style="font-weight:600; color:#64748B;">Bolsa Estudiantil UCN</p>
+                            <p style="opacity:0.85;">Universidad Católica del Norte</p>
+                            <p style="margin:12px 0 0 0;">
+                                Si tienes preguntas, contáctanos en
+                                <a href="mailto:bolsaestudiantil@ucn.cl">bolsaestudiantil@ucn.cl</a>
+                            </p>
+                            <p style="margin:16px 0 0 0; font-size:11px; opacity:0.75;">
+                                Recibiste este correo porque habías postulado a esta oferta.<br>
+                                Este es un correo automático, por favor no responder.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
