@@ -19,6 +19,7 @@ namespace backend.src.Infrastructure.Data
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
             var backgroundJobs = serviceProvider.GetRequiredService<IOfferJobs>();
+            var env = serviceProvider.GetRequiredService<IWebHostEnvironment>();
             try
             {
                 var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
@@ -62,7 +63,67 @@ namespace backend.src.Infrastructure.Data
                     Log.Information("DataSeeder: Roles creados exitosamente.");
                 }
 
-                if (!await context.Users.AnyAsync())
+                if (env.IsProduction())
+                {
+                    var adminEmail =
+                        configuration.GetValue<string>("AdminSettings:DefaultAdmin:Email")
+                        ?? throw new InvalidOperationException(
+                            "DefaultAdmin:Email no está configurado"
+                        );
+                    if (await userManager.FindByEmailAsync(adminEmail) != null)
+                    {
+                        Log.Information(
+                            "DataSeeder: Usuario administrador ya existe, omitiendo creación."
+                        );
+                        return;
+                    }
+                    var defaultAdminUser = new User
+                    {
+                        UserName = "admin",
+                        Email = adminEmail,
+                        PhoneNumber = null,
+                        UserType = UserType.Administrador,
+                        AboutMe = "Administrador del sistema BolsaUcn",
+                        Rut = "111111111-1",
+                        EmailConfirmed = true,
+                        IsBlocked = false,
+                        FirstName = "Administrador",
+                        LastName = "Sistema",
+                        ProfilePhoto = new UserImage
+                        {
+                            Url =
+                                configuration.GetValue<string>("Images:DefaultUserImageUrl")
+                                ?? throw new InvalidOperationException(
+                                    "DefaultUserImageUrl no está configurado"
+                                ),
+                            PublicId =
+                                configuration.GetValue<string>("Images:DefaultUserImagePublicId")
+                                ?? throw new InvalidOperationException(
+                                    "DefaultUserImagePublicId no está configurado"
+                                ),
+                        },
+                    };
+                    var adminResult = await userManager.CreateAsync(
+                        defaultAdminUser,
+                        configuration.GetValue<string>("DefaultAdmin:Password")
+                            ?? throw new InvalidOperationException(
+                                "DefaultAdmin:Password no está configurado"
+                            )
+                    );
+                    if (adminResult.Succeeded)
+                    {
+                        await userManager.AddToRolesAsync(
+                            defaultAdminUser,
+                            [RoleNames.Admin, RoleNames.SuperAdmin]
+                        );
+                        Log.Information(
+                            "✅ Usuario administrador creado: {Email} / (contraseña configurada en appsettings)",
+                            defaultAdminUser.Email
+                        );
+                    }
+                }
+
+                if (env.IsDevelopment() && !await context.Users.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron usuarios, creando usuarios de prueba..."
@@ -71,7 +132,7 @@ namespace backend.src.Infrastructure.Data
                     Log.Information("DataSeeder: Usuarios de prueba creados exitosamente.");
                 }
 
-                if (!await context.Offers.AnyAsync())
+                if (env.IsDevelopment() && !await context.Offers.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron ofertas, creando ofertas de prueba..."
@@ -79,7 +140,7 @@ namespace backend.src.Infrastructure.Data
                     await SeedOffers(context, backgroundJobs, userManager);
                     Log.Information("DataSeeder: Ofertas de prueba creadas exitosamente.");
                 }
-                if (!await context.BuySells.AnyAsync())
+                if (env.IsDevelopment() && !await context.BuySells.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No hay avisos de compra/venta, creando datos de prueba..."
@@ -87,7 +148,7 @@ namespace backend.src.Infrastructure.Data
                     await SeedBuySells(context, userManager);
                     Log.Information("DataSeeder: Compra/venta de prueba creados.");
                 }
-                if (!await context.JobApplications.AnyAsync())
+                if (env.IsDevelopment() && !await context.JobApplications.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron postulaciones, creando postulaciones de prueba..."
@@ -95,7 +156,7 @@ namespace backend.src.Infrastructure.Data
                     await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
-                if (!await context.Reviews.AnyAsync())
+                if (env.IsDevelopment() && !await context.Reviews.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
