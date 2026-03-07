@@ -1,12 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     public class TokenService : ITokenService
     {
@@ -28,7 +28,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// <param name="roleName">Nombre del rol</param>
         /// <param name="rememberMe">Indica si se debe recordar al usuario</param>
         /// <returns>Token JWT</returns>
-        public string CreateToken(GeneralUser user, string roleName, bool rememberMe)
+        public string CreateToken(User user, IList<string> roleNames, bool rememberMe)
         {
             try
             {
@@ -36,7 +36,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                     "Creando token JWT para usuario ID: {UserId}, Email: {Email}, Role: {Role}, RememberMe: {RememberMe}",
                     user.Id,
                     user.Email,
-                    roleName,
+                    roleNames,
                     user.UserType.ToString(),
                     rememberMe
                 );
@@ -44,11 +44,15 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, roleName),
                     new Claim("userName", user.UserName!.ToString()),
                     new Claim("userType", user.UserType.ToString()),
                     new Claim(ClaimTypes.Email, user.Email!),
                 };
+
+                foreach (var roleName in roleNames)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, roleName));
+                }
 
                 var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_jwtSecret));
 
@@ -57,7 +61,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 var expirationHours = rememberMe ? 24 : 1;
                 var token = new JwtSecurityToken(
                     claims: claims,
-                    expires: DateTime.Now.AddHours(expirationHours),
+                    expires: DateTime.UtcNow.AddHours(expirationHours),
                     signingCredentials: creds
                 );
 
@@ -83,10 +87,12 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// <returns>Indica si la operación fue exitosa</returns>
         public async Task<bool> AddToWhitelistAsync(Whitelist token)
         {
-            var result = await _tokenRepository.AddToWhitelistAsync(token) ;
+            var result = await _tokenRepository.AddToWhitelistAsync(token);
             if (result == null)
             {
-                Log.Error($"Error al agregar token a la whitelist para el usuario ID: {token.UserId}");
+                Log.Error(
+                    $"Error al agregar token a la whitelist para el usuario ID: {token.UserId}"
+                );
                 return false;
             }
             Log.Information($"Token agregado a la whitelist para el usuario ID: {token.UserId}");
@@ -112,6 +118,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             Log.Information($"Tokens activos revocados para el usuario ID: {userId}");
             return true;
         }
+
+        #region Background Job
+        public async Task DeleteExpiredTokensAsync()
+        {
+            var cutoffDate = DateTime.UtcNow;
+            var deletedCount = await _tokenRepository.RemoveExpiredTokensAsync(cutoffDate);
+            Log.Information($"Eliminados {deletedCount} tokens expirados de la whitelist.");
+        }
+        #endregion
     }
 }
-            

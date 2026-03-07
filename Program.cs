@@ -1,22 +1,25 @@
-using bolsafeucn_back.src.Application.Infrastructure.Data;
-using bolsafeucn_back.src.Application.Mappers;
-using bolsafeucn_back.src.Application.Services.Implements;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Repositories.Implements;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
-using Mapster;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Implements.Handlers;
+using backend.src.Application.Events.Interfaces;
+using backend.src.Application.Jobs.Implements;
+using backend.src.Application.Jobs.Interfaces;
+using backend.src.Application.Mappers;
+using backend.src.Application.Services.Implements;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Implements;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
+using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers; // <<-- para CORS (HeaderNames)
 using Resend;
 using Serilog;
-using bolsafeucn_back.src.Infrastructure.Extensions;
-using Microsoft.Extensions.FileProviders;
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(
@@ -46,7 +49,7 @@ try
     // 1) Identity
     // =========================
     builder
-        .Services.AddIdentity<GeneralUser, Role>(options =>
+        .Services.AddIdentity<User, Role>(options =>
         {
             options.User.AllowedUserNameCharacters =
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
@@ -106,15 +109,17 @@ try
             "Frontend",
             policy =>
             {
+                var allowedOrigins =
+                    builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ??
+                    [
+                        "http://localhost:3000", // Valor por defecto si no se encuentra en configuración
+                    ];
                 policy
-                    .WithOrigins(
-                        "http://localhost:3000" // Next.js dev
-                                                // ,"https://localhost:3000"  // agrega si usas https en front
-                                                // ,"https://localhost:7129"  // agrega si llamas al backend en https y navegas desde https
-                    )
+                    .WithOrigins(allowedOrigins)
                     .WithHeaders(HeaderNames.ContentType, HeaderNames.Authorization, "Accept")
+                    .WithExposedHeaders(HeaderNames.ContentDisposition) // para que el front pueda leer el header Content-Disposition en la respuesta (nombre del archivo al descargar CV)
                     .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                    .AllowCredentials(); // opcional si luego usas cookies
+                    .AllowCredentials();
             }
         );
     });
@@ -143,51 +148,102 @@ try
     #endregion
 
     #region Hangfire
-    // Hangfire - usa MemoryStorage por simplicidad
+    // =========================
+    // 6) Hangfire (background jobs)
+    // =========================
+
+    Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
     builder.Services.AddHangfire(configuration =>
-        configuration.UseMemoryStorage()
+        configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
+            {
+                options.UseNpgsqlConnection(
+                    builder.Configuration.GetConnectionString("DefaultConnection")
+                );
+            })
     );
+
     builder.Services.AddHangfireServer();
+
     #endregion
 
 
     #region DI
     // =========================
-    // 6) DI (repos/services/mappers)
+    // 7) DI (repos/services/mappers/jobs/events)
     // =========================
-    builder.Services.AddScoped<StudentMapper>();
-    builder.Services.AddScoped<IndividualMapper>();
-    builder.Services.AddScoped<CompanyMapper>();
-    builder.Services.AddScoped<AdminMapper>();
+    // === Mappers ===
+    builder.Services.AddScoped<UserMapper>();
+    builder.Services.AddScoped<PublicationMapper>();
     builder.Services.AddScoped<OfferMapper>();
+    builder.Services.AddScoped<BuySellMapper>();
+    builder.Services.AddScoped<ApplicationMapper>();
     builder.Services.AddScoped<ProfileMapper>();
+    builder.Services.AddScoped<ReviewMapper>();
 
+    // === Repositorios ===
     builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IOfferRepository, OfferRepository>();
-    builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
-    builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
-    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+    builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
+    builder.Services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
     builder.Services.AddScoped<IAdminNotificationRepository, AdminNotificationRepository>();
     builder.Services.AddScoped<IFileRepository, FileRepository>();
     builder.Services.AddScoped<IPublicationRepository, PublicationRepository>();
     builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
     builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+    builder.Services.AddScoped<IEventDispatcher, EventDispatcher>();
 
+    // === Servicios ===
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
-    builder.Services.AddScoped<IEmailService, EmailService>();
+    builder.Services.AddScoped<IEmailDigestService, EmailDigestService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
-    builder.Services.AddScoped<IOfferService, OfferService>();
-    builder.Services.AddScoped<IJobApplicationService, JobApplicationService>();
+    builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
     builder.Services.AddScoped<IPublicationService, PublicationService>();
-    builder.Services.AddScoped<IBuySellService, BuySellService>();
     builder.Services.AddScoped<IReviewService, ReviewService>();
     builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
-    builder.Services.AddDocumentStorageProvider(builder.Configuration);
-    
+    builder.Services.AddScoped<IApprovalService, ApprovalService>();
+    builder.Services.AddScoped<EmailService>();
+    builder.Services.AddScoped<IEmailService>(sp => new EmailRateLimitedService(
+        sp.GetRequiredService<EmailService>()
+    ));
+
+    // === Jobs ===
+    builder.Services.AddScoped<IUserJobs, UserJobs>();
+    builder.Services.AddScoped<IOfferJobs, OfferJobs>();
+    builder.Services.AddScoped<IWhitelistedTokenJobs, WhitelistedTokenJobs>();
+    builder.Services.AddScoped<INotificationJobs, NotificationJobs>();
+
+    // === Eventos y handlers ===
+    builder.Services.AddScoped<
+        IEventHandler<ApplicationStatusChangedEvent>,
+        SendEmailOnApplicationStatusChangedHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<OfferCancelledEvent>,
+        SendEmailOnOfferCancelledHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<InitialReviewsCreatedEvent>,
+        SendEmailOnInitialReviewCreationHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<PublicationStatusChangedEvent>,
+        SendEmailOnPublicationStatusChangedHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<PublicationClosedByAdminEvent>,
+        SendEmailOnPublicationClosedByAdminHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<OfferSlotsFilledEvent>,
+        CloseOfferOnSlotsFilledHandler
+    >();
 
     builder.Services.AddMapster();
 
@@ -201,23 +257,65 @@ try
     #endregion
 
     #region Hangfire Dashboard + Recurring Jobs
-    // Hangfire dashboard (solo en desarrollo)
+    // Hangfire Dashboard (solo en desarrollo)
     if (app.Environment.IsDevelopment())
     {
         app.UseHangfireDashboard();
-        // Registrar job recurrente cada hora para cerrar reviews vencidas
-        RecurringJob.AddOrUpdate<IReviewService>(
-            "CloseExpiredReviews",
-            service => service.CloseExpiredReviewsAsync(),
-            Cron.Hourly
-        );
-        Log.Information("Hangfire dashboard habilitado y job recurrente para cierre de reviews programado. Servidor en: http://localhost:5185/hangfire");
+        Log.Information("Hangfire dashboard habilitado en modo desarrollo");
     }
+    else
+    {
+        app.UseHangfireDashboard(); // TEST
+        Log.Information("Servidor en modo producción, Hangfire dashboard deshabilitado");
+    }
+    // === Trabajos recurrentes ===
+    // User Jobs
+    RecurringJob.AddOrUpdate<IUserJobs>(
+        nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
+        job => job.DeleteUnconfirmedUserAccountsAsync(),
+        Cron.Weekly(DayOfWeek.Monday), // Todos los lunes a las 2 AM
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    // Whitelist Jobs
+    RecurringJob.AddOrUpdate<IWhitelistedTokenJobs>(
+        nameof(IWhitelistedTokenJobs.DeleteExpiredTokensAsync),
+        job => job.DeleteExpiredTokensAsync(),
+        Cron.Daily(), // Todos los días a medianoche
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    // Notification Jobs
+    RecurringJob.AddOrUpdate<INotificationJobs>(
+        nameof(INotificationJobs.SendUserDailyNotificationsAsync),
+        job => job.SendUserDailyNotificationsAsync(),
+        Cron.Daily(8), // Todos los dias a las 8 AM
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    RecurringJob.AddOrUpdate<INotificationJobs>(
+        nameof(INotificationJobs.SendAdminDailyNotificationsAsync),
+        job => job.SendAdminDailyNotificationsAsync(),
+        Cron.Daily(9), // Todos los dias a las 9 AM
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    Log.Information(
+        "Trabajos recurrentes de Hangfire (User, Whitelist, Notification) configurados"
+    );
 
     #endregion
     #region Middleware
     // Middleware global de errores (antes de todo)
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
+    app.UseMiddleware<backend.src.API.Middlewares.ErrorHandlingMiddleware.ErrorHandlingMiddleware>();
     #endregion
 
     // Seed DB + Mapster (al inicio)
@@ -229,6 +327,10 @@ try
         app.UseSwaggerUI();
         Log.Information("Swagger UI habilitado en modo desarrollo");
     }
+    else
+    {
+        Log.Information("Servidor en modo producción, Swagger UI deshabilitado");
+    }
 
     // Si te genera líos en local (http->https), puedes comentar mientras desarrollas:
     // app.UseHttpsRedirection();
@@ -238,22 +340,8 @@ try
 
     // Muy importante: primero autenticación, luego autorización
     app.UseAuthentication();
-    app.UseMiddleware<bolsafeucn_back.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en blacklist debe ir entre auth y authorization
+    app.UseMiddleware<backend.src.API.Middlewares.BlacklistMiddleware>(); // Middleware para validar tokens en la whitelist
     app.UseAuthorization();
-
-    // Configuración para servir archivos estáticos desde la carpeta "uploads"
-    var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
-    if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(
-            Path.Combine(builder.Environment.ContentRootPath, "uploads")),
-        RequestPath = "/uploads",
-        OnPrepareResponse = ctx =>
-        {
-            ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=3600");
-        }
-    });
 
     app.MapControllers();
 

@@ -1,11 +1,14 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.Services.Interfaces
+namespace backend.src.Application.Services.Interfaces
 {
     public interface ITokenService
     {
-        string CreateToken(GeneralUser user, string roleName, bool rememberMe);
+        string CreateToken(User user, IList<string> roleNames, bool rememberMe);
         Task<bool> AddToWhitelistAsync(Whitelist token);
         Task<bool> RevokeAllActiveTokensAsync(int userId);
+        #region Background Job
+        Task DeleteExpiredTokensAsync();
+        #endregion
     }
 }

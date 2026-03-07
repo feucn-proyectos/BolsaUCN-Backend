@@ -1,7 +1,10 @@
 using System;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.ReviewDTO.AdminDTOs;
+using backend.src.Application.DTOs.ReviewDTO.MyReviewsDTO;
+using backend.src.Domain.Models;
+using backend.src.Domain.Options;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     /// <summary>
     /// Interfaz que define las operaciones de acceso a datos para las reseñas.
@@ -10,63 +13,33 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
     public interface IReviewRepository
     {
         /// <summary>
-        /// Agrega una nueva reseña a la base de datos.
+        /// Obtiene el conteo de reseñas pendientes para un usuario específico, con opción de filtrar por rol.
         /// </summary>
-        /// <param name="review">La reseña a agregar.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        Task AddAsync(Review review);
+        /// <param name="userId">El identificador del usuario.</param>
+        /// <param name="role">El rol del usuario (opcional). Si <c>null</c>, se ignora y se buscan reseñas pendientes para todos los roles.</param>
+        /// <returns>El número de reseñas pendientes.</returns>
+        Task<int> GetPendingCountOfReviewsByUserIdAsync(int userId, string? role = null);
 
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un oferente específico.
-        /// </summary>
-        /// <param name="offerorId">El identificador del oferente.</param>
-        /// <returns>Una colección de reseñas del oferente.</returns>
-        Task<IEnumerable<Review>> GetByOfferorIdAsync(int offerorId);
-        /// <summary>
-        /// Obtiene todas las reseñas asociadas a un estudiante específico.
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>Una colección de reseñas del estudiante.</returns>
-        Task<IEnumerable<Review>> GetByStudentIdAsync(int studentId);
-
-        /// <summary>
-        /// Calcula el promedio de calificaciones recibidas por un oferente.
-        /// </summary>
-        /// <param name="providerId">El identificador del oferente.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        Task<double?> GetOfferorAverageRatingAsync(int providerId);
-        /// <summary>
-        /// Calcula el promedio de calificaciones de un estudiante.
-        /// </summary>
-        /// <param name="studentId">El identificador del estudiante.</param>
-        /// <returns>El promedio de calificaciones, o null si no hay reseñas.</returns>
-        Task<double?> GetStudentAverageRatingAsync(int studentId);
-
-        /// <summary>
-        /// Obtiene una reseña asociada a una publicación específica.
-        /// </summary>
-        /// <param name="publicationId">El identificador de la publicación.</param>
-        /// <returns>La reseña asociada a la publicación, o null si no existe.</returns>
-        Task<Review?> GetByPublicationIdAsync(int publicationId);
-
-        /// <summary>
-        /// Obtiene una reseña por su identificador único.
-        /// </summary>
-        /// <param name="reviewId">El identificador de la reseña.</param>
-        /// <returns>La reseña solicitada, o null si no existe.</returns>
-        Task<Review?> GetByIdAsync(int reviewId);
-
-        /// <summary>
-        /// Actualiza una reseña existente en la base de datos.
-        /// </summary>
-        /// <param name="review">La reseña con los datos actualizados.</param>
-        /// <returns>Una tarea que representa la operación asíncrona.</returns>
-        Task UpdateAsync(Review review);
-        /// <summary>
-        /// Obtiene todas las reseñas del sistema.
-        /// </summary>
-        /// <returns></returns>
-        Task<IEnumerable<Review>> GetAllAsync();
-        Task<IEnumerable<Publication>> GetPublicationInformationAsync(int publicationId);
+        #region Refactored Methods
+        Task<bool> CreateReviewAsync(Review review);
+        Task<bool> CreateReviewsAsync(IEnumerable<Review> reviews);
+        Task<Review?> GetByIdAsync(int reviewId, ReviewQueryOptions? options = null);
+        Task<List<Review>> GetReviewsByOfferIdAsync(int offerId);
+        Task CalculateUserRating(User user);
+        Task<int> GetPendingReviewsCountByOfferIdAsync(int offerId);
+        Task<(List<Review> reviews, int totalCount)> GetMyReviewsByUserIdAsync(
+            MyReviewsSearchParamsDTO searchParams,
+            int userId
+        );
+        Task<Review?> GetMyReviewDetailsByIdAsync(int reviewId, int userId);
+        Task<(List<Review> reviews, int totalCount)> GetAllReviewsForAdminAsync(
+            GetReviewsSearchParamsDTO searchParams,
+            int adminId
+        );
+        Task<Review?> GetReviewDetailsForAdminByIdAsync(int reviewId);
+        Task<List<Review>> GetAllForAdminAsync();
+        Task<List<Review>> GetAllByUserIdAsync(int userId);
+        Task<bool> UpdateReviewAsync(Review review);
+        #endregion
     }
 }

@@ -1,94 +1,89 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     /// <summary>
-    /// Enum that defines types of publications in the system.
+    /// Enum que define los tipos de publicaciones disponibles en la plataforma. Usado para diferenciar entre ofertas laborales/voluntariados y anuncios de compra/venta, permitiendo manejar lógicas específicas para cada tipo de publicación en el sistema.
     /// </summary>
-    public enum Types
+    public enum PublicationType
     {
-        Offer, // Job or volunteer offer
-        BuySell, // Buy/Sell listing
+        Oferta, // Oferta de trabajo o voluntariado
+        CompraVenta, // Anuncio de compra/venta
     }
 
     /// <summary>
-    /// Validation state used by administrative workflows.
+    /// Enum que define el estado de aprobación administrativa de una publicación. Usado para controlar el flujo de revisión y publicación de las ofertas y anuncios en la plataforma.
     /// </summary>
-    public enum StatusValidation
+    public enum ApprovalStatus
     {
-        Published, // Validated and published by an administrator
-        InProcess, // Under administrative review
-        Rejected, // Rejected by an administrator
-        Closed, // Closed by the user or administrator
+        Aceptada, // Aprobado y publicado por un administrador
+        Pendiente, // En revisión administrativa
+        Rechazada, // Rechazado por un administrador
     }
 
     /// <summary>
-    /// Abstract base class for all publication entities in the system.
-    /// Derived types include <see cref="Offer"/> and <see cref="BuySell"/>.
+    /// Clase base abstracta para todas las entidades de publicación en el sistema.
+    /// Los tipos derivados incluyen <see cref="Offer"/> y <see cref="BuySell"/>.
     /// </summary>
-    public abstract class Publication
+    public abstract class Publication : ModelBase
     {
         /// <summary>
-        /// Unique identifier for the publication.
+        /// El usuario que creó la publicación.
         /// </summary>
-        public int Id { get; set; }
+        public required User User { get; set; }
 
         /// <summary>
-        /// The user who created the publication.
-        /// </summary>
-        public required GeneralUser User { get; set; }
-
-        /// <summary>
-        /// Identifier of the user who created the publication.
+        /// Identificador del usuario que creó la publicación.
         /// </summary>
         public required int UserId { get; set; }
 
         /// <summary>
-        /// Title of the publication.
+        /// Título de la publicación.
         /// </summary>
         public required string Title { get; set; }
 
         /// <summary>
-        /// Full description of the publication.
+        /// Descripción completa de la publicación.
         /// </summary>
         public required string Description { get; set; }
 
         /// <summary>
-        /// Publication date and time in UTC.
+        /// Ubicación asociada a la publicación.
         /// </summary>
-        public DateTime PublicationDate { get; set; } = DateTime.UtcNow;
+        public required string Location { get; set; }
 
         /// <summary>
-        /// Collection of images attached to the publication.
+        /// Información de contacto adicional proporcionada por el usuario.
         /// </summary>
-        public ICollection<Image> Images { get; set; } = new List<Image>();
+        public string? AdditionalContactEmail { get; set; }
 
         /// <summary>
-        /// Publication type (Offer, BuySell).
+        /// Número de teléfono de contacto adicional proporcionado por el usuario.
         /// </summary>
-        public required Types Type { get; set; }
+        public string? AdditionalContactPhoneNumber { get; set; }
 
         /// <summary>
-        /// Whether the publication is active and visible to users.
+        /// Tipo de publicación (Oferta, CompraVenta).
         /// </summary>
-        public bool IsActive { get; set; }
+        public required PublicationType PublicationType { get; set; }
 
         /// <summary>
-        /// Administrative validation status for the publication.
+        /// Estado de validación administrativa de la publicación.
         /// </summary>
-        public StatusValidation statusValidation { get; set; }
-/// <summary>
-        /// Reason provided by the administrator when rejecting the publication.
-        /// This feedback allows the user to correct their publication.
-        /// </summary>
-        public string? AdminRejectionReason { get; set; }
+        public ApprovalStatus ApprovalStatus { get; set; }
 
         /// <summary>
-        /// Justification provided by the user when appealing a rejection.
+        /// Razón de rechazo proporcionada por el administrador.
+        /// Esta retroalimentación permite al usuario corregir su publicación.
         /// </summary>
-        public string? UserAppealJustification { get; set; }
+        public string? RejectedByAdminReason { get; set; }
 
         /// <summary>
-        /// Counter for the number of appeal attempts made by the user.
-        /// Used to enforce the maximum appeal limit logic.
+        /// Razón de cierre proporcionada por el administrador. Usada para registrar el motivo por el cual una publicación fue cerrada.
+        /// </summary>
+        public string? ClosedByAdminReason { get; set; }
+
+        /// <summary>
+        /// Contador del número de intentos de apelación realizados por el usuario.
+        /// Usado para hacer cumplir la lógica del límite máximo de apelaciones.
         /// </summary>
         public int AppealCount { get; set; } = 0;
     }

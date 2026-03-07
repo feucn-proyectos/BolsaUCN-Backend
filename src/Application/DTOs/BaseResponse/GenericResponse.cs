@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.BaseResponse;
+namespace backend.src.Application.DTOs.BaseResponse;
 
 /// <summary>
 /// Clase que representa una respuesta genérica de la aplicación.

@@ -1,10 +1,10 @@
 using System.Security;
 using System.Text.Json;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.Services.Implements;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Infrastructure.Exceptions;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Middlewares.ErrorHandlingMiddleware;
+namespace backend.src.API.Middlewares.ErrorHandlingMiddleware;
 
 /// <summary>
 /// Middleware para el manejo de excepciones en la aplicación.

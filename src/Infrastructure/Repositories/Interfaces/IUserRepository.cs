@@ -1,34 +1,51 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public interface IUserRepository
     {
-        Task<GeneralUser?> GetByEmailAsync(string email);
+        /// <summary>
+        /// Obtiene un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">El ID del usuario.</param>
+        /// <param name="options">Opciones para la consulta del usuario.
+        /// <list type="bullet">
+        /// <item><description>IncludePhoto: Incluir foto del usuario.</description></item>
+        /// <item><description>IncludeCV: Incluir CV del usuario.</description></item>
+        /// <item><description>IncludeApplications: Incluir aplicaciones del usuario si es estudiante.</description></item>
+        /// <item><description>IncludePublications: Incluir publicaciones del usuario.</description></item>
+        /// <item><description>TrackChanges: Rastrear cambios en la entidad consultada.</description></item>
+        /// </list>
+        /// </param>
+        /// <returns>El usuario correspondiente al ID proporcionado, o null si no se encuentra.</returns>
+        Task<User?> GetByIdAsync(int userId, UserQueryOptions? options = null);
+        Task<User?> GetByEmailAsync(string email);
+        Task<IList<User>> GetAllByRoleAsync(string role);
+        Task<bool> ExistsByIdAsync(int id);
         Task<bool> ExistsByEmailAsync(string email);
         Task<bool> ExistsByRutAsync(string rut);
-        Task<bool> GetBlockedStatusAsync(int userId);
-        Task<bool> CreateUserAsync(GeneralUser user, string password, string role);
-        Task<bool> CreateStudentAsync(Student student);
-        Task<bool> CreateIndividualAsync(Individual individual);
-        Task<bool> CreateCompanyAsync(Company company);
-        Task<bool> CreateAdminAsync(Admin admin, bool SuperAdmin);
-        Task<bool> CheckPasswordAsync(GeneralUser user, string password);
-        Task<bool> UpdateAsync(GeneralUser user);
-        Task<bool> UpdatePasswordAsync(GeneralUser user, string newPassword);
-        Task<bool> UpdateLastLoginAsync(GeneralUser user);
-        Task<string> GetRoleAsync(GeneralUser user);
-        Task<GeneralUser> GetGeneralUserByIdAsync(int id);
-        Task<IEnumerable<GeneralUser>> GetAllAsync();
+        Task<bool> CreateUserAsync(User user, string password, string[] roles);
+        Task<bool> CheckPasswordAsync(User user, string password);
+        Task<bool> UpdateAsync(User user);
+        Task<bool> UpdatePasswordAsync(User user, string newPassword);
+        Task<bool> UpdateLastLoginAsync(User user);
+        Task<IList<string>> GetRolesAsync(User user);
+        Task<bool> CheckRoleAsync(int userId, string role);
+        Task<User> GetGeneralUserByIdAsync(int id);
         Task<bool> ConfirmEmailAsync(string email);
-        Task<GeneralUser?> GetByIdAsync(int id);
-        Task<GeneralUser?> GetByIdWithRelationsAsync(int id);
-        Task<GeneralUser?> GetUntrackedWithTypeAsync(int id, UserType? userType);
-        Task<GeneralUser?> GetTrackedWithTypeAsync(int id, UserType? userType);
-        Task<(IEnumerable<GeneralUser>, int TotalCount)> GetFilteredForAdminAsync(int adminId, SearchParamsDTO searchParams);
-        Task<int> GetNumberOfAdmins();
-        Task<GeneralUser> AddAsync(GeneralUser usuario);
-        Task<bool> DeleteAsync(int id);
+        Task<(IEnumerable<User>, int TotalCount)> GetUsersFilteredForAdminAsync(
+            int adminId,
+            UsersForAdminSearchParamsDTO searchParams
+        );
+        Task<int> GetCountByTypeAsync(UserType userType);
+        Task<int> GetCountByRoleAsync(string role);
+        Task<bool> DeleteUserAsync(User user);
+        Task<(
+            int deletedUsersCount,
+            int deletedVerificationCodesCount
+        )> DeleteUnconfirmedUsersByCutoffDateAsync(DateTime cutoffDate);
+        Task<bool> ClearUnconfirmedEmailChangeRequestsAsync(int userId);
     }
 }

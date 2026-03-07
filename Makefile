@@ -1,6 +1,6 @@
 # Makefile para tareas comunes de desarrollo
 # hice esto con claude pq me da flojera apreneder makefile
-DOTNET_DIR := ./bolsafeucn_back
+DOTNET_DIR := ./backend
 CONTAINER_NAME := bolsafeucn-docker
 
 # Valores por defecto en caso de que no se encuentren en appsettings.json:

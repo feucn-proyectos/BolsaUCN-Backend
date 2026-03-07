@@ -5,13 +5,13 @@
 cd "$(dirname "$0")/.."
 
 echo "Construyendo la aplicación..."
-cd bolsafeucn_back
+cd backend
 
 # Primero restauramos las dependencias silenciosamente
 dotnet restore --verbosity quiet > /dev/null 2>&1
 
 # Luego construimos el proyecto
-dotnet build bolsafeucn_back.csproj --no-restore --verbosity quiet
+dotnet build backend.csproj --no-restore --verbosity quiet
 
 BUILD_EXIT_CODE=$?
 

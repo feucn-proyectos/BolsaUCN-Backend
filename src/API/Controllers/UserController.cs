@@ -1,14 +1,15 @@
 using System.Security.Claims;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs;
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.UserProfileDTOs;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.DTOs.UserDTOs;
+using backend.src.Application.DTOs.UserDTOs.UserProfileDTOs;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     public class UserController : BaseController
     {
@@ -20,114 +21,36 @@ namespace bolsafeucn_back.src.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene el perfil del estudiante autenticado.
+        /// Obtiene el perfil del usuario autenticado.
         /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/student")] //No estoy seguro si este es el endpoint correcto
+        /// <returns>Datos del perfil del usuario.</returns>
+        [HttpGet("profile")]
         [Authorize]
-        public async Task<IActionResult> GetStudentProfile()
+        public async Task<IActionResult> GetUserProfile()
         {
-            (int parsedUserId, UserType parsedUserType) = GetIdAndTypeFromToken();
+            int parsedUserId = GetUserIdFromToken();
 
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId, parsedUserType);
-            return Ok(new GenericResponse<GetStudentProfileDTO>("Datos de perfil obtenidos.", (GetStudentProfileDTO)result));
+            var result = await _userService.GetUserProfileByIdAsync(parsedUserId);
+            return Ok(new GenericResponse<GetUserProfileDTO>("Datos de perfil obtenidos.", result));
         }
 
         /// <summary>
-        /// Obtiene el perfil del usuario particular autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/individual")]
-        [Authorize]
-        public async Task<IActionResult> GetIndividualProfile()
-        {
-            (int parsedUserId, UserType parsedUserType) = GetIdAndTypeFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId, parsedUserType);
-            return Ok(new GenericResponse<GetIndividualProfileDTO>("Datos de perfil obtenidos.", (GetIndividualProfileDTO)result));
-        }
-
-        /// <summary>
-        /// Obtiene el perfil del usuario empresa autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/company")] //No estoy seguro si este es el endpoint correcto
-        [Authorize]
-        public async Task<IActionResult> GetCompanyProfile()
-        {
-            (int parsedUserId, UserType parsedUserType) = GetIdAndTypeFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId, parsedUserType);
-            return Ok(new GenericResponse<GetCompanyProfileDTO>("Datos de perfil obtenidos.", (GetCompanyProfileDTO)result));
-        }
-
-        /// <summary>
-        /// Obtiene el perfil del usuario administrador autenticado.
-        /// </summary>
-        /// <returns>Perfil del usuario autenticado</returns>
-        [HttpGet("profile/admin")] //No estoy seguro si este es el endpoint correcto
-        [Authorize]
-        public async Task<IActionResult> GetAdminProfile()
-        {
-            (int parsedUserId, UserType parsedUserType) = GetIdAndTypeFromToken();
-
-            var result = await _userService.GetUserProfileByIdAsync(parsedUserId, parsedUserType);
-            return Ok(new GenericResponse<GetAdminProfileDTO>("Datos de perfil obtenidos.", (GetAdminProfileDTO)result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario estudiante autenticado.
+        /// Actualiza el perfil del usuario autenticado.
         /// </summary>
         /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario.</param>
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/student")]
+        [HttpPatch("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateStudentProfile([FromForm] UpdateStudentParamsDTO updateParamsDTO)
+        public async Task<IActionResult> UpdateUserProfile(
+            [FromForm] UpdateUserProfileDTO updateParamsDTO
+        )
         {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(updateParamsDTO, userId, userType);
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario particular autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario particular.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/individual")]
-        [Authorize]
-        public async Task<IActionResult> UpdateIndividualProfile([FromForm] UpdateIndividualParamsDTO updateParamsDTO)
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(updateParamsDTO, userId, userType);
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario empresa autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario empresa.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/company")]
-        [Authorize]
-        public async Task<IActionResult> UpdateCompanyProfile([FromForm] UpdateCompanyParamsDTO updateParamsDTO)
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(updateParamsDTO, userId, userType);
-            return Ok(new GenericResponse<string>("Perfil actualizado", result));
-        }
-
-        /// <summary>
-        /// Actualiza el perfil del usuario administrador autenticado.
-        /// </summary>
-        /// <param name="updateParamsDTO">Parámetros para actualizar el perfil del usuario administrador.</param>
-        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
-        [HttpPatch("profile/admin")]
-        [Authorize]
-        public async Task<IActionResult> UpdateAdminProfile([FromForm] UpdateAdminParamsDTO updateParamsDTO)
-        {
-            (int userId, UserType userType) = GetIdAndTypeFromToken();
-            var result = await _userService.UpdateUserProfileByIdAsync(updateParamsDTO, userId, userType);
+            var (userId, userType) = GetIdAndTypeFromToken();
+            var result = await _userService.UpdateUserProfileByIdAsync(
+                updateParamsDTO,
+                userId,
+                userType
+            );
             return Ok(new GenericResponse<string>("Perfil actualizado", result));
         }
 
@@ -151,11 +74,50 @@ namespace bolsafeucn_back.src.API.Controllers
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
         [HttpPatch("profile/photo")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfilePhoto([FromForm] UpdatePhotoDTO updatePhotoDTO)
+        public async Task<IActionResult> UpdateProfilePhoto(
+            [FromForm] UpdatePhotoDTO updatePhotoDTO
+        )
         {
             int userId = GetUserIdFromToken();
             var result = await _userService.UpdateUserProfilePhotoByIdAsync(updatePhotoDTO, userId);
             return Ok(new GenericResponse<string>("Foto de perfil actualizada", result));
+        }
+
+        [HttpPatch("profile/change-email")]
+        [Authorize]
+        public async Task<IActionResult> ChangeEmail(
+            [FromBody] ChangeUserEmailDTO changeUserEmailDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ChangeUserEmailByIdAsync(
+                changeUserEmailDTO,
+                parsedUserId
+            );
+            return Ok(new GenericResponse<string>("Correo electrónico actualizado", result));
+        }
+
+        [HttpPost("profile/change-email/verify")]
+        [Authorize]
+        public async Task<IActionResult> VerifyNewEmail(
+            [FromBody] VerifyNewEmailDTO verifyNewEmailDTO
+        )
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.VerifyNewEmailByIdAsync(
+                verifyNewEmailDTO,
+                parsedUserId
+            );
+            return Ok(new GenericResponse<string>("Nuevo correo electrónico verificado", result));
+        }
+
+        [HttpPost("profile/change-email/resend-verification")]
+        [Authorize]
+        public async Task<IActionResult> ResendChangeEmailVerification()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ResendChangeEmailVerificationByIdAsync(parsedUserId);
+            return Ok(new GenericResponse<string>("Código de verificación reenviado", result));
         }
 
         /// <summary>
@@ -165,7 +127,9 @@ namespace bolsafeucn_back.src.API.Controllers
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
         [HttpPatch("profile/change-password")]
         [Authorize]
-        public async Task<IActionResult> ChangeUserPassword([FromBody] ChangeUserPasswordDTO changeUserPasswordDTO)
+        public async Task<IActionResult> ChangeUserPassword(
+            [FromBody] ChangeUserPasswordDTO changeUserPasswordDTO
+        )
         {
             int userId = GetUserIdFromToken();
             var result = await _userService.ChangeUserPasswordById(changeUserPasswordDTO, userId);
@@ -178,20 +142,60 @@ namespace bolsafeucn_back.src.API.Controllers
         /// <param name="updateCVDTO">Parámetros para subir el CV del usuario.</param>
         /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
         [HttpPatch("cv")]
-        [Authorize]
+        [Authorize(Roles = RoleNames.Applicant)]
         public async Task<IActionResult> UploadCV([FromForm] UploadCVDTO updateCVDTO)
         {
             int userId = GetUserIdFromToken();
             var result = await _userService.UploadCVByIdAsync(updateCVDTO, userId);
             return Ok(new GenericResponse<string>("CV actualizado", result));
         }
+
         [HttpGet("cv")]
         [Authorize]
-        public async Task<IActionResult> GetCV()
+        public async Task<IActionResult> HasCV()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.CheckCVExistsByIdAsync(parsedUserId);
+            return Ok(new GenericResponse<HasCVDTO>("CV obtenido", result));
+        }
+
+        /// <summary>
+        /// Permite a un usuario autenticado descargar su CV en formato PDF, si existe.
+        /// </summary>
+        /// <param name="userId">ID del usuario cuyo CV se desea descargar.</param>
+        /// <returns>Respuesta genérica con el archivo del CV o un mensaje de error si no existe.</returns>
+        [HttpGet("cv/download")]
+        [Authorize]
+        public async Task<IActionResult> DownloadCV()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.DownloadCVByIdAsync(parsedUserId);
+
+            return File(result.FileStream, result.FileName, result.ContentType);
+        }
+
+        /// <summary>
+        /// Elimina el CV del usuario autenticado.
+        /// </summary>
+        /// <returns>Respuesta genérica indicando el resultado de la operación.</returns>
+        [HttpDelete("cv")]
+        [Authorize(Roles = RoleNames.Applicant)]
+        public async Task<IActionResult> DeleteCV()
         {
             int userId = GetUserIdFromToken();
-            var result = await _userService.DownloadCVByIdAsync(userId);
-            return Ok(new GenericResponse<GetCVDTO>("CV obtenido", result));
+            var result = await _userService.DeleteCVByIdAsync(userId);
+            return Ok(new GenericResponse<string>("CV eliminado", result));
+        }
+
+        [HttpPatch("profile/toggle-notifications")]
+        [Authorize]
+        public async Task<IActionResult> ToggleAllowNotifications()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ToggleAllowNotificationsByIdAsync(parsedUserId);
+            return Ok(
+                new GenericResponse<string>("Preferencia de notificaciones actualizada", result)
+            );
         }
     }
 }

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Application.Validators;
+using backend.src.Application.Validators;
 
-namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
+namespace backend.src.Application.DTOs.AuthDTOs
 {
     public class RegisterStudentDTO
     {
@@ -9,7 +9,7 @@ namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
         /// Nombre completo del estudiante.
         /// </summary>
         [Required(ErrorMessage = "El nombre es obligatorio.")]
-        public required string Name { get; set; }
+        public required string FirstName { get; set; }
 
         /// <summary>
         /// Apellido completo del estudiante.

@@ -1,4 +1,4 @@
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs
+namespace backend.src.Application.DTOs.UserDTOs
 {
     public class UserImagesDTO
     {

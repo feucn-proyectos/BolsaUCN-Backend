@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs
+namespace backend.src.Application.DTOs.UserDTOs
 {
     public class ChangeUserPasswordDTO
     {
@@ -8,14 +8,12 @@ namespace bolsafeucn_back.src.Application.DTOs.UserDTOs
         /// Contraseña actual del usuario.
         /// </summary>
         [Required(ErrorMessage = "La contraseña es obligatoria.")]
-
         public required string CurrentPassword { get; set; }
 
         /// <summary>
         /// Nueva contraseña del usuario.
         /// </summary>
         [Required(ErrorMessage = "La contraseña es obligatoria.")]
-
         public required string NewPassword { get; set; }
 
         /// <summary>

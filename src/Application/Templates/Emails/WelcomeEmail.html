@@ -1,101 +1,174 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bolsa Estudiantil UCN - Verificación</title>
+  <title>Bienvenido a Bolsa FEUCN</title>
   <style>
     /* Default (light mode) */
     body {
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
-      font-family: Arial, sans-serif;
-      color: #333333;
+      background-color: #F9FAFB;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      color: #1F2937;
     }
 
     .container {
-      background-color: #ffffff;
-      border-radius: 6px;
+      background-color: #FFFFFF;
+      border-radius: 12px;
       overflow: hidden;
       max-width: 600px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
     }
 
     .header {
-      background-color: #003366;
+      background: linear-gradient(135deg, #6D5EF7 0%, #8B7EFF 100%);
       color: #ffffff;
+      padding: 32px 24px;
     }
 
-    .code {
-      font-size: 28px;
-      font-weight: bold;
-      color: #003366;
-      letter-spacing: 2px;
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 15px;
+      opacity: 0.95;
+    }
+
+    .body-content {
+      padding: 32px 24px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #1F2937;
+    }
+
+    .body-content p {
+      margin: 0 0 16px 0;
+    }
+
+    .body-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .highlight {
+      background-color: #F3F0FF;
+      border-left: 4px solid #6D5EF7;
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 6px;
     }
 
     .footer {
-      background-color: #f0f0f0;
-      color: #666666;
+      background-color: #F9FAFB;
+      color: #64748B;
+      padding: 24px;
+      font-size: 13px;
+      text-align: center;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .footer p {
+      margin: 0 0 8px 0;
+    }
+
+    .footer p:last-child {
+      margin-bottom: 0;
+    }
+
+    a {
+      color: #6D5EF7;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
     }
 
     /* Dark mode support */
     @media (prefers-color-scheme: dark) {
       body {
-        background-color: #121212;
-        color: #e0e0e0;
+        background-color: #111827;
+        color: #E5E7EB;
       }
 
       .container {
-        background-color: #1e1e1e;
-        border: 1px solid #333;
+        background-color: #1F2937;
+        border: 1px solid #374151;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
       }
 
       .header {
-        background-color: #0055aa;
-        color: #ffffff;
+        background: linear-gradient(135deg, #7C6EFF 0%, #9B8FFF 100%);
       }
 
-      .code {
-        color: #66b2ff;
+      .body-content {
+        color: #E5E7EB;
+      }
+
+      .highlight {
+        background-color: rgba(109, 94, 247, 0.15);
+        border-left-color: #8B7EFF;
       }
 
       .footer {
-        background-color: #2a2a2a;
-        color: #bbbbbb;
+        background-color: #111827;
+        color: #9CA3AF;
+        border-top-color: #374151;
       }
 
-      a { color: #66b2ff; }
+      a {
+        color: #8B7EFF;
+      }
     }
   </style>
 </head>
+
 <body>
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
     <tr>
       <td align="center">
         <!-- Main container -->
         <table width="600" cellpadding="0" cellspacing="0" class="container">
-          
+
           <!-- Header -->
           <tr>
-            <td align="center" class="header" style="padding:20px;">
-              <h1 style="font-size:22px; margin:0;">Bolsa Estudiantil UCN</h1>
-              <p style="margin:5px 0 0 0; font-size:14px;">Universidad Católica del Norte</p>
+            <td align="center" class="header">
+              <h1>Bolsa Estudiantil UCN</h1>
+              <p>Universidad Católica del Norte</p>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
-            <td style="padding:24px; font-size:16px; line-height:1.5;">
-              <p>Felicidades, has verificado tu cuenta!</p>
-              <p>Nos alegra tenerte en la bolsa de trabajo para estudiantes UCN.</p>
+            <td class="body-content">
+              <p style="font-size:18px; font-weight:600; color:#1F2937; margin-bottom:16px;">¡Felicidades, has
+                verificado tu cuenta!</p>
+              <p>Nos alegra tenerte en la Bolsa de Trabajo para estudiantes UCN.</p>
+              <p>Ahora puedes acceder a todas las funcionalidades de la plataforma:</p>
+
+              <div class="highlight">
+                <p style="margin:0; font-weight:500;">✓ Explorar ofertas de trabajo<br>✓ Publicar y buscar
+                  productos<br>✓ Conectar con la comunidad UCN</p>
+              </div>
+
+              <p>¡Esperamos que tengas una excelente experiencia!</p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td align="center" class="footer" style="padding:16px; font-size:12px;">
-              <p style="margin:0;">Universidad Católica del Norte</p>
-              <p style="margin:4px 0 0 0;">Si no solicitaste este código, puedes ignorar este email de forma segura.</p>
+            <td class="footer">
+              <p style="font-weight:600; color:#64748B;">Universidad Católica del Norte</p>
+              <p style="opacity:0.85;">Bolsa Estudiantil FEUCN - Plataforma de Empleo y Servicios</p>
+              <p style="margin-top:12px; font-size:12px; opacity:0.75;">Si no solicitaste esta verificación, puedes
+                ignorar este correo de forma segura.</p>
             </td>
           </tr>
 
@@ -104,4 +177,5 @@
     </tr>
   </table>
 </body>
+
 </html>

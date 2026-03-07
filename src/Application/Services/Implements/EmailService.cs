@@ -1,9 +1,10 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
 using Resend;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
     /// Default implementation of <see cref="IEmailService"/>.
@@ -39,7 +40,10 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             try
             {
                 Log.Information("Iniciando envío de email de verificación a: {Email}", email);
-                var htmlBody = await LoadTemplateAsync("VerificationEmail", code);
+                var htmlBody = await LoadTemplateAsync(
+                    "VerificationEmail",
+                    new Dictionary<string, string> { { "CODE", code } }
+                );
 
                 var message = new EmailMessage
                 {
@@ -80,7 +84,10 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             try
             {
                 Log.Information("Iniciando envío de email de restablecimiento a: {Email}", email);
-                var htmlBody = await LoadTemplateAsync("PasswordResetEmail", code);
+                var htmlBody = await LoadTemplateAsync(
+                    "PasswordResetEmail",
+                    new Dictionary<string, string> { { "CODE", code } }
+                );
 
                 var message = new EmailMessage
                 {
@@ -143,9 +150,12 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Loads an email template file from disk and optionally injects a code placeholder.
         /// </summary>
         /// <param name="templateName">Template file name without extension.</param>
-        /// <param name="code">Optional code to replace in the template.</param>
+        /// <param name="templateData">Optional data to replace in the template.</param>
         /// <returns>Rendered HTML content of the template.</returns>
-        public async Task<string> LoadTemplateAsync(string templateName, string? code)
+        public async Task<string> LoadTemplateAsync(
+            string templateName,
+            Dictionary<string, string>? templateData = null
+        )
         {
             try
             {
@@ -166,9 +176,16 @@ namespace bolsafeucn_back.src.Application.Services.Implements
 
                 var htmlContent = await File.ReadAllTextAsync(templatePath);
 
-                if (code != null)
-                    htmlContent = htmlContent.Replace("{{CODE}}", code);
-
+                if (templateData != null)
+                {
+                    foreach (var placeholder in templateData)
+                    {
+                        htmlContent = htmlContent.Replace(
+                            $"{{{{{placeholder.Key}}}}}",
+                            placeholder.Value
+                        );
+                    }
+                }
                 return htmlContent;
             }
             catch (Exception ex)
@@ -188,7 +205,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// <param name="offerName">Offer title.</param>
         /// <param name="companyName">Company name.</param>
         /// <param name="newStatus">New status text.</param>
-        public async Task<bool> SendPostulationStatusChangeEmailAsync(
+        public async Task<bool> SendApplicationStatusChangeEmailAsync(
             string email,
             string offerName,
             string companyName,
@@ -199,10 +216,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             {
                 Log.Information("Enviando email de cambio de estado a {Email}", email);
 
-                var htmlBody = await LoadPostulationStatusTemplateAsync(
-                    offerName,
-                    companyName,
-                    newStatus
+                var htmlBody = await LoadTemplateAsync(
+                    "ApplicationStatusChanged",
+                    new Dictionary<string, string>
+                    {
+                        { "OFFER_NAME", offerName },
+                        { "COMPANY_NAME", companyName },
+                        { "NEW_STATUS", newStatus },
+                    }
                 );
 
                 var message = new EmailMessage
@@ -231,63 +252,81 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             }
         }
 
-        private async Task<string> LoadPostulationStatusTemplateAsync(
-            string offerName,
-            string companyName,
-            string newStatus
-        )
+        public async Task<bool> SendChangeEmailVerificationEmailAsync(string email, string code)
         {
             try
             {
-                var templatePath = Path.Combine(
-                    _environment.ContentRootPath,
-                    "src",
-                    "Application",
-                    "Templates",
-                    "Emails",
-                    "PostulationStatusChanged.html"
+                Log.Information("Iniciando envío de email de verificación a: {Email}", email);
+                var htmlBody = await LoadTemplateAsync(
+                    "EmailChangeVerification",
+                    new Dictionary<string, string> { { "CODE", code } }
                 );
 
-                var html = await File.ReadAllTextAsync(templatePath);
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = _configuration["EmailConfiguration:VerificationSubject"]!,
+                    HtmlBody = htmlBody,
+                };
 
-                html = html.Replace("{{OFFER_NAME}}", offerName);
-                html = html.Replace("{{COMPANY_NAME}}", companyName);
-                html = html.Replace("{{NEW_STATUS}}", newStatus);
+                var result = await _resend.EmailSendAsync(message);
 
-                return html;
+                if (!result.Success)
+                {
+                    Log.Error("El envío del email de verificación falló para: {Email}", email);
+                    return false;
+                }
+
+                Log.Information("Email de verificación enviado exitosamente a: {Email}", email);
+                return true;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error cargando template PostulationStatusChanged");
-                throw;
+                Log.Error(ex, "Error al enviar email de verificación a: {Email}", email);
+                return false;
             }
         }
 
         public async Task<bool> SendPublicationStatusChangeEmailAsync(
-            int? publicationId,
-            string recipientEmail,
-            string publicationTitle,
-            string newStatus
+            string email,
+            Dictionary<string, string> templateData
         )
         {
             try
             {
                 Log.Information(
                     "Enviando email de cambio de estado de publicación a {Email}",
-                    recipientEmail
+                    email
                 );
 
-                bool isRejected = newStatus.Equals("Rechazada", StringComparison.OrdinalIgnoreCase);
+                bool isRejected =
+                    templateData.GetValueOrDefault("NEW_STATUS")
+                    == ApprovalStatus.Rechazada.ToString();
 
-                var htmlBody = await LoadPublicationStatusTemplateAsync(
-                    publicationId,
-                    publicationTitle,
-                    newStatus
-                );
+                if (isRejected && templateData.TryGetValue("PUBLICATION_ID", out var publicationId))
+                {
+                    string appealLink = $"https://bolsafeucn.cl/publications/{publicationId}";
+                    templateData["REJECTED_BLOCK"] =
+                        $@"
+                        <hr />
+                        <p style='color:#c0392b;'>
+                            Tu publicación fue rechazada tras la revisión.
+                        </p>
+                        <p>
+                            Si consideras que esto fue un error, puedes apelar:
+                        </p>
+                        <p>
+                            <a href='{appealLink}' style='color:#2980b9;'>Apelar decisión</a>
+                        </p>
+                    ";
+                }
+
+                var htmlBody = await LoadTemplateAsync("PublicationStatusChanged", templateData);
 
                 var message = new EmailMessage
                 {
-                    To = recipientEmail,
+                    To = email,
                     From = _configuration["EmailConfiguration:From"]!,
                     Subject = isRejected
                         ? "Tu publicación fue rechazada"
@@ -301,14 +340,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 {
                     Log.Error(
                         "Error al enviar correo de cambio de estado de publicación a {Email}",
-                        recipientEmail
+                        email
                     );
                     return false;
                 }
 
                 Log.Information(
                     "Correo de cambio de estado de publicación enviado exitosamente a {Email}",
-                    recipientEmail
+                    email
                 );
                 return true;
             }
@@ -317,70 +356,9 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 Log.Error(
                     ex,
                     "Error enviando correo de cambio de estado de publicación a {Email}",
-                    recipientEmail
+                    email
                 );
                 return false;
-            }
-        }
-
-        private async Task<string> LoadPublicationStatusTemplateAsync(
-            int? publicationId,
-            string publicationTitle,
-            string newStatus
-        )
-        {
-            try
-            {
-                var templatePath = Path.Combine(
-                    _environment.ContentRootPath,
-                    "src",
-                    "Application",
-                    "Templates",
-                    "Emails",
-                    "PublicationStatusChanged.html"
-                );
-
-                var html = await File.ReadAllTextAsync(templatePath);
-
-                html = html.Replace("{{PUBLICATION_TITLE}}", publicationTitle);
-                html = html.Replace("{{NEW_STATUS}}", newStatus);
-
-                bool isRejected = newStatus.Equals("Rechazada", StringComparison.OrdinalIgnoreCase);
-
-                if (isRejected && publicationId.HasValue)
-                {
-                    string appealLink =
-                        $"https://bolsafeucn.cl/publications/{publicationId}/appeal";
-
-                    var rejectedBlock =
-                        $@"
-                <hr />
-                <p style='color:#c0392b;'>
-                    Tu publicación fue rechazada tras la revisión.
-                </p>
-                <p>
-                    Si consideras que esto fue un error, puedes apelar en el siguiente enlace:
-                </p>
-                <p>
-                    <a href='{appealLink}' style='color:#2980b9;'>
-                        Apelar decisión
-                    </a>
-                </p>
-            ";
-
-                    html = html.Replace("{{REJECTED_BLOCK}}", rejectedBlock);
-                }
-                else
-                {
-                    html = html.Replace("{{REJECTED_BLOCK}}", string.Empty);
-                }
-
-                return html;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error cargando template PublicationStatusChanged");
-                throw;
             }
         }
 
@@ -443,6 +421,301 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             catch (Exception ex)
             {
                 Log.Error(ex, "Error enviando alerta de review baja");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendInitialReviewsCreatedEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                Log.Information("Enviando email de reseñas iniciales creadas a: {Email}", email);
+
+                var htmlBody = templateData.ContainsKey("REVIEWS_CREATED_COUNT")
+                    ? await LoadTemplateAsync("InitialReviewsCreatedOfferor", templateData)
+                    : await LoadTemplateAsync("InitialReviewsCreatedApplicant", templateData);
+
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = $"¡Reseñas iniciales creadas para '{templateData["OFFER_NAME"]}'!",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error(
+                        "Error al enviar email de reseñas iniciales creadas a: {Email}",
+                        email
+                    );
+                    return false;
+                }
+
+                Log.Information(
+                    "Email de reseñas iniciales creadas enviado exitosamente a: {Email}",
+                    email
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    ex,
+                    "Error al enviar email de reseñas iniciales creadas a: {Email}",
+                    email
+                );
+                return false;
+            }
+        }
+
+        public async Task<bool> SendPublicationClosedByAdminEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                Log.Information(
+                    "Enviando email de publicación cerrada por admin a: {Email}",
+                    email
+                );
+                var htmlBody = await LoadTemplateAsync("PublicationClosedByAdmin", templateData);
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject =
+                        $"Tu publicación '{templateData["PUBLICATION_TITLE"]}' ha sido cerrada por un administrador",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error(
+                        "Error al enviar email de publicación cerrada por admin a: {Email}",
+                        email
+                    );
+                    return false;
+                }
+
+                Log.Information(
+                    "Email de publicación cerrada por admin enviado exitosamente a: {Email}",
+                    email
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    ex,
+                    "Error al enviar email de publicación cerrada por admin a: {Email}",
+                    email
+                );
+                return false;
+            }
+        }
+
+        public async Task<bool> SendPublicationStatusChangedEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                Log.Information(
+                    "Enviando email de cambio de estado de publicación a {Email}",
+                    email
+                );
+
+                bool isRejected =
+                    templateData.GetValueOrDefault("NEW_STATUS")
+                    == ApprovalStatus.Rechazada.ToString();
+
+                if (isRejected && templateData.TryGetValue("PUBLICATION_ID", out var publicationId))
+                {
+                    string appealLink = $"https://bolsafeucn.cl/publications/{publicationId}";
+                    templateData["REJECTED_BLOCK"] =
+                        $@"
+                        <hr />
+                        <p style='color:#c0392b;'>
+                            Tu publicación fue rechazada tras la revisión.
+                        </p>
+                        <p>
+                            Si consideras que esto fue un error, puedes apelar:
+                        </p>
+                        <p>
+                            <a href='{appealLink}' style='color:#2980b9;'>Apelar decisión</a>
+                        </p>
+                    ";
+                }
+                else
+                {
+                    templateData["REJECTED_BLOCK"] = string.Empty;
+                }
+
+                var htmlBody = await LoadTemplateAsync("PublicationStatusChanged", templateData);
+
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = isRejected
+                        ? "Tu publicación fue rechazada"
+                        : $"Actualización en tu publicación '{templateData["PUBLICATION_TITLE"]}'",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error(
+                        "Error al enviar correo de cambio de estado de publicación a {Email}",
+                        email
+                    );
+                    return false;
+                }
+
+                Log.Information(
+                    "Correo de cambio de estado de publicación enviado exitosamente a {Email}",
+                    email
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    ex,
+                    "Error enviando correo de cambio de estado de publicación a {Email}",
+                    email
+                );
+                return false;
+            }
+        }
+
+        public async Task<bool> SendDailyDigestAsync(
+            string email,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                Log.Information("Enviando resumen diario a: {Email}", email);
+                var htmlBody = await LoadTemplateAsync("DailyUserDigestEmail", templateData);
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = "Tienes nuevas postulaciones en tus ofertas - BolsaFeUCN",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error("Error al enviar resumen diario a: {Email}", email);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error al enviar resumen diario a: {Email}", email);
+                return false;
+            }
+        }
+
+        public async Task<bool> SendDailyAdminDigestAsync(
+            User admin,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                templateData["USER_NAME"] = admin.FullName ?? "Administrador";
+                Log.Information("Enviando resumen diario administrativo a: {Email}", admin.Email!);
+                var htmlBody = await LoadTemplateAsync("DailyAdminDigestEmail", templateData);
+                var message = new EmailMessage
+                {
+                    To = admin.Email!,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = "Resumen diario de notificaciones administrativas",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error(
+                        "Error al enviar resumen diario administrativo a: {Email}",
+                        admin.Email!
+                    );
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    ex,
+                    "Error al enviar resumen diario administrativo a: {Email}",
+                    admin.Email!
+                );
+                return false;
+            }
+        }
+
+        public async Task<bool> SendOfferCancelledForApplicantEmailAsync(
+            string email,
+            Dictionary<string, string> templateData
+        )
+        {
+            try
+            {
+                Log.Information("Enviando email de oferta cancelada a postulante: {Email}", email);
+                var htmlBody = await LoadTemplateAsync("OfferCancelledForApplicant", templateData);
+                var message = new EmailMessage
+                {
+                    To = email,
+                    From = _configuration["EmailConfiguration:From"]!,
+                    Subject = $"Oferta cancelada: '{templateData["OFFER_TITLE"]}'",
+                    HtmlBody = htmlBody,
+                };
+
+                var result = await _resend.EmailSendAsync(message);
+
+                if (!result.Success)
+                {
+                    Log.Error(
+                        "Error al enviar email de oferta cancelada a postulante: {Email}",
+                        email
+                    );
+                    return false;
+                }
+
+                Log.Information(
+                    "Email de oferta cancelada enviado exitosamente a postulante: {Email}",
+                    email
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    ex,
+                    "Error al enviar email de oferta cancelada a postulante: {Email}",
+                    email
+                );
                 return false;
             }
         }

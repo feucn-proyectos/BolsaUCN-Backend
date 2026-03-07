@@ -1,10 +1,7 @@
-namespace bolsafeucn_back.src.Application.DTOs.UserDTOs
+namespace backend.src.Application.DTOs.UserDTOs
 {
-    public class GetCVDTO
+    public class HasCVDTO
     {
-        public required string OriginalFileName { get; set; }
-        public required string Url { get; set; }
-        public required long FileSizeBytes { get; set; }
-        public required DateTime UploadDate { get; set; }
+        public required bool HasCV { get; set; }
     }
 }

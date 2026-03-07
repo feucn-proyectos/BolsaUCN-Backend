@@ -41,11 +41,9 @@ TestResults/
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.local.json
-appsettings.json
 secrets.json
 
 # Entity Framework
-Migrations/
 *.sqlite
 *.db
 *.mdf
@@ -71,4 +69,4 @@ docker-compose.override.yml
 
 
 .config/dotnet-tools.json
-bolsafeucn_back/appsettings.json
+backend/appsettings.json

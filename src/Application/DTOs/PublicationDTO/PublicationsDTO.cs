@@ -1,21 +1,55 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Application.DTOs.PublicationDTO
+namespace backend.src.Application.DTOs.PublicationDTO
 {
+    /// <summary>
+    /// DTO que presenta una publicacion
+    /// </summary>
     public class PublicationsDTO
     {
+        /// <summary>
+        /// Identificador único de la publicación
+        /// </summary>
         public int IdPublication { get; set; }
+
+        /// <summary>
+        /// Identificador del usuario que creó la publicación
+        /// </summary>
         public int UserId { get; set; }
+
+        /// <summary>
+        /// Título de la publicación
+        /// </summary>
         public string Title { get; set; } = string.Empty;
-        public Types types { get; set; }
+
+        /// <summary>
+        /// Tipo de publicación (Oferta o CompraVenta)
+        /// </summary>
+        public PublicationType Types { get; set; }
+
+        /// <summary>
+        /// Descripción de la publicación
+        /// </summary>
         public string Description { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Fecha de publicación
+        /// </summary>
         public DateTime PublicationDate { get; set; }
+
+        /// <summary>
+        /// Imágenes asociadas a la publicación
+        /// </summary>
         public ICollection<Image> Images { get; set; } = new List<Image>();
+
+        /// <summary>
+        /// Indica si la publicación está activa o no
+        /// </summary>
         public bool IsActive { get; set; }
-        public StatusValidation statusValidation { get; set; }
+
+        /// <summary>
+        /// Estado de validación de la publicación
+        /// </summary>
+        public ApprovalStatus StatusValidation { get; set; }
     }
 }

@@ -1,8 +1,404 @@
-using bolsafeucn_back.src.Application.DTOs.PublicationDTO;
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Application.DTOs.PublicationDTO;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
+using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
+using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Domain.Models;
+using Mapster;
 
-namespace bolsafeucn_back.src.Application.Mappers
+namespace backend.src.Application.Mappers
 {
+    public class PublicationMapper
+    {
+        public void ConfigureAllMappings()
+        {
+            ConfigurePublicationMapping();
+            ConfigurePublicationsForOfferor();
+            ConfigurePublicationsForAdmin();
+        }
+
+        public void ConfigurePublicationMapping()
+        {
+            TypeAdapterConfig<Publication, PublicationsDTO>
+                .NewConfig()
+                .Map(dest => dest.IdPublication, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Types, src => src.PublicationType)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.StatusValidation, src => src.ApprovalStatus);
+
+            TypeAdapterConfig<Publication, PublicationAwaitingApprovalDTO>
+                .NewConfig()
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Type, src => src.PublicationType)
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.CreatedBy, src => src.User.UserName)
+                .Map(dest => dest.Status, src => src.ApprovalStatus)
+                .Map(
+                    dest => dest.OfferType,
+                    src => src is Offer ? ((Offer)src).OfferType.ToString() : null
+                )
+                .Map(
+                    dest => dest.Price,
+                    src => src is BuySell ? ((BuySell)src).Price.ToString() : null
+                );
+            TypeAdapterConfig<Publication, PublicationDetailsForApprovalDTO>
+                .NewConfig()
+                // Atributos comunes
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.UserId, src => src.User.Id)
+                .Map(dest => dest.UserEmail, src => src.User.Email)
+                .Map(dest => dest.UserName, src => src.User.FullName)
+                .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(
+                    dest => dest.AdditionalContactEmail,
+                    src => src.AdditionalContactEmail ?? string.Empty
+                )
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber ?? string.Empty
+                )
+                .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
+                .Map(dest => dest.Rating, src => src.User.Rating)
+                .Map(dest => dest.NumberOfAppeals, src => src.AppealCount)
+                .Map(dest => dest.LastRejectionReason, src => src.RejectedByAdminReason)
+                // Atributos de Oferta
+                .Map(
+                    dest => dest.EndDate,
+                    src => src is Offer ? ((Offer)src).EndDate.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.ApplicationDeadline,
+                    src => src is Offer ? ((Offer)src).ApplicationDeadline.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.Remuneration,
+                    src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                )
+                .Map(
+                    dest => dest.IsCVRequired,
+                    src => src is Offer ? ((Offer)src).IsCvRequired : (bool?)null
+                )
+                .Map(
+                    dest => dest.OfferType,
+                    src => src is Offer ? ((Offer)src).OfferType.ToString() : string.Empty
+                )
+                // Atributos de Compra/Venta
+                .Map(
+                    dest => dest.Category,
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : string.Empty
+                )
+                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
+                .Map(
+                    dest => dest.ImageUrls,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
+                            : null
+                )
+                .Map(
+                    dest => dest.Quantity,
+                    src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
+                )
+                .Map(
+                    dest => dest.Condition,
+                    src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                );
+        }
+
+        public void ConfigurePublicationsForOfferor()
+        {
+            // Mapeo para listar publicaciones del offerente
+            TypeAdapterConfig<Publication, PublicationForOfferorDTO>
+                .NewConfig()
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.PublicationType, src => src.PublicationType)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
+                .Map(dest => dest.HasAppealed, src => src.AppealCount > 0)
+                .Map(
+                    dest => dest.Availability,
+                    src => src is BuySell ? ((BuySell)src).Availability.ToString() : null
+                );
+
+            // Mapeo para detalles de publicación del offerente
+            TypeAdapterConfig<Publication, MyPublicationDetailsDTO>
+                .NewConfig()
+                // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
+                .Map(dest => dest.Id, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.ContactEmail, src => src.User.Email)
+                .Map(dest => dest.ContactPhone, src => src.User.PhoneNumber)
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.ReasonForClosure, src => src.ClosedByAdminReason)
+                .Map(dest => dest.ReasonForRejection, src => src.RejectedByAdminReason)
+                .Map(dest => dest.AppealCount, src => src.AppealCount)
+                // === OFERTAS DE TRABAJO ===
+                .Map(
+                    dest => dest.OfferStatus,
+                    src => src is Offer ? ((Offer)src).CurrentStatus.ToString() : null
+                )
+                .Map(
+                    dest => dest.OfferType,
+                    src => src is Offer ? ((Offer)src).OfferType.ToString() : null
+                )
+                .Map(
+                    dest => dest.EndDate,
+                    src => src is Offer ? ((Offer)src).EndDate : (DateTime?)null
+                )
+                .Map(
+                    dest => dest.ApplicationDeadline,
+                    src => src is Offer ? ((Offer)src).ApplicationDeadline : (DateTime?)null
+                )
+                .Map(
+                    dest => dest.Remuneration,
+                    src => src is Offer ? ((Offer)src).Remuneration : null
+                )
+                .Map(
+                    dest => dest.IsCvRequired,
+                    src => src is Offer ? ((Offer)src).IsCvRequired : (bool?)null
+                )
+                .Map(
+                    dest => dest.ApplicationsCount,
+                    src => src is Offer ? ((Offer)src).Applications.Count : (int?)null
+                )
+                .Map(
+                    dest => dest.RemainingSlots,
+                    src => src is Offer ? ((Offer)src).AvailableSlots : (int?)null
+                )
+                // === COMPRA / VENTAS ===
+                .Map(
+                    dest => dest.ImageUrls,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
+                            : null
+                )
+                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
+                .Map(
+                    dest => dest.Category,
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : null
+                )
+                .Map(
+                    dest => dest.Quantity,
+                    src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
+                )
+                .Map(
+                    dest => dest.Availability,
+                    src => src is BuySell ? ((BuySell)src).Availability.ToString() : null
+                )
+                .Map(
+                    dest => dest.Condition,
+                    src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                )
+                .Map(
+                    dest => dest.ShowEmail,
+                    src => src is BuySell ? ((BuySell)src).IsEmailAvailable : (bool?)null
+                )
+                .Map(
+                    dest => dest.ShowPhoneNumber,
+                    src => src is BuySell ? ((BuySell)src).IsPhoneAvailable : (bool?)null
+                );
+
+            // Mapeos para actualizar publicaciones a partir de una apelación de rechazo
+            TypeAdapterConfig<AppealRejectionDTO, Offer>
+                .NewConfig()
+                .Map(dest => dest.Title, src => src.Tittle)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
+                .Map(
+                    dest => dest.ApplicationDeadline,
+                    src =>
+                        src.ApplicationDeadline.HasValue
+                            ? ((DateTime)src.ApplicationDeadline).ToUniversalTime()
+                            : (DateTime?)null
+                )
+                .Map(
+                    dest => dest.EndDate,
+                    src =>
+                        src.EndDate.HasValue
+                            ? ((DateTime)src.EndDate).ToUniversalTime()
+                            : (DateTime?)null
+                )
+                .Map(dest => dest.Remuneration, src => src.Remuneration)
+                .Map(dest => dest.AvailableSlots, src => src.RequiredApplicants)
+                .Map(dest => dest.OfferType, src => src.OfferType)
+                .Map(dest => dest.IsCvRequired, src => src.IsCvRequired);
+            TypeAdapterConfig<AppealRejectionDTO, BuySell>
+                .NewConfig()
+                .Map(dest => dest.Title, src => src.Tittle)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.AdditionalContactEmail, src => src.AdditionalContactEmail)
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber
+                )
+                .Map(dest => dest.Category, src => src.Category)
+                .Map(dest => dest.Price, src => src.Price)
+                .Map(dest => dest.Quantity, src => src.Quantity)
+                .Map(dest => dest.Availability, src => src.Availability)
+                .Map(dest => dest.Condition, src => src.Condition);
+        }
+
+        public void ConfigurePublicationsForAdmin()
+        {
+            TypeAdapterConfig<Publication, PublicationForAdminDTO>
+                .NewConfig()
+                .Map(dest => dest.Id, src => src.Id)
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.AuthorName, src => src.User.UserName)
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus)
+                .Map(dest => dest.AppealsCount, src => src.AppealCount)
+                // Informacion del autor
+                .Map(dest => dest.AuthorId, src => src.User.Id)
+                .Map(
+                    dest => dest.AuthorName,
+                    src =>
+                        src.User.UserType == UserType.Empresa
+                            ? src.User.FirstName
+                            : src.User.FirstName + " " + src.User.LastName
+                )
+                .Map(dest => dest.UserType, src => src.User.UserType.ToString())
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
+                .Map(dest => dest.AuthorEmail, src => src.User.Email);
+
+            TypeAdapterConfig<Publication, PublicationDetailsForAdminDTO>
+                .NewConfig()
+                // === PROPIEDADES COMUNES A TODAS LAS PUBLICACIONES ===
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.Description, src => src.Description)
+                .Map(dest => dest.PublicationDate, src => src.CreatedAt)
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.ApprovalStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.Location, src => src.Location)
+                .Map(
+                    dest => dest.AdditionalContactEmail,
+                    src => src.AdditionalContactEmail ?? string.Empty
+                )
+                .Map(
+                    dest => dest.AdditionalContactPhoneNumber,
+                    src => src.AdditionalContactPhoneNumber ?? string.Empty
+                )
+                // === INFORMACION DEL AUTOR ===
+                .Map(dest => dest.UserId, src => src.User.Id)
+                .Map(dest => dest.UserEmail, src => src.User.Email)
+                .Map(dest => dest.UserPhoneNumber, src => src.User.PhoneNumber)
+                .Map(dest => dest.ProfilePhotoUrl, src => src.User.ProfilePhoto!.Url)
+                .Map(
+                    dest => dest.UserName,
+                    src =>
+                        src.User.UserType == UserType.Empresa
+                            ? src.User.FirstName
+                            : src.User.FirstName + " " + src.User.LastName
+                )
+                .Map(dest => dest.UserType, src => src.User.UserType.ToString())
+                .Map(dest => dest.AboutMe, src => src.User.AboutMe ?? string.Empty)
+                .Map(dest => dest.Rating, src => src.User.Rating)
+                // === ATRIBUTOS DE OFERTA ===
+                .Map(
+                    dest => dest.CurrentStatus,
+                    src => src is Offer ? ((Offer)src).CurrentStatus.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.EndDate,
+                    src => src is Offer ? ((Offer)src).EndDate.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.DeadlineDate,
+                    src => src is Offer ? ((Offer)src).ApplicationDeadline.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.Remuneration,
+                    src => src is Offer ? ((Offer)src).Remuneration : (int?)null
+                )
+                .Map(
+                    dest => dest.OfferType,
+                    src => src is Offer ? ((Offer)src).OfferType.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.ApplicantsCount,
+                    src => src is Offer ? ((Offer)src).Applications.Count : (int?)null
+                )
+                .Map(
+                    dest => dest.IsCvRequired,
+                    src => src is Offer ? ((Offer)src).IsCvRequired : (bool?)null
+                )
+                // === ATRIBUTOS DE COMPRA/VENTA ===
+                .Map(
+                    dest => dest.ImageUrls,
+                    src =>
+                        src is BuySell
+                            ? ((BuySell)src).Images.Select(img => img.Url).ToList()
+                            : new List<string>()
+                )
+                .Map(
+                    dest => dest.Category,
+                    src => src is BuySell ? ((BuySell)src).Category.ToString() : string.Empty
+                )
+                .Map(
+                    dest => dest.Condition,
+                    src => src is BuySell ? ((BuySell)src).Condition.ToString() : null
+                )
+                .Map(
+                    dest => dest.Quantity,
+                    src => src is BuySell ? ((BuySell)src).Quantity : (int?)null
+                )
+                .Map(dest => dest.Price, src => src is BuySell ? ((BuySell)src).Price : (int?)null)
+                .Map(
+                    dest => dest.Availability,
+                    src => src is BuySell ? ((BuySell)src).Availability.ToString() : null
+                )
+                .Map(
+                    dest => dest.ShowEmail,
+                    src => src is BuySell ? ((BuySell)src).IsEmailAvailable : (bool?)null
+                )
+                .Map(
+                    dest => dest.ShowPhoneNumber,
+                    src => src is BuySell ? ((BuySell)src).IsPhoneAvailable : (bool?)null
+                );
+
+            TypeAdapterConfig<Publication, UserPublicationForAdminDTO>
+                .NewConfig()
+                .Map(dest => dest.PublicationId, src => src.Id)
+                .Map(dest => dest.Title, src => src.Title)
+                .Map(dest => dest.PublicationStatus, src => src.ApprovalStatus.ToString())
+                .Map(dest => dest.PublicationType, src => src.PublicationType.ToString())
+                .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+                .Map(dest => dest.HasBeenAppealed, src => src.AppealCount > 0);
+        }
+    }
+
+    /*
     /// <summary>
     /// Mapper para convertir entidades de Publication a DTOs.
     /// Usado en el ReviewService para obtener información de publicaciones asociadas a reseñas.
@@ -20,13 +416,14 @@ namespace bolsafeucn_back.src.Application.Mappers
             {
                 IdPublication = publication.Id,
                 Title = publication.Title,
-                types = publication.Type,
+                Types = publication.Type,
                 Description = publication.Description,
-                PublicationDate = publication.PublicationDate,
+                PublicationDate = publication.CreatedAt,
                 Images = publication.Images,
-                IsActive = publication.IsActive,
-                statusValidation = publication.statusValidation
+                IsActive = publication.IsOpen,
+                StatusValidation = publication.StatusValidation,
             };
         }
     }
+    */
 }

@@ -45,7 +45,7 @@ int.TryParse(userIdClaim, out int currentUserId)
 
 **PostgreSQL 16** via EF Core. Connection string in `appsettings.json`.
 
-**Critical Commands** (run from `bolsafeucn_back/`):
+**Critical Commands** (run from `backend/`):
 ```bash
 dotnet ef migrations add MigrationName
 dotnet ef database update
@@ -236,7 +236,7 @@ On application start (in `Program.cs`):
 
 **Start Development**:
 ```bash
-cd bolsafeucn_back
+cd backend
 dotnet watch --no-hot-reload  # Auto-recompile on file changes
 ```
 

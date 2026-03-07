@@ -1,12 +1,13 @@
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs;
-using bolsafeucn_back.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
-using bolsafeucn_back.src.Application.DTOs.BaseResponse;
-using bolsafeucn_back.src.Application.Services.Interfaces;
+using backend.src.Application.DTOs.AuthDTOs;
+using backend.src.Application.DTOs.AuthDTOs.ResetPasswordDTOs;
+using backend.src.Application.DTOs.BaseResponse;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
-namespace bolsafeucn_back.src.API.Controllers
+namespace backend.src.API.Controllers
 {
     public class AuthController : BaseController
     {
@@ -21,10 +22,10 @@ namespace bolsafeucn_back.src.API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterStudentDTO registerStudentDTO)
         {
             Log.Information(
-                "Attempting to register new student with email {Email}",
+                "Intentando registrar estudiante con email: {Email}",
                 registerStudentDTO.Email
             );
-            var message = await _service.RegisterStudentAsync(registerStudentDTO, HttpContext);
+            var message = await _service.RegisterStudentAsync(registerStudentDTO);
             return Ok(new GenericResponse<string>("Registro de estudiante exitoso", message));
         }
 
@@ -34,13 +35,10 @@ namespace bolsafeucn_back.src.API.Controllers
         )
         {
             Log.Information(
-                "Endpoint: POST /api/auth/register/individual - Intentando registrar particular con email: {Email}",
+                "Intentando registrar particular con email: {Email}",
                 registerIndividualDTO.Email
             );
-            var message = await _service.RegisterIndividualAsync(
-                registerIndividualDTO,
-                HttpContext
-            );
+            var message = await _service.RegisterIndividualAsync(registerIndividualDTO);
             return Ok(new GenericResponse<string>("Registro de particular exitoso", message));
         }
 
@@ -48,34 +46,31 @@ namespace bolsafeucn_back.src.API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterCompanyDTO registerCompanyDTO)
         {
             Log.Information(
-                "Endpoint: POST /api/auth/register/company - Intentando registrar empresa con email: {Email}",
+                "Intentando registrar empresa con email: {Email}",
                 registerCompanyDTO.Email
             );
-            var message = await _service.RegisterCompanyAsync(registerCompanyDTO, HttpContext);
+            var message = await _service.RegisterCompanyAsync(registerCompanyDTO);
             return Ok(new GenericResponse<string>("Registro de empresa exitoso", message));
         }
 
         [HttpPost("register/admin")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = RoleNames.SuperAdmin)]
         public async Task<IActionResult> Register([FromBody] RegisterAdminDTO registerAdminDTO)
         {
             var adminId = GetUserIdFromToken();
             Log.Information(
-                "Endpoint: POST /api/auth/register/admin - Intentando registrar admin con email: {Email}",
+                "Intentando registrar admin con email: {Email}",
                 registerAdminDTO.Email
             );
-            var message = await _service.RegisterAdminAsync(adminId, registerAdminDTO, HttpContext);
+            var message = await _service.RegisterAdminAsync(adminId, registerAdminDTO);
             return Ok(new GenericResponse<string>("Registro de admin exitoso", message));
         }
 
         [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDTO verifyEmailDTO)
         {
-            Log.Information(
-                "Endpoint: POST /api/auth/verify-email - Intentando verificar email: {Email}",
-                verifyEmailDTO.Email
-            );
-            var message = await _service.VerifyEmailAsync(verifyEmailDTO, HttpContext);
+            Log.Information("Intentando verificar email: {Email}", verifyEmailDTO.Email);
+            var message = await _service.VerifyEmailAsync(verifyEmailDTO);
             return Ok(new GenericResponse<string>("Verificación de email exitosa", message));
         }
 
@@ -85,24 +80,18 @@ namespace bolsafeucn_back.src.API.Controllers
         )
         {
             Log.Information(
-                "Endpoint: POST /api/auth/resend-verification - Reenviando código de verificación al email: {Email}",
+                "Intentando reenviar código de verificación al email: {Email}",
                 resendVerificationDTO.Email
             );
-            var message = await _service.ResendVerificationEmailAsync(
-                resendVerificationDTO,
-                HttpContext
-            );
+            var message = await _service.ResendVerificationEmailAsync(resendVerificationDTO);
             return Ok(new GenericResponse<string>("Código de verificación reenviado", message));
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO loginDTO)
         {
-            Log.Information(
-                "Endpoint: POST /api/auth/login - Intento de login para: {Email}",
-                loginDTO.Email
-            );
-            var token = await _service.LoginAsync(loginDTO, HttpContext);
+            Log.Information("Intentando hacer login para: {Email}", loginDTO.Email);
+            var token = await _service.LoginAsync(loginDTO);
             return Ok(new GenericResponse<string>("Login exitoso", token));
         }
 
@@ -112,12 +101,11 @@ namespace bolsafeucn_back.src.API.Controllers
         )
         {
             Log.Information(
-                "Endpoint: POST /api/auth/reset-password - Intento de reseteo de contraseña para: {Email}",
+                "Intentando hacer reseteo de contraseña para: {Email}",
                 requestResetPasswordCodeDTO.Email
             );
             var message = await _service.SendResetPasswordVerificationCodeEmailAsync(
-                requestResetPasswordCodeDTO,
-                HttpContext
+                requestResetPasswordCodeDTO
             );
             return Ok(
                 new GenericResponse<string>("Correo de reseteo de contraseña enviado", message)
@@ -130,13 +118,10 @@ namespace bolsafeucn_back.src.API.Controllers
         )
         {
             Log.Information(
-                "Endpoint: POST /api/auth/reset-password/verify - Intento de verificación de código de reseteo de contraseña para: {Email}",
+                "Intentando verificar código de reseteo de contraseña para: {Email}",
                 verifyResetPasswordCodeDTO.Email
             );
-            var message = await _service.VerifyResetPasswordCodeAsync(
-                verifyResetPasswordCodeDTO,
-                HttpContext
-            );
+            var message = await _service.VerifyResetPasswordCodeAsync(verifyResetPasswordCodeDTO);
             return Ok(
                 new GenericResponse<string>(
                     "Verificación de código de reseteo de contraseña exitosa",
@@ -144,39 +129,5 @@ namespace bolsafeucn_back.src.API.Controllers
                 )
             );
         }
-
-        /*
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var usuarios = await _service.GetUsuariosAsync();
-            return Ok(usuarios);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var usuario = await _service.GetUsuarioAsync(id);
-            if (usuario == null)
-                return NotFound();
-            return Ok(usuario);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] UsuarioDto dto)
-        {
-            var usuario = await _service.CrearUsuarioAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = usuario.Id }, usuario);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var result = await _service.EliminarUsuarioAsync(id);
-            if (!result)
-                return NotFound();
-            return NoContent();
-        }
-        */
     }
 }

@@ -1,51 +1,53 @@
-using bolsafeucn_back.src.Application.DTOs.ReviewDTO;
-using bolsafeucn_back.src.Application.Events;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.ReviewDTO;
+using backend.src.Application.Events;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Repositories.Interfaces;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     /// <summary>
-    /// Service responsible for creating and persisting notifications and delegating
-    /// email sending when application/postulation status changes.
+    /// Implementación del servicio de notificaciones, que se encargará de gestionar la creación y envío de notificaciones a los usuarios y administradores
     /// </summary>
     public class NotificationService : INotificationService
     {
-        private readonly IEmailService _emailService;
-        private readonly INotificationRepository _notificationRepo;
+        private readonly IAdminNotificationRepository _adminNotificationRepository;
+        private readonly IUserNotificationRepository _userNotificationRepository;
 
-        /// <summary>
-        /// Constructs a new <see cref="NotificationService"/>.
-        /// </summary>
-        public NotificationService(IEmailService emailService, INotificationRepository notificationRepo)
+        public NotificationService(
+            IUserNotificationRepository userNotificationRepository,
+            IAdminNotificationRepository adminNotificationRepository
+        )
         {
-            _emailService = emailService;
-            _notificationRepo = notificationRepo;
+            _userNotificationRepository = userNotificationRepository;
+            _adminNotificationRepository = adminNotificationRepository;
         }
 
-        /// <summary>
-        /// Handles a postulation status change event by saving a notification and sending an email.
-        /// </summary>
-        /// <param name="evt">Event describing the status change.</param>
-        public async Task SendPostulationStatusChangeAsync(PostulationStatusChangedEvent evt)
+        public async Task CreateAdminNotificationAsync(
+            AdminNotificationType type,
+            string? payload = null
+        )
         {
-            var statusText = evt.NewStatus.ToString();
-
-            var notification = new NotificationDTO
+            var notification = new AdminNotification
             {
-                UserEmail = evt.StudentEmail,
-                Message =
-                    $"Tu postulación a '{evt.OfferName}' en '{evt.CompanyName}' ha cambiado a '{statusText}'.",
-                CreatedAt = DateTime.UtcNow,
+                Type = type,
+                Payload = payload ?? string.Empty,
+                IsSent = false,
             };
 
-            await _notificationRepo.AddAsync(notification);
-            await _emailService.SendPostulationStatusChangeEmailAsync(
-                evt.StudentEmail,
-                evt.OfferName,
-                evt.CompanyName,
-                statusText
-            );
+            await _adminNotificationRepository.AddAsync(notification);
+        }
+
+        public async Task CreateUserNotificationAsync(int recipientId, UserNotificationType type)
+        {
+            var notification = new UserNotification
+            {
+                RecipientId = recipientId,
+                Type = type,
+                IsSent = false,
+            };
+
+            await _userNotificationRepository.AddAsync(notification);
         }
     }
 }

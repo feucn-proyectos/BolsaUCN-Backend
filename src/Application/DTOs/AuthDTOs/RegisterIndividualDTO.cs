@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using bolsafeucn_back.src.Application.Validators;
+using backend.src.Application.Validators;
 
-namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
+namespace backend.src.Application.DTOs.AuthDTOs
 {
     /// <summary>
     /// DTO para el registro de un usuario individual.
@@ -18,7 +18,7 @@ namespace bolsafeucn_back.src.Application.DTOs.AuthDTOs
         )]
         [MinLength(2, ErrorMessage = "El nombre debe tener mínimo 2 letras.")]
         [MaxLength(50, ErrorMessage = "El nombre debe tener máximo 50 letras.")]
-        public required string Name { get; set; }
+        public required string FirstName { get; set; }
 
         /// <summary>
         /// Apellido del usuario.

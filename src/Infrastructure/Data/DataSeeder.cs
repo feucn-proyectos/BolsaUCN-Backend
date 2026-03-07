@@ -1,11 +1,14 @@
+using backend.src.Application.Jobs.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
 using Bogus;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Infrastructure.Data
+namespace backend.src.Infrastructure.Data
 {
     public class DataSeeder
     {
@@ -15,9 +18,11 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
         )
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
+            var backgroundJobs = serviceProvider.GetRequiredService<IOfferJobs>();
+            var env = serviceProvider.GetRequiredService<IWebHostEnvironment>();
             try
             {
-                var userManager = serviceProvider.GetRequiredService<UserManager<GeneralUser>>();
+                var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
                 var roleManager = serviceProvider.GetRequiredService<RoleManager<Role>>();
 
                 Log.Information("DataSeeder: Iniciando la migración de la base de datos...");
@@ -29,11 +34,28 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information("DataSeeder: No se encontraron roles, creando roles...");
                     var roles = new List<Role>
                     {
-                        new Role { Name = "Admin", NormalizedName = "ADMIN" },
-                        new Role { Name = "Applicant", NormalizedName = "APPLICANT" },
-                        new Role { Name = "Offerent", NormalizedName = "OFFERENT" },
-                        new Role { Name = "SuperAdmin", NormalizedName = "SuperAdmin" },
+                        new Role
+                        {
+                            Name = RoleNames.Admin,
+                            NormalizedName = RoleNames.Admin.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.Applicant,
+                            NormalizedName = RoleNames.Applicant.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.Offeror,
+                            NormalizedName = RoleNames.Offeror.ToUpper(),
+                        },
+                        new Role
+                        {
+                            Name = RoleNames.SuperAdmin,
+                            NormalizedName = RoleNames.SuperAdmin.ToUpper(),
+                        },
                     };
+
                     foreach (var role in roles)
                     {
                         await roleManager.CreateAsync(role);
@@ -41,7 +63,67 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information("DataSeeder: Roles creados exitosamente.");
                 }
 
-                if (!await context.Users.AnyAsync())
+                if (env.IsProduction())
+                {
+                    var adminEmail =
+                        configuration.GetValue<string>("AdminSettings:DefaultAdmin:Email")
+                        ?? throw new InvalidOperationException(
+                            "DefaultAdmin:Email no está configurado"
+                        );
+                    if (await userManager.FindByEmailAsync(adminEmail) != null)
+                    {
+                        Log.Information(
+                            "DataSeeder: Usuario administrador ya existe, omitiendo creación."
+                        );
+                        return;
+                    }
+                    var defaultAdminUser = new User
+                    {
+                        UserName = "admin",
+                        Email = adminEmail,
+                        PhoneNumber = null,
+                        UserType = UserType.Administrador,
+                        AboutMe = "Administrador del sistema BolsaUcn",
+                        Rut = "111111111-1",
+                        EmailConfirmed = true,
+                        IsBlocked = false,
+                        FirstName = "Administrador",
+                        LastName = "Sistema",
+                        ProfilePhoto = new UserImage
+                        {
+                            Url =
+                                configuration.GetValue<string>("Images:DefaultUserImageUrl")
+                                ?? throw new InvalidOperationException(
+                                    "DefaultUserImageUrl no está configurado"
+                                ),
+                            PublicId =
+                                configuration.GetValue<string>("Images:DefaultUserImagePublicId")
+                                ?? throw new InvalidOperationException(
+                                    "DefaultUserImagePublicId no está configurado"
+                                ),
+                        },
+                    };
+                    var adminResult = await userManager.CreateAsync(
+                        defaultAdminUser,
+                        configuration.GetValue<string>("DefaultAdmin:Password")
+                            ?? throw new InvalidOperationException(
+                                "DefaultAdmin:Password no está configurado"
+                            )
+                    );
+                    if (adminResult.Succeeded)
+                    {
+                        await userManager.AddToRolesAsync(
+                            defaultAdminUser,
+                            [RoleNames.Admin, RoleNames.SuperAdmin]
+                        );
+                        Log.Information(
+                            "✅ Usuario administrador creado: {Email} / (contraseña configurada en appsettings)",
+                            defaultAdminUser.Email
+                        );
+                    }
+                }
+
+                if (env.IsDevelopment() && !await context.Users.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron usuarios, creando usuarios de prueba..."
@@ -50,36 +132,36 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Log.Information("DataSeeder: Usuarios de prueba creados exitosamente.");
                 }
 
-                if (!await context.Offers.AnyAsync())
+                if (env.IsDevelopment() && !await context.Offers.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron ofertas, creando ofertas de prueba..."
                     );
-                    await SeedOffers(context);
+                    await SeedOffers(context, backgroundJobs, userManager);
                     Log.Information("DataSeeder: Ofertas de prueba creadas exitosamente.");
                 }
-                if (!await context.BuySells.AnyAsync())
+                if (env.IsDevelopment() && !await context.BuySells.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No hay avisos de compra/venta, creando datos de prueba..."
                     );
-                    await SeedBuySells(context);
+                    await SeedBuySells(context, userManager);
                     Log.Information("DataSeeder: Compra/venta de prueba creados.");
                 }
-                if (!await context.JobApplications.AnyAsync())
+                if (env.IsDevelopment() && !await context.JobApplications.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron postulaciones, creando postulaciones de prueba..."
                     );
-                    await SeedJobApplications(context);
+                    await SeedJobApplications(context, userManager);
                     Log.Information("DataSeeder: Postulaciones de prueba creadas exitosamente.");
                 }
-                if (!await context.Reviews.AnyAsync())
+                if (env.IsDevelopment() && !await context.Reviews.AnyAsync())
                 {
                     Log.Information(
                         "DataSeeder: No se encontraron reviews, creando reviews de prueba..."
                     );
-                    await SeedReviews(context);
+                    await SeedReviews(context, userManager);
                     Log.Information("DataSeeder: Reviews de prueba creadas exitosamente.");
                 }
             }
@@ -91,7 +173,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
         }
 
         private static async Task SeedUsers(
-            UserManager<GeneralUser> userManager,
+            UserManager<User> userManager,
             AppDbContext context,
             IConfiguration configuration
         )
@@ -105,7 +187,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
             // 1. ESTUDIANTE DE PRUEBA
 
-            var testStudentUser = new GeneralUser
+            var testStudentUser1 = new User
             {
                 UserName = "estudiante",
                 Email = "estudiante@alumnos.ucn.cl",
@@ -113,8 +195,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 UserType = UserType.Estudiante,
                 Rut = "12345678-9",
                 EmailConfirmed = true,
-                Banned = false,
-                Rating = 3.3,
+                IsBlocked = false,
+                Rating = 3.3f,
+                FirstName = "Juan",
+                LastName = "Pérez Estudiante",
+                Disability = Disability.Ninguna,
+                CVId = null,
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -127,79 +213,23 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
-            var studentResult = await userManager.CreateAsync(testStudentUser, "Test123!");
-            if (studentResult.Succeeded)
+            var studentResult1 = await userManager.CreateAsync(testStudentUser1, "Test123!");
+            if (studentResult1.Succeeded)
             {
-                await userManager.AddToRoleAsync(testStudentUser, "Applicant");
-                var testStudent = new Student
-                {
-                    GeneralUserId = testStudentUser.Id,
-                    Name = "Juan",
-                    LastName = "Pérez Estudiante",
-                    Disability = Disability.Ninguna,
-                    GeneralUser = testStudentUser,
-                    CurriculumVitae = "https://ejemplo.com/cv/juan_perez.pdf", // CV de prueba
-                    MotivationLetter = "Soy un estudiante motivado y con ganas de aprender", // Carta opcional
-                };
-                context.Students.Add(testStudent);
+                await userManager.AddToRolesAsync(
+                    testStudentUser1,
+                    [RoleNames.Applicant, RoleNames.Offeror]
+                );
                 Log.Information(
                     "✅ Usuario estudiante creado: estudiante@alumnos.ucn.cl / Test123!"
                 );
             }
 
-            var testStudentUser1 = new GeneralUser
-            {
-                UserName = "Gabo",
-                Email = "gabriel.cofre@alumnos.ucn.cl",
-                PhoneNumber = "+56912345678",
-                UserType = UserType.Estudiante,
-                AboutMe = "Soy estudioso jeje",
-                Rut = "12345678-9",
-                EmailConfirmed = true,
-                Banned = false,
-                Rating = 4.3,
-                ProfilePhoto = new UserImage
-                {
-                    Url =
-                        configuration.GetValue<string>("Images:DefaultUserImageUrl")
-                        ?? throw new InvalidOperationException(
-                            "DefaultUserImageUrl no está configurado"
-                        ),
-                    PublicId =
-                        configuration.GetValue<string>("Images:DefaultUserImagePublicId")
-                        ?? throw new InvalidOperationException(
-                            "DefaultUserImagePublicId no está configurado"
-                        ),
-                    ImageType = UserImageType.Perfil,
-                },
-            };
-            var studentResult1 = await userManager.CreateAsync(testStudentUser1, "Test123!");
-            if (studentResult.Succeeded)
-            {
-                await userManager.AddToRoleAsync(testStudentUser1, "Applicant");
-                var testStudent1 = new Student
-                {
-                    GeneralUserId = testStudentUser1.Id,
-                    Name = "Gabriel",
-                    LastName = "Cofre",
-                    Disability = Disability.Ninguna,
-                    GeneralUser = testStudentUser1,
-                    CurriculumVitae = "https://ejemplo.com/cv/gabriel_cofre.pdf", // CV de prueba
-                    MotivationLetter = "Soy un estudiante motivado y con ganas de aprender", // Carta opcional
-                };
-                context.Students.Add(testStudent1);
-                Log.Information(
-                    "✅ Usuario estudiante creado: gabriel.cofre@alumnos.ucn.cl / Test123!"
-                );
-            }
-
             // ESTUDIANTE CON REVIEWS PENDIENTES
-            var testStudentUser2 = new GeneralUser
+            var testStudentUser2 = new User
             {
-                Id = 99,
                 UserName = "estudiante2",
                 Email = "estudiante2@alumnos.ucn.cl",
                 PhoneNumber = "+56923456789",
@@ -207,8 +237,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Estudiante con varias evaluaciones pendientes",
                 Rut = "22334455-6",
                 EmailConfirmed = true,
-                Banned = false,
-                Rating = 0.0,
+                IsBlocked = false,
+                Rating = 0.0f,
+                FirstName = "Pedro",
+                LastName = "López Morales",
+                Disability = Disability.Ninguna,
+                CVId = null,
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -221,31 +255,22 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
             var studentResult2 = await userManager.CreateAsync(testStudentUser2, "Test123!");
             if (studentResult2.Succeeded)
             {
-                await userManager.AddToRoleAsync(testStudentUser2, "Applicant");
-                var testStudent2 = new Student
-                {
-                    GeneralUserId = testStudentUser2.Id,
-                    Name = "Pedro",
-                    LastName = "López Morales",
-                    Disability = Disability.Ninguna,
-                    GeneralUser = testStudentUser2,
-                    CurriculumVitae = "https://ejemplo.com/cv/pedro_lopez.pdf",
-                    MotivationLetter = "Estudiante comprometido con el aprendizaje continuo",
-                };
-                context.Students.Add(testStudent2);
+                await userManager.AddToRolesAsync(
+                    testStudentUser2,
+                    [RoleNames.Applicant, RoleNames.Offeror]
+                );
                 Log.Information(
                     "✅ Usuario estudiante creado: estudiante2@alumnos.ucn.cl / Test123!"
                 );
             }
 
             // 2. EMPRESA DE PRUEBA
-            var testCompanyUser = new GeneralUser
+            var testCompanyUser = new User
             {
                 UserName = "empresa",
                 Email = "empresa@techcorp.cl",
@@ -254,8 +279,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Empresa comprometida con el cambio y progreso de sus trabajadores",
                 Rut = "76543210-K",
                 EmailConfirmed = true,
-                Rating = 5.4,
-                Banned = false,
+                Rating = 5.4f,
+                IsBlocked = false,
+                FirstName = "Tech Corp SpA",
+                LastName = "Tecnología Corporativa SpA",
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -268,26 +295,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
             var companyResult = await userManager.CreateAsync(testCompanyUser, "Test123!");
             if (companyResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testCompanyUser, "Offerent");
-                var testCompany = new Company
-                {
-                    GeneralUserId = testCompanyUser.Id,
-                    CompanyName = "Tech Corp SpA",
-                    LegalName = "Tecnología Corporativa SpA",
-                    GeneralUser = testCompanyUser,
-                };
-                context.Companies.Add(testCompany);
+                await userManager.AddToRoleAsync(testCompanyUser, RoleNames.Offeror);
                 Log.Information("✅ Usuario empresa creado: empresa@techcorp.cl / Test123!");
             }
 
             // 3. PARTICULAR DE PRUEBA
-            var testIndividualUser = new GeneralUser
+            var testIndividualUser = new User
             {
                 UserName = "particular",
                 Email = "particular@ucn.cl",
@@ -296,8 +314,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Emprendedor con 5 años de experiencia",
                 Rut = "11222333-4",
                 EmailConfirmed = true,
-                Rating = 6.0,
-                Banned = false,
+                Rating = 6.0f,
+                IsBlocked = false,
+                FirstName = "María",
+                LastName = "González Particular",
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -310,26 +330,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
             var individualResult = await userManager.CreateAsync(testIndividualUser, "Test123!");
             if (individualResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testIndividualUser, "Offerent");
-                var testIndividual = new Individual
-                {
-                    GeneralUserId = testIndividualUser.Id,
-                    Name = "María",
-                    LastName = "González Particular",
-                    GeneralUser = testIndividualUser,
-                };
-                context.Individuals.Add(testIndividual);
+                await userManager.AddToRoleAsync(testIndividualUser, RoleNames.Offeror);
                 Log.Information("✅ Usuario particular creado: particular@ucn.cl / Test123!");
             }
 
             // 4. ADMIN DE PRUEBA
-            var testAdminUser = new GeneralUser
+            var testAdminUser = new User
             {
                 UserName = "admin",
                 Email = "admin@ucn.cl",
@@ -338,7 +349,9 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 AboutMe = "Administrador del sistema BolsaUcn",
                 Rut = "99888777-6",
                 EmailConfirmed = true,
-                Banned = false,
+                IsBlocked = false,
+                FirstName = "Administrador",
+                LastName = "Sistema",
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -351,22 +364,15 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
             var adminResult = await userManager.CreateAsync(testAdminUser, "Test123!");
             if (adminResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(testAdminUser, "Admin");
-                var testAdmin = new Admin
-                {
-                    GeneralUserId = testAdminUser.Id,
-                    Name = "Admin",
-                    LastName = "Admin Sistema",
-                    SuperAdmin = true,
-                    GeneralUser = testAdminUser,
-                };
-                context.Admins.Add(testAdmin);
+                await userManager.AddToRolesAsync(
+                    testAdminUser,
+                    [RoleNames.Admin, RoleNames.SuperAdmin, RoleNames.Offeror]
+                );
                 Log.Information("✅ Usuario admin creado: admin@ucn.cl / Test123!");
             }
 
@@ -403,7 +409,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             // Seed Random Students
             for (int i = 0; i < 30; i++)
             {
-                var studentUser = new GeneralUser
+                var studentUser = new User
                 {
                     UserName = faker.Internet.UserName(),
                     Email = faker.Internet.Email(),
@@ -412,8 +418,11 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                    Banned = faker.Random.Bool(0.3f),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
+                    IsBlocked = faker.Random.Bool(0.3f),
+                    FirstName = faker.Name.FirstName(),
+                    LastName = faker.Name.LastName(),
+                    Disability = faker.PickRandom<Disability>(),
                     ProfilePhoto = new UserImage
                     {
                         Url =
@@ -426,29 +435,22 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                             ?? throw new InvalidOperationException(
                                 "DefaultUserImagePublicId no está configurado"
                             ),
-                        ImageType = UserImageType.Perfil,
                     },
                 };
                 var result = await userManager.CreateAsync(studentUser, "Password123!");
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(studentUser, "Applicant");
-                    var student = new Student
-                    {
-                        GeneralUserId = studentUser.Id,
-                        Name = faker.Name.FirstName(),
-                        LastName = faker.Name.LastName(),
-                        Disability = faker.PickRandom<Disability>(),
-                        GeneralUser = studentUser,
-                    };
-                    context.Students.Add(student);
+                    await userManager.AddToRolesAsync(
+                        studentUser,
+                        [RoleNames.Applicant, RoleNames.Offeror]
+                    );
                 }
             }
 
             // Seed Companies
             for (int i = 0; i < 20; i++)
             {
-                var companyUser = new GeneralUser
+                var companyUser = new User
                 {
                     UserName = faker.Internet.UserName(),
                     Email = faker.Internet.Email(),
@@ -456,8 +458,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     AboutMe = faker.Random.Replace("##################"),
                     Rut = faker.Random.Replace("##.###.###-K"),
                     EmailConfirmed = true,
-                    Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                    Banned = faker.Random.Bool(0.3f),
+                    Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
+                    IsBlocked = faker.Random.Bool(0.3f),
+                    FirstName = faker.Company.CompanyName(),
+                    LastName = faker.Company.CompanyName() + " S.A.",
                     ProfilePhoto = new UserImage
                     {
                         Url =
@@ -470,26 +474,17 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                             ?? throw new InvalidOperationException(
                                 "DefaultUserImagePublicId no está configurado"
                             ),
-                        ImageType = UserImageType.Perfil,
                     },
                 };
                 var result = await userManager.CreateAsync(companyUser, "Password123!");
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(companyUser, "Offerent");
-                    var company = new Company
-                    {
-                        GeneralUserId = companyUser.Id,
-                        CompanyName = faker.Company.CompanyName(),
-                        LegalName = faker.Company.CompanyName() + " S.A.",
-                        GeneralUser = companyUser,
-                    };
-                    context.Companies.Add(company);
+                    await userManager.AddToRoleAsync(companyUser, RoleNames.Offeror);
                 }
             }
 
             // Seed Individual
-            var randomIndividualUser = new GeneralUser
+            var randomIndividualUser = new User
             {
                 UserName = faker.Internet.UserName(),
                 Email = faker.Internet.Email(),
@@ -497,8 +492,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Rut = faker.Random.Replace("##.###.###-K"),
                 AboutMe = faker.Random.Replace("################"),
                 EmailConfirmed = true,
-                Rating = Math.Round(faker.Random.Double(1.0, 6.0), 1),
-                Banned = faker.Random.Bool(0.9f),
+                Rating = MathF.Round(faker.Random.Float(1.0f, 6.0f), 1),
+                IsBlocked = faker.Random.Bool(0.9f),
+                FirstName = faker.Name.FirstName(),
+                LastName = faker.Name.LastName(),
                 ProfilePhoto = new UserImage
                 {
                     Url =
@@ -511,7 +508,6 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         ?? throw new InvalidOperationException(
                             "DefaultUserImagePublicId no está configurado"
                         ),
-                    ImageType = UserImageType.Perfil,
                 },
             };
             var randomIndividualResult = await userManager.CreateAsync(
@@ -520,28 +516,20 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             );
             if (randomIndividualResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(randomIndividualUser, "Offerent");
-                var randomIndividual = new Individual
-                {
-                    GeneralUserId = randomIndividualUser.Id,
-                    Name = faker.Name.FirstName(),
-                    LastName = faker.Name.LastName(),
-                    GeneralUser = randomIndividualUser,
-                };
-                context.Individuals.Add(randomIndividual);
+                await userManager.AddToRoleAsync(randomIndividualUser, RoleNames.Offeror);
             }
 
             await context.SaveChangesAsync();
             Log.Information("DataSeeder: Todos los usuarios creados exitosamente.");
         }
 
-        private static async Task SeedOffers(AppDbContext context)
+        private static async Task SeedOffers(
+            AppDbContext context,
+            IOfferJobs backgroundJobs,
+            UserManager<User> userManager
+        )
         {
-            var offerents = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
 
             if (offerents.Count == 0)
                 return;
@@ -556,6 +544,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Apoyo en Feria UCN",
                     Desc = "Logística de stands, orientación a asistentes y apoyo en acreditación.",
                     Rem = 55000,
+                    Slots = 5,
                     Type = OfferTypes.Trabajo,
                     Loc = "Campus Antofagasta",
                     Req = "Responsable, trato cordial, disponibilidad el sábado.",
@@ -569,6 +558,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Diseño de flyer (freelance)",
                     Desc = "Diseño de pieza gráfica en formato A4 y versión para RRSS.",
                     Rem = 40000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Remoto",
                     Req = "Portafolio o muestras previas; entrega en 48h.",
@@ -582,11 +572,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Tutorías de Cálculo I",
                     Desc = "Tutorías grupales (máx. 8) dos veces por semana durante 1 mes.",
                     Rem = 0,
+                    Slots = 2,
                     Type = OfferTypes.Voluntariado,
                     Loc = "Campus Coquimbo",
                     Req = "Aprobado Cálculo I/II, ganas de explicar.",
                     Contact = "centro.estudiantes@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(9),
                     End = now.AddDays(30),
                 },
@@ -595,11 +586,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Community Manager para evento",
                     Desc = "Cobertura en vivo y publicaciones previas del evento (1 semana).",
                     Rem = 80000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Remoto / Híbrido",
                     Req = "Manejo de IG y TikTok; redacción básica.",
                     Contact = "comunicaciones@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(6),
                     End = now.AddDays(12),
                 },
@@ -608,11 +600,12 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Asistente de Laboratorio (química)",
                     Desc = "Apoyo en preparación de materiales y registro de datos.",
                     Rem = 120000,
+                    Slots = 1,
                     Type = OfferTypes.Trabajo,
                     Loc = "Campus Antofagasta",
                     Req = "Ramos básicos aprobados; EPP al día.",
                     Contact = "lab.quimica@ucn.cl",
-                    IsCv = true,
+                    IsCv = false,
                     Deadline = now.AddDays(10),
                     End = now.AddDays(20),
                 },
@@ -621,6 +614,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = "Mentorías a mechones (Programa Bienestar)",
                     Desc = "Acompañamiento y resolución de dudas generales 1 vez por semana.",
                     Rem = 0,
+                    Slots = 3,
                     Type = OfferTypes.Voluntariado,
                     Loc = "Campus Coquimbo",
                     Req = "Segundo año o superior; empatía y responsabilidad.",
@@ -646,18 +640,18 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
                     Title = s.Title,
                     Description = s.Desc,
-                    PublicationDate = now.AddDays(-i % 3), // algunas “recientes”
-                    Type = Types.Offer,
-                    IsActive = true,
-                    statusValidation = StatusValidation.Published,
+                    CreatedAt = now.AddDays(-i % 3), // algunas “recientes”
+                    PublicationType = PublicationType.Oferta,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
-                    EndDate = s.End,
-                    DeadlineDate = s.Deadline,
+                    EndDate = s.End.ToUniversalTime(),
+                    ApplicationDeadline = s.Deadline.ToUniversalTime(),
+                    ReviewDeadline = s.End.AddDays(14).ToUniversalTime(), // Hardcoded a 14 dias como ejemplo para pruebas.
                     Remuneration = s.Rem,
+                    AvailableSlots = s.Slots,
                     OfferType = s.Type,
                     Location = s.Loc,
-                    Requirements = s.Req,
-                    ContactInfo = s.Contact,
+                    AdditionalContactEmail = s.Contact,
                     IsCvRequired = s.IsCv,
                 };
 
@@ -674,33 +668,24 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Title = "Práctica Desarrollo .NET (En Revisión)",
                 Description =
                     "Se busca estudiante para práctica de 3 meses en desarrollo backend con .NET y Azure. El postulante debe estar en último año. Esta oferta está pendiente de aprobación por la DGE.",
-                PublicationDate = now.AddDays(-1),
-                Type = Types.Offer,
-                IsActive = true,
-                statusValidation = StatusValidation.InProcess, // <- Estado solicitado
+                CreatedAt = now.AddDays(-1),
+                PublicationType = PublicationType.Oferta,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
                 EndDate = now.AddMonths(3),
-                DeadlineDate = now.AddDays(14),
+                ApplicationDeadline = now.AddDays(14),
+                ReviewDeadline = now.AddMonths(3).AddDays(14), // Hardcoded a 14 dias despues del end date para pruebas.
                 Remuneration = 400000, // Remuneración de práctica
                 OfferType = OfferTypes.Trabajo, // Asumiendo que Práctica es un tipo de Trabajo
                 Location = "Remoto (Chile)",
-                Requirements =
-                    "Cursando último año. Conocimiento en C# y SQL Server. Deseable Azure.",
-                ContactInfo = "rrhh.pending@techcorp.cl",
+                AdditionalContactEmail = "rrhh.pending@techcorp.cl",
                 IsCvRequired = true,
             };
             context.Offers.Add(inProcessOffer);
-            // <<< FIN: OFERTA "INPROCESS" SOLICITADA >>>
 
-            await context.SaveChangesAsync();
-
-            Log.Information(
-                "DataSeeder: Ofertas de ejemplo cargadas ({Count})",
-                samples.Length + 1
-            );
-
+            // Ofertas aleatorias
             var faker = new Faker("es");
-            var randomOffersCount = 50;
+            var randomOffersCount = 15;
             Log.Information(
                 $"DataSeeder: Creando {randomOffersCount} ofertas aleatorias con Faker..."
             );
@@ -728,26 +713,16 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 var endDate = nowForFaker.AddDays(daysUntilEnd);
                 var publicationDate = nowForFaker.AddDays(-daysSincePost);
 
-                var isActive = true;
-                var status = StatusValidation.Published;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.InProcess;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rejected;
-                    isActive = false;
-                }
-
-                // Ocasionalmente, hacer que una oferta expire o ya no esté activa
-                if (faker.Random.Bool(0.10f))
-                {
-                    endDate = nowForFaker.AddDays(-faker.Random.Int(1, 5)); // Finalizada
-                    isActive = false;
-                    status = StatusValidation.Closed;
+                    status = ApprovalStatus.Rechazada;
                 }
 
                 var offer = new Offer
@@ -757,35 +732,71 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
                     Title = faker.Name.JobTitle(),
                     Description = faker.Lorem.Paragraph(3),
-                    PublicationDate = publicationDate,
-                    Type = Types.Offer,
-                    IsActive = isActive,
-                    statusValidation = status,
+                    CreatedAt = publicationDate,
+                    PublicationType = PublicationType.Oferta,
+                    ApprovalStatus = status,
 
                     EndDate = endDate,
-                    DeadlineDate = deadlineDate,
+                    ApplicationDeadline = deadlineDate,
+                    ReviewDeadline = endDate.AddDays(14), // Hardcoded a 14 dias despues del end date para pruebas.
                     Remuneration = remuneration,
                     OfferType = offerType,
                     Location = location,
-                    Requirements = faker.Lorem.Sentence(5),
-                    ContactInfo = faker.Internet.Email(),
+                    AdditionalContactEmail = faker.Internet.Email(),
                     IsCvRequired = isCvRequired,
                 };
 
                 context.Offers.Add(offer);
-            } // +1 por la nueva
+            }
+
+            await context.SaveChangesAsync();
+            await ScheduleLifetimeTrackingJobs(context, backgroundJobs);
+
+            Log.Information(
+                "DataSeeder: Ofertas de ejemplo cargadas ({Count})",
+                samples.Length + randomOffersCount + 1
+            );
         }
 
-        private static async Task SeedBuySells(AppDbContext context)
+        private static async Task ScheduleLifetimeTrackingJobs(
+            AppDbContext context,
+            IOfferJobs backgroundJobs
+        )
+        {
+            var activeOffers = await context
+                .Offers.Where(o => o.ApprovalStatus != ApprovalStatus.Rechazada)
+                .ToListAsync();
+
+            foreach (var offer in activeOffers)
+            {
+                var closeApplicationsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsCloseForApplicationsAsync(offer.Id),
+                    offer.ApplicationDeadline
+                );
+                var completeAndInitReviewsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsCompleteAndInitializeReviewsAsync(offer.Id),
+                    offer.EndDate
+                );
+                var finalizeAndCloseReviewsId = BackgroundJob.Schedule(
+                    () => backgroundJobs.SetAsFinalizedAndCloseReviewsAsync(offer.Id),
+                    offer.ReviewDeadline // Hardcoded a 14 dias, solo como ejemplo para pruebas.
+                );
+                offer.CloseApplicationsJobId = closeApplicationsId;
+                offer.FinishWorkAndInitializeReviewsJobId = completeAndInitReviewsId;
+                offer.FinalizeAndCloseReviewsJobId = finalizeAndCloseReviewsId;
+            }
+            await context.SaveChangesAsync();
+            Log.Information(
+                "DataSeeder: Trabajos programados para seguimiento de ciclo de vida de ofertas."
+            );
+        }
+
+        private static async Task SeedBuySells(AppDbContext context, UserManager<User> userManager)
         {
             var now = DateTime.UtcNow;
 
             // Buscamos oferentes (empresa o particular) para asociar publicaciones
-            var sellers = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var sellers = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
             if (sellers.Count == 0)
                 return;
 
@@ -800,8 +811,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Venta libro Cálculo I (Stewart 7ma)",
                     Desc = "En buen estado, pocas marcas.",
-                    Price = 12000m,
-                    Category = "Libros",
+                    Price = 12000,
+                    Category = Category.Libros,
                     Loc = "Antofagasta",
                     Contact = "ignacio@ucn.cl",
                 },
@@ -809,8 +820,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Teclado mecánico Redragon K552",
                     Desc = "Switch blue, 1 año de uso.",
-                    Price = 18000m,
-                    Category = "Tecnología",
+                    Price = 18000,
+                    Category = Category.Electronica,
                     Loc = "Coquimbo",
                     Contact = "+56987654321",
                 },
@@ -818,8 +829,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Bata laboratorio talla M",
                     Desc = "Lavada y desinfectada, casi nueva.",
-                    Price = 8000m,
-                    Category = "Laboratorio",
+                    Price = 8000,
+                    Category = Category.Ropa,
                     Loc = "Antofagasta",
                     Contact = "c.labs@ucn.cl",
                 },
@@ -827,8 +838,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Calculadora científica Casio fx-82",
                     Desc = "Funciona perfecto, con pilas nuevas.",
-                    Price = 9000m,
-                    Category = "Accesorios",
+                    Price = 9000,
+                    Category = Category.Electronica,
                     Loc = "Remoto",
                     Contact = "ventas@ucn.cl",
                 },
@@ -836,8 +847,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 {
                     Title = "Pack cuadernos + destacadores",
                     Desc = "5 cuadernos college + 6 destacadores.",
-                    Price = 6000m,
-                    Category = "Útiles",
+                    Price = 6000,
+                    Category = Category.Otros,
                     Loc = "Coquimbo",
                     Contact = "j.vende@ucn.cl",
                 },
@@ -854,15 +865,19 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     User = owner,
                     Title = it.Title,
                     Description = it.Desc,
-                    PublicationDate = now.AddDays(-(i % 3)),
-                    Type = Types.BuySell,
-                    IsActive = true,
-                    statusValidation = StatusValidation.Published,
+                    CreatedAt = now.AddDays(-(i % 3)),
+                    PublicationType = PublicationType.CompraVenta,
+                    ApprovalStatus = ApprovalStatus.Aceptada,
 
                     Price = it.Price,
+                    Quantity = 1,
+                    Availability = Availability.Disponible,
+                    Condition = Condition.Nuevo,
                     Category = it.Category,
                     Location = it.Loc,
-                    ContactInfo = it.Contact,
+                    IsEmailAvailable = true,
+                    IsPhoneAvailable = false,
+                    AdditionalContactEmail = it.Contact,
                 };
 
                 context.BuySells.Add(bs);
@@ -877,15 +892,19 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 Title = "Venta de apuntes",
                 Description =
                     "Vendo todos mis apuntes de primer año de ing. civil. Están en PDF. El admin debe revisar que no sea material con copyright.",
-                PublicationDate = now.AddDays(-1),
-                Type = Types.BuySell,
-                IsActive = true,
-                statusValidation = StatusValidation.InProcess, // <- Estado solicitado
+                CreatedAt = now.AddDays(-1),
+                PublicationType = PublicationType.CompraVenta,
+                ApprovalStatus = ApprovalStatus.Pendiente, // <- Estado solicitado
 
-                Price = 15000m,
-                Category = "Útiles",
+                Price = 15000,
+                Quantity = 1,
+                Availability = Availability.Disponible,
+                Condition = Condition.Nuevo,
+                Category = Category.Otros,
                 Location = "Digital (PDF)",
-                ContactInfo = "apuntes.pendientes@ucn.cl",
+                IsEmailAvailable = true,
+                IsPhoneAvailable = false,
+                AdditionalContactEmail = "apuntes.pendientes@ucn.cl",
             };
             context.BuySells.Add(inProcessBuySell);
 
@@ -894,24 +913,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
 
             var faker = new Faker("es");
             var randomBuySellsCount = 50;
-            var categories = new[]
-            {
-                "Libros",
-                "Tecnología",
-                "Laboratorio",
-                "Útiles",
-                "Deportes",
-                "Mobiliario",
-                "Servicios",
-            };
-            var locations = new[]
-            {
-                "Antofagasta",
-                "Coquimbo",
-                "Digital",
-                "UCN Campus",
-                "La Serena",
-            };
+
+            var locations = new[] { "Antofagasta", "Digital", "UCN Campus" };
             Log.Information(
                 $"DataSeeder: Creando {randomBuySellsCount} publicaciones de compra/venta aleatorias con Faker..."
             );
@@ -920,25 +923,36 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             {
                 var owner = sellers[k % sellersCount];
                 var nowForFaker = DateTime.UtcNow;
-                var category = faker.PickRandom(categories);
+                var category = faker.PickRandom(
+                    Category.Electronica,
+                    Category.Ropa,
+                    Category.Hogar,
+                    Category.Vehiculos,
+                    Category.Deportes,
+                    Category.Libros,
+                    Category.Musica,
+                    Category.Juguetes,
+                    Category.Mascotas,
+                    Category.Servicios,
+                    Category.Otros
+                );
 
                 var title =
-                    category == "Servicios"
+                    category == Category.Servicios
                         ? $"Servicio de {faker.Commerce.ProductName().ToLower()} (Freelance)"
                         : $"{category}: {faker.Commerce.ProductName()}";
 
-                var isActive = true;
-                var status = StatusValidation.Published;
+                var availability = Availability.Disponible;
+                var status = ApprovalStatus.Aceptada;
 
                 if (faker.Random.Bool(0.5f))
                 {
-                    status = StatusValidation.InProcess;
+                    status = ApprovalStatus.Pendiente;
                 }
 
                 if (faker.Random.Bool(0.15f))
                 {
-                    status = StatusValidation.Rejected;
-                    isActive = false;
+                    status = ApprovalStatus.Rechazada;
                 }
 
                 var bs = new BuySell
@@ -948,15 +962,19 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                     Title = title,
                     Description =
                         faker.Commerce.ProductDescription() + ". " + faker.Lorem.Sentence(5),
-                    PublicationDate = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
-                    Type = Types.BuySell,
-                    IsActive = isActive,
-                    statusValidation = status,
+                    CreatedAt = nowForFaker.AddDays(-faker.Random.Int(1, 20)),
+                    PublicationType = PublicationType.CompraVenta,
+                    ApprovalStatus = status,
 
-                    Price = faker.Random.Decimal(5000, 100000),
+                    Price = faker.Random.Int(5000, 100000),
+                    Quantity = 1,
+                    Availability = availability,
+                    Condition = Condition.Nuevo,
                     Category = category,
                     Location = faker.PickRandom(locations),
-                    ContactInfo = faker.Random.Bool(0.7f)
+                    IsEmailAvailable = faker.Random.Bool(0.8f),
+                    IsPhoneAvailable = faker.Random.Bool(0.5f),
+                    AdditionalContactEmail = faker.Random.Bool(0.7f)
                         ? faker.Phone.PhoneNumber("+569########")
                         : faker.Internet.Email(),
                 };
@@ -965,7 +983,10 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             }
         }
 
-        private static async Task SeedJobApplications(AppDbContext context)
+        private static async Task SeedJobApplications(
+            AppDbContext context,
+            UserManager<User> userManager
+        )
         {
             var studentUser = await context.Users.FirstOrDefaultAsync(u =>
                 u.Email == "estudiante@alumnos.ucn.cl"
@@ -975,18 +996,14 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var offers = await context
                 .Offers.Include(o => o.User)
                 .Where(o =>
-                    o.statusValidation == StatusValidation.Published
-                    && o.IsActive == true
-                    && o.DeadlineDate > DateTime.UtcNow
-                    && o.Type == Types.Offer
+                    o.ApprovalStatus == ApprovalStatus.Aceptada
+                    && o.ApplicationDeadline > DateTime.UtcNow
+                    && o.PublicationType == PublicationType.Oferta
                 )
                 .ToListAsync();
 
             // Obtener todos los estudiantes para postular aleatoriamente
-            var allStudents = await context
-                .Users.Include(u => u.Student)
-                .Where(u => u.UserType == UserType.Estudiante)
-                .ToListAsync();
+            var allStudents = await userManager.GetUsersInRoleAsync(RoleNames.Applicant);
 
             if (offers.Count < 5 || allStudents.Count == 0 || studentUser == null)
             {
@@ -1016,7 +1033,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[4].Id, // offers[4]
                         JobOffer = offersForTestStudent[4],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-2),
+                        CreatedAt = DateTime.UtcNow.AddDays(-2),
                     },
                     new JobApplication
                     {
@@ -1025,7 +1042,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[3].Id, // offers[3]
                         JobOffer = offersForTestStudent[3],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-7),
+                        CreatedAt = DateTime.UtcNow.AddDays(-7),
                     },
                     new JobApplication
                     {
@@ -1034,7 +1051,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         JobOfferId = offersForTestStudent[0].Id, // offers[0]
                         JobOffer = offersForTestStudent[0],
                         Status = ApplicationStatus.Pendiente,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-5),
+                        CreatedAt = DateTime.UtcNow.AddDays(-5),
                     },
                     new JobApplication
                     {
@@ -1042,8 +1059,8 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         Student = studentUser,
                         JobOfferId = offersForTestStudent[1].Id, // offers[1]
                         JobOffer = offersForTestStudent[1],
-                        Status = ApplicationStatus.Aceptada,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-3),
+                        Status = ApplicationStatus.Pendiente,
+                        CreatedAt = DateTime.UtcNow.AddDays(-3),
                     },
                     new JobApplication
                     {
@@ -1051,12 +1068,11 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                         Student = studentUser,
                         JobOfferId = offersForTestStudent[2].Id, // offers[2]
                         JobOffer = offersForTestStudent[2],
-                        Status = ApplicationStatus.Rechazada,
-                        ApplicationDate = DateTime.UtcNow.AddDays(-1),
+                        Status = ApplicationStatus.Pendiente,
+                        CreatedAt = DateTime.UtcNow.AddDays(-1),
                     },
                 }
             );
-
 
             var maxPossibleApplications = offers.Count * allStudents.Count;
 
@@ -1085,7 +1101,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                             JobOfferId = offerToApply.Id,
                             JobOffer = offerToApply,
                             Status = faker.PickRandom<ApplicationStatus>(),
-                            ApplicationDate = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
+                            CreatedAt = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 30)),
                         }
                     );
                 }
@@ -1111,19 +1127,14 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
         /// ADMIN: ID 4 (admin@ucn.cl - NO usar en reviews)
         /// PUBLICACIONES: Offers con IDs secuenciales desde 1
         /// </summary>
-        private static async Task SeedReviews(AppDbContext context)
+        private static async Task SeedReviews(AppDbContext context, UserManager<User> userManager)
         {
-            var students = await context
-                .Users.Where(u => u.UserType == UserType.Estudiante)
-                .ToListAsync();
-            var offerents = await context
-                .Users.Where(u =>
-                    u.UserType == UserType.Empresa || u.UserType == UserType.Particular
-                )
-                .ToListAsync();
+            var students = await userManager.GetUsersInRoleAsync(RoleNames.Applicant);
+            var offerents = await userManager.GetUsersInRoleAsync(RoleNames.Offeror);
             var publications = await context.Offers.ToListAsync();
+            var applications = await context.JobApplications.ToListAsync();
 
-            if (students.Count == 0 || offerents.Count == 0 || publications.Count == 0)
+            if (students.Count == 0 || offerents.Count == 0 || applications.Count == 0)
             {
                 Log.Warning(
                     "DataSeeder: No se pueden crear reviews - faltan usuarios o publicaciones"
@@ -1142,7 +1153,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             {
                 Log.Information($"   ID {s.Id}: {s.Email}");
             }
-            Log.Information("🏢 OFERENTES (Offerent):");
+            Log.Information("🏢 OFERENTES (Offeror):");
             foreach (var o in offerents)
             {
                 var type = o.UserType == UserType.Empresa ? "Empresa" : "Particular";
@@ -1165,443 +1176,483 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             //     HasReviewForStudentBeenDeleted = false, HasReviewForOfferorBeenDeleted = false,
             // });
 
-            reviews.Add(new Review
-            {
-                StudentId = students[0].Id,
-                Student = students[0],
-                OfferorId = publications[1].UserId,
-                Offeror = publications[1].User,
-                PublicationId = publications[1].Id,
-                Publication = publications[1],
-                RatingForStudent = 4,
-                CommentForStudent = "Buen desempeño, aunque tuvo algunos retrasos menores. Muestra potencial.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 4,
-                CommentForOfferor = "Buena experiencia en general. Me permitió aplicar conocimientos universitarios.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[0].Id,
+                    Applicant = students[0],
+                    OfferorId = applications[1].JobOffer!.UserId,
+                    Offeror = applications[1].JobOffer!.User,
+                    ApplicationId = applications[1].Id,
+                    Application = applications[1],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
+                        "Buen desempeño, aunque tuvo algunos retrasos menores. Muestra potencial.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
+                        "Buena experiencia en general. Me permitió aplicar conocimientos universitarios.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = 5,
-                Student = students.FirstOrDefault(s => s.Id == 5),
-                OfferorId = publications[1].UserId,
-                Offeror = publications[1].User,
-                PublicationId = publications[1].Id,
-                Publication = publications[1],
-                RatingForStudent = 5,
-                CommentForStudent = "Muy comprometido con las tareas asignadas. Excelente actitud de trabajo.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 5,
-                CommentForOfferor = "Ambiente profesional y buena coordinación. Aprendí nuevas habilidades.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = 5,
+                    Applicant = students.FirstOrDefault(s => s.Id == 5),
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
+                        "Muy comprometido con las tareas asignadas. Excelente actitud de trabajo.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
+                        "Ambiente profesional y buena coordinación. Aprendí nuevas habilidades.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = 6,
-                Student = students.FirstOrDefault(s => s.Id == 6),
-                OfferorId = publications[1].UserId,
-                Offeror = publications[1].User,
-                PublicationId = publications[1].Id,
-                Publication = publications[1],
-                RatingForStudent = 3,
-                CommentForStudent = "Desempeño aceptable pero le faltó proactividad en algunos momentos.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = false, StudentHasRespectOfferor = false },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 4,
-                CommentForOfferor = "Experiencia positiva. Instrucciones claras y buen trato del equipo.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = 6,
+                    Applicant = students.FirstOrDefault(s => s.Id == 6),
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = 3,
+                    OfferorCommentForApplicant =
+                        "Desempeño aceptable pero le faltó proactividad en algunos momentos.",
+                    IsOnTime = true,
+                    IsPresentable = false,
+                    IsRespectful = false,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
+                        "Experiencia positiva. Instrucciones claras y buen trato del equipo.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = 7,
-                Student = students.FirstOrDefault(s => s.Id == 7),
-                OfferorId = publications[1].UserId,
-                Offeror = publications[1].User,
-                PublicationId = publications[1].Id,
-                Publication = publications[1],
-                RatingForStudent = 6,
-                CommentForStudent = "Estudiante excepcional. Superó todas las expectativas y mostró gran iniciativa.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 6,
-                CommentForOfferor = "Experiencia formativa increíble. Excelente mentoría y ambiente de aprendizaje.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = 7,
+                    Applicant = students.FirstOrDefault(s => s.Id == 7),
+                    OfferorId = applications[1].JobOffer!.UserId,
+                    Offeror = applications[1].JobOffer!.User,
+                    ApplicationId = applications[1].Id,
+                    Application = applications[1],
+                    OfferorRatingOfApplicant = 6,
+                    OfferorCommentForApplicant =
+                        "Estudiante excepcional. Superó todas las expectativas y mostró gran iniciativa.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 6,
+                    ApplicantCommentForOfferor =
+                        "Experiencia formativa increíble. Excelente mentoría y ambiente de aprendizaje.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[1 % students.Count].Id,
-                Student = students[1 % students.Count],
-                OfferorId = publications[2].UserId,
-                Offeror = publications[2].User,
-                PublicationId = publications[2].Id,
-                Publication = publications[2],
-                RatingForStudent = 6,
-                CommentForStudent = "Estudiante sobresaliente. Proactivo, responsable y con excelente actitud.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 5,
-                CommentForOfferor = "Excelente oportunidad de aprendizaje. Supervisión clara y buen ambiente.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[1 % students.Count].Id,
+                    Applicant = students[1 % students.Count],
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    OfferorRatingOfApplicant = 6,
+                    OfferorCommentForApplicant =
+                        "Estudiante sobresaliente. Proactivo, responsable y con excelente actitud.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
+                        "Excelente oportunidad de aprendizaje. Supervisión clara y buen ambiente.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[2 % students.Count].Id,
-                Student = students[2 % students.Count],
-                OfferorId = publications[3].UserId,
-                Offeror = publications[3].User,
-                PublicationId = publications[3].Id,
-                Publication = publications[3],
-                RatingForStudent = 3,
-                CommentForStudent = "Cumplió las tareas asignadas, pero faltó más iniciativa y comunicación.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = false, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 3,
-                CommentForOfferor = "Experiencia aceptable, pero faltó claridad en las instrucciones iniciales.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = 3,
+                    OfferorCommentForApplicant =
+                        "Cumplió las tareas asignadas, pero faltó más iniciativa y comunicación.",
+                    IsOnTime = true,
+                    IsPresentable = false,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 3,
+                    ApplicantCommentForOfferor =
+                        "Experiencia aceptable, pero faltó claridad en las instrucciones iniciales.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[2 % students.Count].Id,
-                Student = students[2 % students.Count],
-                OfferorId = publications[4].UserId,
-                Offeror = publications[4].User,
-                PublicationId = publications[4].Id,
-                Publication = publications[4],
-                RatingForStudent = 5,
-                CommentForStudent = "Muy buen estudiante. Adaptación rápida y trabajo en equipo destacable.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 6,
-                CommentForOfferor = "Experiencia excepcional. Organización impecable y excelente mentoría.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[4].JobOffer!.UserId,
+                    Offeror = applications[4].JobOffer!.User,
+                    ApplicationId = applications[4].Id,
+                    Application = applications[4],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
+                        "Muy buen estudiante. Adaptación rápida y trabajo en equipo destacable.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 6,
+                    ApplicantCommentForOfferor =
+                        "Experiencia excepcional. Organización impecable y excelente mentoría.",
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[3 % students.Count].Id,
-                Student = students[3 % students.Count],
-                OfferorId = publications[5].UserId,
-                Offeror = publications[5].User,
-                PublicationId = publications[5].Id,
-                Publication = publications[5],
-                RatingForStudent = 4,
-                CommentForStudent = "Buen nivel técnico y compromiso. Entregó trabajos de calidad.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = 4,
-                CommentForOfferor = "Buena experiencia. Proyecto interesante y ambiente colaborativo.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = true,
-                IsClosed = true,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[3 % students.Count].Id,
+                    Applicant = students[3 % students.Count],
+                    OfferorId = applications[5].JobOffer!.UserId,
+                    Offeror = applications[5].JobOffer!.User,
+                    ApplicationId = applications[5].Id,
+                    Application = applications[5],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
+                        "Buen nivel técnico y compromiso. Entregó trabajos de calidad.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = 4,
+                    ApplicantCommentForOfferor =
+                        "Buena experiencia. Proyecto interesante y ambiente colaborativo.",
+                }
+            );
 
             // REVIEWS INCOMPLETAS (4 en total)
             // Solo oferente evaluo
-            reviews.Add(new Review
-            {
-                StudentId = students[0].Id,
-                Student = students[0],
-                OfferorId = publications[6 % publications.Count].UserId,
-                Offeror = publications[6 % publications.Count].User,
-                PublicationId = 6,
-                Publication = publications.FirstOrDefault(p => p.Id == 6),
-                RatingForStudent = 5,
-                CommentForStudent = "Estudiante confiable y organizado. Muy buena experiencia trabajando juntos.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = null,
-                CommentForOfferor = null,
-                IsReviewForOfferorCompleted = false,
-                IsCompleted = false,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[0].Id,
+                    Applicant = students[0],
+                    OfferorId = applications[6 % applications.Count].JobOffer!.UserId,
+                    Offeror = applications[6 % applications.Count].JobOffer!.User,
+                    ApplicationId = applications[6 % applications.Count].Id,
+                    Application = applications[6 % applications.Count],
+                    OfferorRatingOfApplicant = 5,
+                    OfferorCommentForApplicant =
+                        "Estudiante confiable y organizado. Muy buena experiencia trabajando juntos.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = null,
+                    ApplicantCommentForOfferor = null,
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[1 % students.Count].Id,
-                Student = students[1 % students.Count],
-                OfferorId = publications[0].UserId,
-                Offeror = publications[0].User,
-                PublicationId = publications[0].Id,
-                Publication = publications[0],
-                RatingForStudent = 4,
-                CommentForStudent = "Buen trabajo en general. Cumplió plazos y mostró interés genuino.",
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = true, StudentHasRespectOfferor = true },
-                IsReviewForStudentCompleted = true,
-                RatingForOfferor = null,
-                CommentForOfferor = null,
-                IsReviewForOfferorCompleted = false,
-                IsCompleted = false,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[1 % students.Count].Id,
+                    Applicant = students[1 % students.Count],
+                    OfferorId = applications[0].JobOffer!.UserId,
+                    Offeror = applications[0].JobOffer!.User,
+                    ApplicationId = applications[0].Id,
+                    Application = applications[0],
+                    OfferorRatingOfApplicant = 4,
+                    OfferorCommentForApplicant =
+                        "Buen trabajo en general. Cumplió plazos y mostró interés genuino.",
+                    IsOnTime = false,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    ApplicantRatingOfOfferor = null,
+                    ApplicantCommentForOfferor = null,
+                }
+            );
             // Solo estudiante evaluo
-            reviews.Add(new Review
-            {
-                StudentId = students[3 % students.Count].Id,
-                Student = students[3 % students.Count],
-                OfferorId = publications[2].UserId,
-                Offeror = publications[2].User,
-                PublicationId = publications[2].Id,
-                Publication = publications[2],
-                RatingForStudent = null,
-                CommentForStudent = null,
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                IsReviewForStudentCompleted = false,
-                RatingForOfferor = 5,
-                CommentForOfferor = "Muy buen ambiente laboral. Aprendí bastante y me trataron bien.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = false,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[3 % students.Count].Id,
+                    Applicant = students[3 % students.Count],
+                    OfferorId = applications[2].JobOffer!.UserId,
+                    Offeror = applications[2].JobOffer!.User,
+                    ApplicationId = applications[2].Id,
+                    Application = applications[2],
+                    ApplicantRatingOfOfferor = 5,
+                    ApplicantCommentForOfferor =
+                        "Muy buena experiencia. Aprendí mucho y el ambiente fue colaborativo.",
+                    IsOnTime = true,
+                    IsPresentable = true,
+                    IsRespectful = true,
+                    OfferorRatingOfApplicant = null,
+                    OfferorCommentForApplicant = null,
+                }
+            );
 
-            reviews.Add(new Review
-            {
-                StudentId = students[2 % students.Count].Id,
-                Student = students[2 % students.Count],
-                OfferorId = publications[3].UserId,
-                Offeror = publications[3].User,
-                PublicationId = publications[3].Id,
-                Publication = publications[3],
-                RatingForStudent = null,
-                CommentForStudent = null,
-                ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                IsReviewForStudentCompleted = false,
-                RatingForOfferor = 3,
-                CommentForOfferor = "Experiencia regular. Faltó mejor organización en las tareas asignadas.",
-                IsReviewForOfferorCompleted = true,
-                IsCompleted = false,
-                HasReviewForStudentBeenDeleted = false,
-                HasReviewForOfferorBeenDeleted = false,
-            });
+            reviews.Add(
+                new Review
+                {
+                    ApplicantId = students[2 % students.Count].Id,
+                    Applicant = students[2 % students.Count],
+                    OfferorId = applications[3].JobOffer!.UserId,
+                    Offeror = applications[3].JobOffer!.User,
+                    ApplicationId = applications[3].Id,
+                    Application = applications[3],
+                    OfferorRatingOfApplicant = null,
+                    OfferorCommentForApplicant = null,
+
+                    IsOnTime = false,
+                    IsPresentable = false,
+                    IsRespectful = false,
+                    ApplicantRatingOfOfferor = 3,
+                    ApplicantCommentForOfferor =
+                        "Experiencia regular. Faltó mejor organización en las tareas asignadas.",
+                }
+            );
 
             // REVIEWS PENDIENTES PARA ESTUDIANTE2 (4 reviews sin responder del estudiante)
             var estudiante2 = students.FirstOrDefault(s => s.Email == "estudiante2@alumnos.ucn.cl");
             if (estudiante2 != null)
             {
                 // Review 1: Solo oferente evaluo, estudiante2 NO ha respondido
-                reviews.Add(new Review
-                {
-                    StudentId = estudiante2.Id,
-                    Student = estudiante2,
-                    OfferorId = publications[7 % publications.Count].UserId,
-                    Offeror = publications[7 % publications.Count].User,
-                    PublicationId = publications[7 % publications.Count].Id,
-                    Publication = publications[7 % publications.Count],
-                    RatingForStudent = 5,
-                    CommentForStudent = "Buen trabajo en general, cumplió con las expectativas.",
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[7 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[7 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[7 % applications.Count].Id,
+                        Application = applications[7 % applications.Count],
+                        OfferorRatingOfApplicant = 5,
+                        OfferorCommentForApplicant =
+                            "Buen trabajo en general, cumplió con las expectativas.",
+                        IsOnTime = true,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
                 // Review 2: Solo oferente evaluo, estudiante2 NO ha respondido
-                reviews.Add(new Review
-                {
-                    StudentId = estudiante2.Id,
-                    Student = estudiante2,
-                    OfferorId = publications[8 % publications.Count].UserId,
-                    Offeror = publications[8 % publications.Count].User,
-                    PublicationId = publications[8 % publications.Count].Id,
-                    Publication = publications[8 % publications.Count],
-                    RatingForStudent = 4,
-                    CommentForStudent = "Mostró compromiso, aunque hubo retrasos menores.",
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = true, StudentHasRespectOfferor = true },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[8 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[8 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[8 % applications.Count].Id,
+                        Application = applications[8 % applications.Count],
+                        OfferorRatingOfApplicant = 4,
+                        OfferorCommentForApplicant =
+                            "Mostró compromiso, aunque hubo retrasos menores.",
+                        IsOnTime = false,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
                 // Review 3: Solo oferente evaluo, estudiante2 NO ha respondido
-                reviews.Add(new Review
-                {
-                    StudentId = estudiante2.Id,
-                    Student = estudiante2,
-                    OfferorId = publications[9 % publications.Count].UserId,
-                    Offeror = publications[9 % publications.Count].User,
-                    PublicationId = publications[9 % publications.Count].Id,
-                    Publication = publications[9 % publications.Count],
-                    RatingForStudent = 6,
-                    CommentForStudent = "Excelente desempeño, muy proactivo y responsable.",
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = true, StudentHasRespectOfferor = true },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[9 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[9 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[9 % applications.Count].Id,
+                        Application = applications[9 % applications.Count],
+                        OfferorRatingOfApplicant = 6,
+                        OfferorCommentForApplicant =
+                            "Excelente desempeño, muy proactivo y responsable.",
+                        IsOnTime = true,
+                        IsPresentable = true,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
                 // Review 4: Solo oferente evaluo, estudiante2 NO ha respondido
-                reviews.Add(new Review
-                {
-                    StudentId = estudiante2.Id,
-                    Student = estudiante2,
-                    OfferorId = publications[10 % publications.Count].UserId,
-                    Offeror = publications[10 % publications.Count].User,
-                    PublicationId = publications[10 % publications.Count].Id,
-                    Publication = publications[10 % publications.Count],
-                    RatingForStudent = 3,
-                    CommentForStudent = "Desempeño regular, faltó más comunicación.",
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = true, GoodPresentation = false, StudentHasRespectOfferor = true },
-                    IsReviewForStudentCompleted = true,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiante2.Id,
+                        Applicant = estudiante2,
+                        OfferorId = applications[10 % applications.Count].JobOffer!.UserId,
+                        Offeror = applications[10 % applications.Count].JobOffer!.User,
+                        ApplicationId = applications[10 % applications.Count].Id,
+                        Application = applications[10 % applications.Count],
+                        OfferorRatingOfApplicant = 3,
+                        OfferorCommentForApplicant = "Desempeño regular, faltó más comunicación.",
+                        IsOnTime = true,
+                        IsPresentable = false,
+                        IsRespectful = true,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
-                Log.Information("DataSeeder: 4 reviews pendientes creadas para estudiante2@alumnos.ucn.cl");
+                Log.Information(
+                    "DataSeeder: 4 reviews pendientes creadas para estudiante2@alumnos.ucn.cl"
+                );
             }
 
             // REVIEWS ADICIONALES PARA EMPRESA@TECHCORP.CL (userId=3, publicacionId=60)
             // 4 estudiantes distintos, ninguna completada por el oferente, 2 completadas por estudiantes
-            var empresaTechCorp = await context.Users.FirstOrDefaultAsync(u => u.Email == "empresa@techcorp.cl");
-            var publicacion60 = await context.Publications.FirstOrDefaultAsync(p => p.Id == 60);
-            var estudiantesAleatorios = await context.Users
-                .Where(u => u.UserType == UserType.Estudiante && u.Email != "estudiante@alumnos.ucn.cl" && u.Email != "estudiante2@alumnos.ucn.cl")
+            var empresaTechCorp = await context.Users.FirstOrDefaultAsync(u =>
+                u.Email == "empresa@techcorp.cl"
+            );
+            var postulacion60 = await context.JobApplications.FirstOrDefaultAsync(p => p.Id == 60);
+            var estudiantesAleatorios = await context
+                .Users.Where(u =>
+                    u.UserType == UserType.Estudiante
+                    && u.Email != "estudiante@alumnos.ucn.cl"
+                    && u.Email != "estudiante2@alumnos.ucn.cl"
+                )
                 .Take(4)
                 .ToListAsync();
 
-            if (empresaTechCorp != null && publicacion60 != null && estudiantesAleatorios.Count >= 4)
+            if (
+                empresaTechCorp != null
+                && postulacion60 != null
+                && estudiantesAleatorios.Count >= 4
+            )
             {
                 // Review 1: Estudiante SÍ completó su evaluación, Oferente NO
-                reviews.Add(new Review
-                {
-                    StudentId = estudiantesAleatorios[0].Id,
-                    Student = estudiantesAleatorios[0],
-                    OfferorId = empresaTechCorp.Id,
-                    Offeror = empresaTechCorp,
-                    PublicationId = 60,
-                    Publication = publicacion60,
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = 5,
-                    CommentForOfferor = "Excelente experiencia laboral, ambiente muy profesional y buena comunicación.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[0].Id,
+                        Applicant = estudiantesAleatorios[0],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 60,
+                        Application = postulacion60,
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = 5,
+                        ApplicantCommentForOfferor =
+                            "Excelente experiencia laboral, ambiente muy profesional y buena comunicación.",
+                    }
+                );
 
                 // Review 2: Estudiante SÍ completó su evaluación, Oferente NO
-                reviews.Add(new Review
-                {
-                    StudentId = estudiantesAleatorios[1].Id,
-                    Student = estudiantesAleatorios[1],
-                    OfferorId = empresaTechCorp.Id,
-                    Offeror = empresaTechCorp,
-                    PublicationId = 60,
-                    Publication = publicacion60,
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = 6,
-                    CommentForOfferor = "Muy buena empresa para trabajar, aprendí mucho y el equipo es muy colaborativo.",
-                    IsReviewForOfferorCompleted = true,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[1].Id,
+                        Applicant = estudiantesAleatorios[1],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 61,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 61
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = 6,
+                        ApplicantCommentForOfferor =
+                            "Muy buena empresa para trabajar, aprendí mucho y el equipo es muy colaborativo.",
+                    }
+                );
 
                 // Review 3: Estudiante NO completó su evaluación, Oferente NO
-                reviews.Add(new Review
-                {
-                    StudentId = estudiantesAleatorios[2].Id,
-                    Student = estudiantesAleatorios[2],
-                    OfferorId = empresaTechCorp.Id,
-                    Offeror = empresaTechCorp,
-                    PublicationId = 60,
-                    Publication = publicacion60,
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[2].Id,
+                        Applicant = estudiantesAleatorios[2],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 62,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 62
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
                 // Review 4: Estudiante NO completó su evaluación, Oferente NO
-                reviews.Add(new Review
-                {
-                    StudentId = estudiantesAleatorios[3].Id,
-                    Student = estudiantesAleatorios[3],
-                    OfferorId = empresaTechCorp.Id,
-                    Offeror = empresaTechCorp,
-                    PublicationId = 60,
-                    Publication = publicacion60,
-                    RatingForStudent = null,
-                    CommentForStudent = null,
-                    ReviewChecklistValues = new ReviewChecklistValues { AtTime = false, GoodPresentation = false, StudentHasRespectOfferor = false },
-                    IsReviewForStudentCompleted = false,
-                    RatingForOfferor = null,
-                    CommentForOfferor = null,
-                    IsReviewForOfferorCompleted = false,
-                    IsCompleted = false,
-                    HasReviewForStudentBeenDeleted = false,
-                    HasReviewForOfferorBeenDeleted = false,
-                });
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[3].Id,
+                        Applicant = estudiantesAleatorios[3],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 63,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 63
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
 
-                Log.Information("DataSeeder: 4 reviews adicionales creadas para empresa@techcorp.cl en publicación 60");
+                // Review 4: Estudiante NO completó su evaluación, Oferente NO
+                reviews.Add(
+                    new Review
+                    {
+                        ApplicantId = estudiantesAleatorios[3].Id,
+                        Applicant = estudiantesAleatorios[3],
+                        OfferorId = empresaTechCorp.Id,
+                        Offeror = empresaTechCorp,
+                        ApplicationId = 64,
+                        Application = await context.JobApplications.FirstOrDefaultAsync(p =>
+                            p.Id == 64
+                        ),
+                        OfferorRatingOfApplicant = null,
+                        OfferorCommentForApplicant = null,
+                        IsOnTime = false,
+                        IsPresentable = false,
+                        IsRespectful = false,
+                        ApplicantRatingOfOfferor = null,
+                        ApplicantCommentForOfferor = null,
+                    }
+                );
+
+                Log.Information(
+                    "DataSeeder: 4 reviews adicionales creadas para empresa@techcorp.cl en publicación 60"
+                );
             }
 
             await context.Reviews.AddRangeAsync(reviews);
@@ -1616,7 +1667,7 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
             var allUserIds = new HashSet<int>();
             foreach (var review in reviews)
             {
-                allUserIds.Add(review.StudentId);
+                allUserIds.Add(review.ApplicantId);
                 allUserIds.Add(review.OfferorId);
             }
 
@@ -1630,20 +1681,28 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
                 if (user.UserType == UserType.Estudiante)
                 {
                     var studentReviews = await context
-                        .Reviews.Where(r => r.StudentId == userId && r.RatingForStudent.HasValue)
+                        .Reviews.Where(r =>
+                            r.ApplicantId == userId && r.OfferorRatingOfApplicant.HasValue
+                        )
                         .ToListAsync();
-                    if (studentReviews.Any())
-                        averageRating = studentReviews.Average(r => r.RatingForStudent!.Value);
+                    if (studentReviews.Count != 0)
+                        averageRating = studentReviews.Average(r =>
+                            r.OfferorRatingOfApplicant!.Value
+                        );
                 }
                 else if (user.UserType == UserType.Empresa || user.UserType == UserType.Particular)
                 {
                     var offerorReviews = await context
-                        .Reviews.Where(r => r.OfferorId == userId && r.RatingForOfferor.HasValue)
+                        .Reviews.Where(r =>
+                            r.OfferorId == userId && r.ApplicantRatingOfOfferor.HasValue
+                        )
                         .ToListAsync();
-                    if (offerorReviews.Any())
-                        averageRating = offerorReviews.Average(r => r.RatingForOfferor!.Value);
+                    if (offerorReviews.Count != 0)
+                        averageRating = offerorReviews.Average(r =>
+                            r.ApplicantRatingOfOfferor!.Value
+                        );
                 }
-                user.Rating = averageRating ?? 0.0;
+                user.Rating = (float?)averageRating ?? 0.0f;
                 context.Users.Update(user);
             }
 
@@ -1655,4 +1714,4 @@ namespace bolsafeucn_back.src.Application.Infrastructure.Data
         }
     }
 }
-#endregion
+        #endregion

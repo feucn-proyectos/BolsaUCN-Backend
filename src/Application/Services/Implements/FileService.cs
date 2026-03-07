@@ -1,12 +1,13 @@
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Serilog;
 using SkiaSharp;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     public class FileService : IFileService
     {
@@ -14,6 +15,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         private readonly Cloudinary _cloudinary;
         private readonly string[] _allowedExtensions;
         private readonly int _maxFileSizeInBytes;
+        private readonly int _maxBuySellImages;
         private readonly IFileRepository _fileRepository;
         private readonly IUserRepository _userRepository;
         private readonly string _cloudName;
@@ -24,7 +26,11 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         private readonly string _transformationQuality;
         private readonly string _transformationFetchFormat;
 
-        public FileService(IConfiguration configuration, IFileRepository fileRepository, IUserRepository userRepository)
+        public FileService(
+            IConfiguration configuration,
+            IFileRepository fileRepository,
+            IUserRepository userRepository
+        )
         {
             _configuration = configuration;
             _fileRepository = fileRepository;
@@ -65,11 +71,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 ?? throw new InvalidOperationException(
                     "La configuración del formato de la transformación es obligatoria"
                 );
+            if (!int.TryParse(_configuration["Images:MaxBuySellImages"], out _maxBuySellImages))
+            {
+                throw new InvalidOperationException(
+                    "La configuración del número máximo de imágenes por publicación de compra/venta es obligatoria"
+                );
+            }
             if (
-                !int.TryParse(
-                    _configuration["Images:ImageMaxSizeInBytes"],
-                    out _maxFileSizeInBytes
-                )
+                !int.TryParse(_configuration["Images:ImageMaxSizeInBytes"], out _maxFileSizeInBytes)
             )
             {
                 throw new InvalidOperationException(
@@ -93,14 +102,14 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// Sube un archivo a Cloudinary.
         /// </summary>
         /// <param name="file">El archivo a subir.</param>
-        /// <param name="procationId">El ID de la publicación al que pertenece la imagen.</param>
+        /// <param name="buySellId">El ID de la publicación de compra/venta al que pertenece la imagen.</param>
         /// <returns>True si la carga fue exitosa, de lo contrario False.</returns>
-        public async Task<bool> UploadAsync(IFormFile file, int publicationId)
+        public async Task<bool> UploadAsync(IFormFile file, int buySellId)
         {
-            if (publicationId <= 0)
+            if (buySellId <= 0)
             {
-                Log.Error($"ProductId inválido: {publicationId}");
-                throw new ArgumentException("ProductId debe ser mayor a 0");
+                Log.Error($"BuySellId inválido: {buySellId}");
+                throw new ArgumentException("BuySellId debe ser mayor a 0");
             }
 
             if (file == null || file.Length == 0)
@@ -134,7 +143,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 Log.Error($"El archivo {file.FileName} no es una imagen válida");
                 throw new ArgumentException("El archivo no es una imagen válida");
             }
-            var folder = $"product/{publicationId}/images";
+            var folder = $"product/{buySellId}/images";
             using var stream = file.OpenReadStream();
 
             var uploadParams = new ImageUploadParams()
@@ -167,7 +176,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             {
                 PublicId = uploadResult.PublicId,
                 Url = uploadResult.SecureUrl.ToString(),
-                PublicationId = publicationId,
+                BuySellId = buySellId,
             };
 
             var result = await _fileRepository.CreateAsync(image);
@@ -196,9 +205,174 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             return true;
         }
 
-        public async Task<bool> UploadUserImageAsync(IFormFile file, GeneralUser user, UserImageType imageType)
+        public async Task<bool> UploadBatchAsync(List<IFormFile> images, BuySell buySell)
         {
+            if (buySell.Id <= 0)
+            {
+                Log.Error($"BuySellId inválido: {buySell.Id}");
+                throw new ArgumentException("BuySellId debe ser mayor a 0");
+            }
+            if (images == null || images.Count == 0)
+            {
+                Log.Error("Intento de subir una lista de imágenes nula o vacía");
+                throw new ArgumentException("Lista de imágenes inválida");
+            }
+            if (images.Count > _maxBuySellImages)
+            {
+                Log.Error($"Número de imágenes excede el máximo permitido: {images.Count}");
+                throw new ArgumentException(
+                    $"No se pueden subir más de {_maxBuySellImages} imágenes"
+                );
+            }
+            if (buySell.Images.Count + images.Count > _maxBuySellImages)
+            {
+                Log.Error(
+                    $"Número total de imágenes para BuySellId {buySell.Id} excede el máximo permitido: {buySell.Images.Count + images.Count}"
+                );
+                throw new ArgumentException(
+                    $"No se pueden subir las imágenes porque el número total de imágenes para esta publicación de compra/venta excede el máximo permitido de {_maxBuySellImages}"
+                );
+            }
+            foreach (var imageFile in images)
+            {
+                ValidateImageFile(imageFile);
+            }
 
+            var uploadedImages = new List<Image>();
+            var uploadedPublicIds = new List<string>();
+            try
+            {
+                var folder = $"product/{buySell.Id}/images";
+                var uploadTasks = images.Select(async imageFile =>
+                {
+                    using var stream = imageFile.OpenReadStream();
+
+                    var uploadParams = new ImageUploadParams()
+                    {
+                        Folder = folder,
+                        File = new FileDescription(imageFile.FileName, stream),
+                        UseFilename = true,
+                        UniqueFilename = true,
+                    };
+
+                    Log.Information(
+                        "Optimizando imagen: {imageFile.FileName} antes de subir a la nube",
+                        imageFile.FileName
+                    );
+                    uploadParams.Transformation = new Transformation()
+                        .Width(_transformationWidth)
+                        .Crop(_transformationCrop)
+                        .Chain()
+                        .Quality(_transformationQuality)
+                        .Chain()
+                        .FetchFormat(_transformationFetchFormat);
+                    Log.Information(
+                        "Subiendo imagen: {imageFile.FileName} a Cloudinary",
+                        imageFile.FileName
+                    );
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    if (uploadResult.Error != null)
+                    {
+                        Log.Error(
+                            "Hubo un error al subir la imagen: {uploadResult.Error.Message}",
+                            uploadResult.Error.Message
+                        );
+                        throw new Exception(
+                            $"Error al subir la imagen: {uploadResult.Error.Message}"
+                        );
+                    }
+                    return new Image
+                    {
+                        PublicId = uploadResult.PublicId,
+                        Url = uploadResult.SecureUrl.ToString(),
+                        BuySellId = buySell.Id,
+                    };
+                });
+                var cloudinaryResults = await Task.WhenAll(uploadTasks);
+                uploadedImages.AddRange(cloudinaryResults);
+                uploadedPublicIds.AddRange(cloudinaryResults.Select(r => r.PublicId));
+
+                var saveResult = await _fileRepository.CreateBatchAsync(uploadedImages);
+                if (!saveResult)
+                {
+                    Log.Error("Error al guardar las imágenes en la base de datos");
+                    await RollbackCloudinaryUploads(uploadedPublicIds);
+                    throw new Exception("Error al guardar las imágenes en la base de datos");
+                }
+                Log.Information(
+                    "Todas las imágenes subidas y guardadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    "Error durante la carga de imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
+                );
+                if (uploadedPublicIds.Count > 0)
+                {
+                    await RollbackCloudinaryUploads(uploadedPublicIds);
+                }
+                throw;
+            }
+        }
+
+        public async Task<bool> RemoveImagesFromBuySellAsync(
+            List<string> imagesToDelete,
+            BuySell buySell
+        )
+        {
+            // Por seguridad, validamos que las imágenes a eliminar existan y estén asociadas a la publicación de compra/venta
+            var publicIdsToDelete = await _fileRepository.GetPublicIdsByBuySellIdAsync(
+                buySell.Id,
+                imagesToDelete
+            );
+            if (publicIdsToDelete.Count != imagesToDelete.Count)
+            {
+                Log.Error(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta con ID {buySell.Id}",
+                    buySell.Id
+                );
+                throw new Exception(
+                    "Algunas de las imágenes a eliminar no existen o no están asociadas a la publicación de compra/venta"
+                );
+            }
+            try
+            {
+                var deleteTasks = publicIdsToDelete.Select(DeleteInCloudinaryAsync);
+                var deleteResults = await Task.WhenAll(deleteTasks);
+
+                if (!deleteResults.All(r => r))
+                {
+                    Log.Error(
+                        "Error al eliminar algunas imágenes de Cloudinary para BuySellId: {buySell.Id}",
+                        buySell.Id
+                    );
+                    throw new Exception("Error al eliminar algunas imágenes de Cloudinary");
+                }
+                await _fileRepository.DeleteBatchAsync(publicIdsToDelete);
+                Log.Information(
+                    "Imágenes eliminadas exitosamente para BuySellId: {buySell.Id}",
+                    buySell.Id
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(
+                    "Error al eliminar imágenes para BuySellId: {buySell.Id}: {ex.Message}",
+                    buySell.Id,
+                    ex.Message
+                );
+                throw new Exception("Error al eliminar las imágenes");
+            }
+        }
+
+        public async Task<bool> UploadUserImageAsync(IFormFile file, User user)
+        {
             if (user.Id <= 0)
             {
                 Log.Error($"Usuario inválido: {user.Id}");
@@ -269,7 +443,6 @@ namespace bolsafeucn_back.src.Application.Services.Implements
             {
                 PublicId = uploadResult.PublicId,
                 Url = uploadResult.SecureUrl.ToString(),
-                ImageType = imageType
             };
 
             var result = await _fileRepository.CreateUserImageAsync(image);
@@ -296,42 +469,184 @@ namespace bolsafeucn_back.src.Application.Services.Implements
 
             Log.Information($"Imagen subida exitosamente: {uploadResult.SecureUrl}");
 
+            // Actualizar la imagen de perfil del usuario
             string publicId;
-
-            switch (imageType)
+            if (user.ProfilePhoto != null)
             {
-                case UserImageType.Perfil:
-                    if (user.ProfilePhoto != null) {
-                        publicId = user.ProfilePhoto.PublicId;
-                        await DeleteInCloudinaryAsync(publicId);
-                        await _fileRepository.DeleteUserImageAsync(publicId);
-                    }
-                    
-                    user.ProfilePhoto = image;
-                    user.ProfilePhotoId = image.Id;
-                    break;
-                case UserImageType.Banner:
-                    if (user.ProfileBanner != null) {
-                        await _fileRepository.DeleteUserImageAsync(user.ProfileBanner.PublicId);
-                        //await DeleteInCloudinaryAsync(user.ProfileBanner.PublicId);
-                    }   
-                    user.ProfileBanner = image;
-                    user.ProfileBannerId = image.Id;
-                    break;
-                default:
-                    Log.Error($"Tipo de imagen de usuario no soportado: {imageType}");
-                    throw new ArgumentException("Tipo de imagen de usuario no soportado");
+                publicId = user.ProfilePhoto.PublicId;
+                await DeleteInCloudinaryAsync(publicId);
+                await _fileRepository.DeleteUserImageAsync(publicId);
             }
-
-
+            user.ProfilePhoto = image;
+            user.ProfilePhotoId = image.Id;
             return true;
         }
 
-        /// <summary>
-        /// Elimina un archivo de Cloudinary.
-        /// </summary>
-        /// <param name="publicId">El ID público del archivo a eliminar.</param>
-        /// <returns>True si la eliminación fue exitosa, de lo contrario false.</returns>
+        public async Task<bool> UploadPDFAsync(IFormFile file, User user)
+        {
+            // Validar archivo
+            if (file == null || file.Length == 0)
+            {
+                Log.Error("Intento de subir un archivo nulo o vacío");
+                throw new ArgumentException("Archivo inválido");
+            }
+            if (file.Length > _maxFileSizeInBytes)
+            {
+                Log.Error(
+                    "El archivo {FileName} excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB",
+                    file.FileName
+                );
+                throw new ArgumentException(
+                    $"El archivo excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+            }
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (fileExtension != ".pdf")
+            {
+                Log.Error("Extensión de archivo no permitida: {FileExtension}", fileExtension);
+                throw new ArgumentException("Solo se permiten archivos PDF");
+            }
+            var folder = $"user/{user.Id}/documents";
+            using var stream = file.OpenReadStream();
+
+            var uploadParams = new ImageUploadParams()
+            {
+                Folder = folder,
+                File = new FileDescription(file.FileName, stream),
+                Type = "authenticated",
+            };
+            Log.Information("Subiendo PDF: {FileName} a Cloudinary", file.FileName);
+            uploadParams.Transformation = new Transformation()
+                .Width(_transformationWidth)
+                .Crop(_transformationCrop)
+                .Chain()
+                .Quality(_transformationQuality)
+                .Page(1)
+                .Chain()
+                .FetchFormat("pdf");
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            if (uploadResult.Error != null)
+            {
+                Log.Error(
+                    "Hubo un error al subir el PDF: {ErrorMessage}",
+                    uploadResult.Error.Message
+                );
+                throw new Exception($"Error al subir el PDF: {uploadResult.Error.Message}");
+            }
+            Curriculum cv = new Curriculum()
+            {
+                PublicId = uploadResult.PublicId,
+                FileSizeBytes = file.Length,
+            };
+            bool result = await _fileRepository.CreateCVAsync(cv);
+            if (!result)
+            {
+                Log.Error("Error al guardar el PDF en la base de datos: {FileName}", file.FileName);
+                var deleteResult = await DeleteInCloudinaryAsync(uploadResult.PublicId);
+                if (!deleteResult)
+                {
+                    Log.Error(
+                        "Error al eliminar el PDF de Cloudinary después de fallar la creación en la base de datos: {PublicId}",
+                        uploadResult.PublicId
+                    );
+                    throw new Exception(
+                        "Error al eliminar el PDF de Cloudinary después de fallar la creación en la base de datos"
+                    );
+                }
+                throw new Exception("Error al guardar el PDF en la base de datos");
+            }
+
+            // Asignar el CV al usuario
+            if (user.CV != null)
+            {
+                // Eliminar el CV anterior si existe
+                await DeleteInCloudinaryAsync(user.CV.PublicId);
+                await _fileRepository.DeleteCVAsync(user.CV.PublicId);
+            }
+            user.CVId = cv.Id;
+            bool saveUserResult = await _userRepository.UpdateAsync(user);
+            if (!saveUserResult)
+            {
+                Log.Error("Error al actualizar el usuario con el nuevo CV: {UserId}", user.Id);
+                throw new Exception("Error al actualizar el usuario con el nuevo CV");
+            }
+
+            Log.Information("PDF subido exitosamente: {SecureUrl}", uploadResult.SecureUrl);
+            return true;
+        }
+
+        public async Task<(Stream fileStream, string fileName, string contentType)> DownloadCVAsync(
+            int userId
+        )
+        {
+            User? user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { IncludeCV = true }
+            );
+            if (user == null || user.CV == null)
+            {
+                Log.Warning("Usuario o CV no encontrado para el ID: {UserId}", userId);
+                throw new KeyNotFoundException("Usuario o CV no encontrado");
+            }
+
+            string signedUrl = _cloudinary
+                .Api.UrlImgUp.Signed(true)
+                .Action("authenticated")
+                .Secure(true)
+                .ResourceType("image")
+                .BuildUrl($"{user.CV.PublicId}.pdf");
+            Log.Information(
+                "URL firmada generada para el CV del usuario {UserId}: {SignedUrl}",
+                userId,
+                signedUrl
+            );
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(signedUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Error(
+                    "Error al descargar el CV desde Cloudinary para el usuario {UserId}: {StatusCode}",
+                    userId,
+                    response.StatusCode
+                );
+                throw new Exception("Error al descargar el CV desde Cloudinary");
+            }
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0; // Reiniciar la posición del stream para su lectura posterior
+
+            string fileName = $"CV_{user.FirstName}_{user.LastName}.pdf"
+                .Replace(" ", "_")
+                .Replace("á", "a")
+                .Replace("é", "e")
+                .Replace("í", "i")
+                .Replace("ó", "o")
+                .Replace("ú", "u")
+                .Replace("ñ", "n");
+            Log.Information(
+                "CV descargado exitosamente para el usuario {UserId}: {FileName}",
+                userId,
+                fileName
+            );
+            return (memoryStream, fileName, "application/pdf");
+        }
+
+        public async Task<string> BuildSignedUrlForCVAsync(string publicId)
+        {
+            string signedUrl = _cloudinary
+                .Api.UrlImgUp.Signed(true)
+                .Action("authenticated")
+                .Secure(true)
+                .ResourceType("image")
+                .BuildUrl($"{publicId}.pdf");
+            Log.Information(
+                "URL firmada generada para el CV con PublicId {PublicId}: {SignedUrl}",
+                publicId,
+                signedUrl
+            );
+            return signedUrl;
+        }
+
         public async Task<bool> DeleteAsync(string publicId)
         {
             var deletionParams = new DeletionParams(publicId);
@@ -375,7 +690,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         {
             var deletionParams = new DeletionParams(publicId);
             Log.Information($"Eliminando imagen con PublicId: {publicId} de Cloudinary");
-            try 
+            try
             {
                 var deleteResult = await _cloudinary.DestroyAsync(deletionParams);
                 if (deleteResult.Error != null)
@@ -386,16 +701,16 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                     return false;
                 }
                 Log.Information(
-                $"Imagen con PublicId: {publicId} eliminada exitosamente de Cloudinary"
+                    $"Imagen con PublicId: {publicId} eliminada exitosamente de Cloudinary"
                 );
-            return true;
-            } 
-            catch 
+                return true;
+            }
+            catch
             {
                 Log.Error(
                     $"Error al eliminar la imagen con PublicId: {publicId} de Cloudinary: No es una publicId de cloudinary."
                 );
-                return false;   
+                return false;
             }
         }
 
@@ -404,7 +719,7 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// </summary>
         /// <param name="file">El archivo a validar.</param>
         /// <returns>True si el archivo es una imagen válida, de lo contrario false.</returns>
-        private bool IsValidImageFile(IFormFile file)
+        private static bool IsValidImageFile(IFormFile file)
         {
             try
             {
@@ -419,6 +734,50 @@ namespace bolsafeucn_back.src.Application.Services.Implements
                 Log.Warning($"Error validando imagen {file.FileName}: {ex.Message}");
                 return false;
             }
+        }
+
+        private void ValidateImageFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                Log.Error("Intento de subir un archivo nulo o vacío");
+                throw new ArgumentException("Archivo inválido");
+            }
+
+            if (file.Length > _maxFileSizeInBytes)
+            {
+                Log.Error(
+                    $"El archivo {file.FileName} excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+                throw new ArgumentException(
+                    $"El archivo excede el tamaño máximo permitido de {_maxFileSizeInBytes / 1024 / 1024} MB"
+                );
+            }
+
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+            if (!_allowedExtensions.Contains(fileExtension))
+            {
+                Log.Error($"Extensión de archivo no permitida: {fileExtension}");
+                throw new ArgumentException(
+                    $"Extensión de archivo no permitida. Permitir: {string.Join(", ", _allowedExtensions)}"
+                );
+            }
+
+            if (!IsValidImageFile(file))
+            {
+                Log.Error($"El archivo {file.FileName} no es una imagen válida");
+                throw new ArgumentException("El archivo no es una imagen válida");
+            }
+        }
+
+        private async Task RollbackCloudinaryUploads(List<string> publicIds)
+        {
+            var deletionTasks = publicIds.Select(DeleteInCloudinaryAsync);
+            await Task.WhenAll(deletionTasks);
+            Log.Information(
+                $"Rollback de uploads a Cloudinary completado para PublicIds: {string.Join(", ", publicIds)}"
+            );
         }
     }
 }

@@ -1,6 +1,6 @@
-using bolsafeucn_back.src.Domain.Models;
+using backend.src.Domain.Models;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
     public interface ITokenRepository
     {
@@ -8,5 +8,6 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Interfaces
         Task<bool> RemoveAllFromWhitelistByUserIdAsync(int userId);
         Task<bool> ExistsByUserIdAsync(int userId);
         Task<bool> IsTokenWhitelistedAsync(int userId, string token);
+        Task<int> RemoveExpiredTokensAsync(DateTime cutoffDate);
     }
 }

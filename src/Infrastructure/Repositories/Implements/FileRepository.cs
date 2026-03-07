@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
+namespace backend.src.Infrastructure.Repositories.Implements
 {
     public class FileRepository : IFileRepository
     {
@@ -34,6 +34,12 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
             return null;
         }
 
+        public async Task<bool> CreateBatchAsync(List<Image> files)
+        {
+            await _context.Images.AddRangeAsync(files);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         /// <summary>
         /// Crea un archivo de imagen de usuario en la base de datos.
         /// </summary>
@@ -50,7 +56,12 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
             return null;
         }
 
-        public async Task<bool?> CreateCVAsync(Curriculum file)
+        /// <summary>
+        /// Crea un archivo de currículum en la base de datos.
+        /// </summary>
+        /// <param name="file">El archivo de currículum a crear.</param>
+        /// <returns>True si el archivo se creó correctamente, de lo contrario false y null en caso de que el currículum ya existe.</returns>
+        public async Task<bool> CreateCVAsync(Curriculum file)
         {
             var existsCV = await _context.CVs.AnyAsync(i => i.PublicId == file.PublicId);
             if (!existsCV)
@@ -58,14 +69,23 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
                 _context.CVs.Add(file);
                 return await _context.SaveChangesAsync() > 0;
             }
+            return false;
+        }
+
+        public async Task<bool?> UpdateCVAsync(string publicId, Curriculum updatedCV)
+        {
+            var existingCV = await _context.CVs.FirstOrDefaultAsync(cv => cv.PublicId == publicId);
+            if (existingCV != null)
+            {
+                existingCV.FileSizeBytes = updatedCV.FileSizeBytes;
+                existingCV.UpdatedAt = updatedCV.UpdatedAt;
+
+                _context.CVs.Update(existingCV);
+                return await _context.SaveChangesAsync() > 0;
+            }
             return null;
         }
 
-        /// <summary>
-        /// Elimina un archivo de imagen de la base de datos.
-        /// </summary>
-        /// <param name="publicId">El identificador público del archivo a eliminar.</param>
-        /// <returns>True si el archivo se eliminó correctamente, de lo contrario false y null si la imagen no existe.</returns>
         public async Task<bool?> DeleteAsync(string publicId)
         {
             var image = await _context.Images.FirstOrDefaultAsync(i => i.PublicId == publicId);
@@ -76,6 +96,20 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
             }
             return null;
         }
+
+        public async Task<bool?> DeleteBatchAsync(List<string> publicIds)
+        {
+            var images = await _context
+                .Images.Where(i => publicIds.Contains(i.PublicId))
+                .ToListAsync();
+            if (images.Count != 0)
+            {
+                _context.Images.RemoveRange(images);
+                return await _context.SaveChangesAsync() > 0;
+            }
+            return null;
+        }
+
         public async Task<bool?> DeleteUserImageAsync(string publicId)
         {
             var image = await _context.UserImages.FirstOrDefaultAsync(i => i.PublicId == publicId);
@@ -86,7 +120,8 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
             }
             return null;
         }
-        public async Task<bool?> DeleteCVAsync(string publicId)
+
+        public async Task<bool> DeleteCVAsync(string publicId)
         {
             var curriculum = await _context.CVs.FirstOrDefaultAsync(cv => cv.PublicId == publicId);
             if (curriculum != null)
@@ -94,7 +129,18 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
                 _context.CVs.Remove(curriculum);
                 return await _context.SaveChangesAsync() > 0;
             }
-            return null;
+            return false;
+        }
+
+        public async Task<List<string>> GetPublicIdsByBuySellIdAsync(
+            int buySellId,
+            List<string> urls
+        )
+        {
+            return await _context
+                .Images.Where(i => i.BuySellId == buySellId && urls.Contains(i.Url))
+                .Select(i => i.PublicId)
+                .ToListAsync();
         }
     }
 }

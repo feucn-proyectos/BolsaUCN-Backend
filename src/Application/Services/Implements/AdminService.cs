@@ -1,11 +1,13 @@
-using bolsafeucn_back.src.Application.DTOs.UserDTOs.AdminDTOs;
-using bolsafeucn_back.src.Application.Services.Interfaces;
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Application.DTOs.UserDTOs.AdminDTOs;
+using backend.src.Application.Services.Interfaces;
+using backend.src.Domain.Constants;
+using backend.src.Domain.Models;
+using backend.src.Domain.Models.Options;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Mapster;
 using Serilog;
 
-namespace bolsafeucn_back.src.Application.Services.Implements
+namespace backend.src.Application.Services.Implements
 {
     public class AdminService : IAdminService
     {
@@ -14,7 +16,11 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         private readonly IConfiguration _configuration;
         private readonly int _defaultPageSize;
 
-        public AdminService(IUserRepository userRepository, ITokenService tokenService, IConfiguration configuration)
+        public AdminService(
+            IUserRepository userRepository,
+            ITokenService tokenService,
+            IConfiguration configuration
+        )
         {
             _userRepository = userRepository;
             _tokenService = tokenService;
@@ -28,72 +34,129 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// <param name="adminId">ID del administrador que realiza la acción.</param>
         /// <param name="userId">ID del usuario cuyo estado de bloqueo se desea alternar.</param>
         /// <returns>El nuevo estado de bloqueo del usuario.</returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        /// <exception cref="KeyNotFoundException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="Exception"></exception>
         public async Task<bool> ToggleUserBlockedStatusAsync(int adminId, int userId)
         {
             //Chequeo de autobloqueo
-            if (userId == adminId) 
+            if (userId == adminId)
             {
                 Log.Warning("Un administrador intentó alternar su propio estado de bloqueo.");
-                throw new InvalidOperationException("Un administrador no puede bloquear o desbloquearse a sí mismo.");
+                throw new InvalidOperationException(
+                    "Un administrador no puede bloquear o desbloquearse a sí mismo."
+                );
             }
-            Log.Information($"Administrador con ID {adminId} está intentando alternar el estado de bloqueo del usuario con ID {userId}.");
+            Log.Information(
+                "Administrador con ID {AdminId} está intentando alternar el estado de bloqueo del usuario con ID {UserId}.",
+                adminId,
+                userId
+            );
 
             // Verificar que el solicitante es un administrador
-            var admin = await _userRepository.GetByIdAsync(adminId);
-            if (admin == null)
+            var requestingAdmin = await _userRepository.GetByIdAsync(adminId);
+            if (requestingAdmin == null)
             {
-                Log.Warning($"No se encontró al administrador con ID {adminId}.");
-                throw new KeyNotFoundException("Administrador no encontrado.");
-            }
-            if (admin.UserType != UserType.Administrador)
-            {
-                Log.Warning($"El usuario con ID {adminId} no tiene permisos de administrador.");
-                throw new UnauthorizedAccessException("El usuario no tiene permisos de administrador.");
-            }
-
-            Log.Information($"Buscando al usuario con ID {userId} para alternar su estado de bloqueo.");
-
-            // Obtener el usuario objetivo
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null) // Verificar que el usuario existe
-            {
-                Log.Warning($"No se encontró al usuario con ID {userId}.");
+                Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
                 throw new KeyNotFoundException("Usuario no encontrado.");
             }
-            if (user.UserType == UserType.Administrador && admin.Admin!.SuperAdmin) // Prevenir bloqueo de administradores si es que es el ultimo
+            var requestingRoleResult = await _userRepository.CheckRoleAsync(
+                requestingAdmin.Id,
+                RoleNames.Admin
+            );
+            if (!requestingRoleResult)
             {
-                var numberOfAdmins = _userRepository.GetNumberOfAdmins();
-                if (numberOfAdmins.Result <= 1)
-                {
-                    Log.Warning("Intento de bloquear al último administrador.");
-                    throw new InvalidOperationException("No se puede bloquear al último administrador.");
-                }
-                Log.Warning($"Intento de alternar el estado de bloqueo del usuario con ID {userId}, que es un administrador.");
-                throw new InvalidOperationException("No se puede bloquear o desbloquear a un administrador.");
+                Log.Warning(
+                    "El usuario con ID {AdminId} no tiene permisos para bloquear usuarios.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos de administrador."
+                );
             }
 
-            user.Banned = !user.Banned; // Alternar el estado de bloqueo
+            Log.Information(
+                "Buscando al usuario con ID {UserId} para alternar su estado de bloqueo.",
+                userId
+            );
+
+            // Obtener el usuario objetivo
+            var user = await _userRepository.GetByIdAsync(
+                userId,
+                new UserQueryOptions { TrackChanges = true }
+            );
+            if (user == null)
+            {
+                Log.Warning("No se encontró al usuario con ID {UserId}.", userId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
+            }
+
+            var userRoleResult = await _userRepository.CheckRoleAsync(
+                user.Id,
+                RoleNames.SuperAdmin
+            );
+            if (userRoleResult) // Prevenir bloqueo de superadministradores
+            {
+                Log.Warning(
+                    "Intento de alternar el estado de bloqueo del usuario con ID {UserId}, que es un superadministrador.",
+                    userId
+                );
+                throw new InvalidOperationException(
+                    "No se puede bloquear o desbloquear a un superadministrador."
+                );
+            }
+            userRoleResult = await _userRepository.CheckRoleAsync(user.Id, RoleNames.Admin);
+            if (userRoleResult) // Prevenir bloqueo de administradores si es que es el ultimo
+            {
+                requestingRoleResult = await _userRepository.CheckRoleAsync(
+                    requestingAdmin.Id,
+                    RoleNames.SuperAdmin
+                );
+                if (!requestingRoleResult)
+                {
+                    Log.Warning(
+                        "El administrador con ID {AdminId} no tiene permisos para bloquear a otros administradores.",
+                        adminId
+                    );
+                    throw new UnauthorizedAccessException(
+                        "Solo un superadministrador puede bloquear o desbloquear a otros administradores."
+                    );
+                }
+
+                int numberOfAdmins = await _userRepository.GetCountByRoleAsync(RoleNames.Admin);
+                if (numberOfAdmins <= 1)
+                {
+                    Log.Warning("Intento de bloquear al último administrador.");
+                    throw new InvalidOperationException(
+                        "No se puede bloquear al último administrador."
+                    );
+                }
+            }
+
+            user.IsBlocked = !user.IsBlocked; // Alternar el estado de bloqueo
 
             var toggleResult = await _userRepository.UpdateAsync(user);
             if (toggleResult)
             {
-                Log.Information($"El estado de bloqueo del usuario con ID {userId} ha sido alternado a {user.Banned}.");
-                if (user.Banned)
+                Log.Information(
+                    "El estado de bloqueo del usuario con ID {UserId} ha sido alternado a {IsBlocked}.",
+                    userId,
+                    user.IsBlocked
+                );
+                if (user.IsBlocked)
                 {
                     var revokeResult = await _tokenService.RevokeAllActiveTokensAsync(userId);
-                    Log.Information(revokeResult
-                        ? $"Tokens activos revocados para el usuario con ID {userId} tras ser bloqueado."
-                        : $"El usuario con ID {userId} no tenía tokens activos para revocar tras ser bloqueado.");
+                    Log.Information(
+                        revokeResult
+                            ? $"Tokens activos revocados para el usuario con ID {userId} tras ser bloqueado."
+                            : $"El usuario con ID {userId} no tenía tokens activos para revocar tras ser bloqueado."
+                    );
                 }
-                return user.Banned;
+                return user.IsBlocked;
             }
             else
             {
-                Log.Error($"Error al actualizar el estado de bloqueo del usuario con ID {userId}.");
+                Log.Error(
+                    "Error al actualizar el estado de bloqueo del usuario con ID {UserId}.",
+                    userId
+                );
                 throw new Exception("Error al actualizar el estado de bloqueo del usuario.");
             }
         }
@@ -103,58 +166,73 @@ namespace bolsafeucn_back.src.Application.Services.Implements
         /// </summary>
         /// <param name="adminId">ID del administrador que realiza la solicitud</param>
         /// <returns>DTO con la lista de usuarios</returns>
-        /// <exception cref="KeyNotFoundException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<UsersForAdminDTO> GetAllUsersAsync(int adminId, SearchParamsDTO searchParams)
+        public async Task<UsersForAdminDTO> GetAllUsersAsync(
+            int adminId,
+            UsersForAdminSearchParamsDTO searchParams
+        )
         {
             // Verificar que el solicitante es un administrador
             var admin = await _userRepository.GetByIdAsync(adminId);
             if (admin == null)
             {
-                Log.Warning($"No se encontró al administrador con ID {adminId}.");
-                throw new KeyNotFoundException("Administrador no encontrado.");
+                Log.Warning("No se encontró al usuario con ID {AdminId}.", adminId);
+                throw new KeyNotFoundException("Usuario no encontrado.");
             }
-            if (admin.UserType != UserType.Administrador)
+            if (admin.UserType != UserType.Administrador) // Como el usuario ya etsa cargado, es mas rapido que preguntar por el role al repo
             {
-                Log.Warning($"El usuario con ID {adminId} no tiene permisos de administrador.");
-                throw new UnauthorizedAccessException("El usuario no tiene permisos de administrador.");
+                Log.Warning(
+                    "El usuario con ID {AdminId} no tiene permisos de administrador.",
+                    adminId
+                );
+                throw new UnauthorizedAccessException(
+                    "El usuario no tiene permisos de administrador."
+                );
             }
             // Validar y ajustar parámetros de paginación
-            var (allUsers, totalCount) = await _userRepository.GetFilteredForAdminAsync(adminId, searchParams);
+            var (allUsers, totalCount) = await _userRepository.GetUsersFilteredForAdminAsync(
+                adminId,
+                searchParams
+            );
             if (allUsers == null)
             {
                 Log.Error("Error al obtener la lista de usuarios para el administrador.");
                 throw new ArgumentNullException("Error al obtener la lista de usuarios.");
             }
             var pageSize = searchParams.PageSize ?? _defaultPageSize;
-            var totalPages = (int)
-                Math.Ceiling((double)totalCount / pageSize);            
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
             var currentPage = searchParams.PageNumber;
-            if (currentPage < 1 || currentPage > totalPages) 
+            if (currentPage < 1 || currentPage > totalPages)
             {
-                Log.Warning($"Página solicitada {currentPage} fuera de rango. Total de páginas: {totalPages}. Se ajusta a la página 1.");
+                Log.Warning(
+                    "Página solicitada {CurrentPage} fuera de rango. Total de páginas: {TotalPages}. Se ajusta a la página 1.",
+                    currentPage,
+                    totalPages
+                );
                 currentPage = 1;
             }
             // Aplicar paginación
-            Log.Information($"Administrador con ID {adminId} obtuvo {totalCount} usuarios (página {currentPage} de {totalPages}).");
+            Log.Information(
+                "Administrador con ID {AdminId} obtuvo {TotalCount} usuarios (página {CurrentPage} de {TotalPages}).",
+                adminId,
+                totalCount,
+                currentPage,
+                totalPages
+            );
             return new UsersForAdminDTO
             {
                 Users = allUsers.Adapt<List<UserForAdminDTO>>(),
                 TotalCount = totalCount,
                 CurrentPage = currentPage,
                 PageSize = pageSize,
-                TotalPages = totalPages
+                TotalPages = totalPages,
             };
         }
 
         public async Task<UserProfileForAdminDTO> GetUserProfileByIdAsync(int adminId, int userId)
         {
-            //TODO Revisar si hay que hacer algo especial con el administrador.
-
-            var user = await _userRepository.GetByIdWithRelationsAsync(userId);
-            if (user == null) throw new KeyNotFoundException();
-
+            var user =
+                await _userRepository.GetByIdAsync(userId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
             return user.Adapt<UserProfileForAdminDTO>();
         }
     }

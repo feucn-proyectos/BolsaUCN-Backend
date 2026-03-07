@@ -1,29 +1,29 @@
-using bolsafeucn_back.src.Domain.Models;
-using bolsafeucn_back.src.Infrastructure.Data;
-using bolsafeucn_back.src.Infrastructure.Repositories.Interfaces;
+using backend.src.Domain.Models;
+using backend.src.Infrastructure.Data;
+using backend.src.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
+namespace backend.src.Infrastructure.Repositories.Implements
 {
     public class TokenRepository : ITokenRepository
     {
         private readonly AppDbContext _context;
+
         public TokenRepository(AppDbContext context)
         {
             _context = context;
         }
+
         public async Task<Whitelist> AddToWhitelistAsync(Whitelist whitelistEntry)
         {
             await _context.Whitelists.AddAsync(whitelistEntry);
             await _context.SaveChangesAsync();
             return whitelistEntry;
         }
-        
+
         public async Task<bool> RemoveAllFromWhitelistByUserIdAsync(int userId)
         {
-            var tokens = await _context.Whitelists
-                .Where(w => w.UserId == userId)
-                .ToListAsync();
+            var tokens = await _context.Whitelists.Where(w => w.UserId == userId).ToListAsync();
             _context.Whitelists.RemoveRange(tokens);
             var result = await _context.SaveChangesAsync();
             return result > 0;
@@ -31,13 +31,21 @@ namespace bolsafeucn_back.src.Infrastructure.Repositories.Implements
 
         public async Task<bool> ExistsByUserIdAsync(int userId)
         {
-            return await _context.Whitelists
-                .AnyAsync(w => w.UserId == userId);
+            return await _context.Whitelists.AnyAsync(w => w.UserId == userId);
         }
+
         public async Task<bool> IsTokenWhitelistedAsync(int userId, string token)
         {
-            return await _context.Whitelists
-                .AnyAsync(w => w.UserId == userId && w.Token == token);
+            return await _context.Whitelists.AnyAsync(w => w.UserId == userId && w.Token == token);
+        }
+
+        public async Task<int> RemoveExpiredTokensAsync(DateTime cutoffDate)
+        {
+            var expiredTokens = await _context
+                .Whitelists.Where(w => w.Expiration <= cutoffDate)
+                .ToListAsync();
+            _context.Whitelists.RemoveRange(expiredTokens);
+            return await _context.SaveChangesAsync();
         }
     }
 }

@@ -1,53 +1,55 @@
-namespace bolsafeucn_back.src.Domain.Models
+namespace backend.src.Domain.Models
 {
     /// <summary>
-    /// Enum that defines the possible statuses of a job application.
+    /// Estado de la postulación (Pendiente, Aceptada, Rechazada).
     /// </summary>
     public enum ApplicationStatus
     {
         Pendiente,
         Aceptada,
-        Rechazada
+        Rechazada,
+        CanceladaPorPostulante,
     }
 
     /// <summary>
-    /// Represents an application submitted by a student to a job offer.
+    /// Representa una postulación realizada por un estudiante a una oferta laboral.
     /// </summary>
-    public class JobApplication
+    public class JobApplication : ModelBase
     {
         /// <summary>
-        /// Unique identifier for the application.
+        /// El usuario estudiante que realizó la postulación.
         /// </summary>
-        public int Id { get; set; }
+        public User? Student { get; set; }
 
         /// <summary>
-        /// The student user who submitted the application.
-        /// </summary>
-        public required GeneralUser Student { get; set; }
-
-        /// <summary>
-        /// Identifier of the student who applied.
+        /// Identificador del usuario estudiante que realizó la postulación.
         /// </summary>
         public required int StudentId { get; set; }
 
         /// <summary>
-        /// The job offer to which the student applied.
+        /// La oferta laboral a la que el estudiante postuló.
         /// </summary>
-        public required Offer JobOffer { get; set; }
+        public Offer? JobOffer { get; set; }
 
         /// <summary>
-        /// Identifier of the job offer.
+        /// Identificador de la oferta laboral.
         /// </summary>
         public required int JobOfferId { get; set; }
 
         /// <summary>
-        /// Current status of the application (Pendiente, Aceptada, Rechazada).
+        /// Carta de presentación opcional adjuntada por el estudiante.
+        /// </summary>
+        public string? CoverLetter { get; set; }
+
+        /// <summary>
+        /// Estado actual de la postulación (Pendiente, Aceptada, Rechazada).
         /// </summary>
         public required ApplicationStatus Status { get; set; }
 
         /// <summary>
-        /// Date and time when the application was submitted (UTC).
+        /// Indica si el postulante ha actualizado o eliminado su CV despues de que la postulacion se haya cerrado.
+        /// Sirve como auditoria para la administracion, para que al revisar el historial de postulaciones puedan saber si el CV que se reviso en su momento es el mismo que el actual del postulante o no.
         /// </summary>
-        public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
+        public bool IsCVInvalid { get; set; } = false;
     }
 }

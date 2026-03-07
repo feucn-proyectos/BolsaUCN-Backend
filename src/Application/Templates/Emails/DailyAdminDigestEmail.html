@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resumen Administrativo - Bolsa FEUCN</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F9FAFB;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      color: #1F2937;
+    }
+
+    .container {
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 600px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+      color: #ffffff;
+      padding: 32px 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 15px;
+      opacity: 0.95;
+    }
+
+    .admin-badge {
+      display: inline-block;
+      background-color: #FEE2E2;
+      color: #991B1B;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+    }
+
+    .body-content {
+      padding: 32px 24px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #1F2937;
+    }
+
+    .greeting {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #DC2626;
+    }
+
+    .summary-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+      color: #ffffff;
+      padding: 12px 28px;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 12px 0;
+      box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: space-around;
+      margin: 28px 0;
+      gap: 12px;
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 20px 16px;
+      background-color: #FEF2F2;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #FEE2E2;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #DC2626;
+      margin: 0 0 8px 0;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #64748B;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .alert-box {
+      background-color: #FFF9E6;
+      border-left: 4px solid #F59E0B;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 24px 0;
+    }
+
+    .alert-title {
+      color: #92400E;
+      font-weight: 600;
+      font-size: 14px;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .alert-icon {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    .alert-content {
+      color: #1F2937;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .description {
+      margin: 24px 0;
+      font-size: 15px;
+      color: #64748B;
+      line-height: 1.6;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+      color: #ffffff;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 24px 0;
+      box-shadow: 0 4px 6px rgba(220, 38, 38, 0.25);
+      transition: transform 0.2s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(220, 38, 38, 0.35);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #E5E7EB 50%, transparent);
+      margin: 32px 0;
+    }
+
+    .footer {
+      background-color: #F9FAFB;
+      color: #64748B;
+      padding: 24px;
+      font-size: 13px;
+      text-align: center;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .footer p {
+      margin: 0 0 8px 0;
+    }
+
+    .footer p:last-child {
+      margin-bottom: 0;
+    }
+
+    .footer-brand {
+      font-weight: 600;
+      color: #DC2626;
+    }
+
+    a {
+      color: #DC2626;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #111827;
+        color: #E5E7EB;
+      }
+
+      .container {
+        background-color: #1F2937;
+        border: 1px solid #374151;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+      }
+
+      .admin-badge {
+        background-color: rgba(220, 38, 38, 0.2);
+        color: #FCA5A5;
+      }
+
+      .body-content {
+        color: #E5E7EB;
+      }
+
+      .greeting {
+        color: #EF4444;
+      }
+
+      .summary-badge {
+        background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+      }
+
+      .stat-box {
+        background-color: rgba(220, 38, 38, 0.15);
+        border-color: rgba(220, 38, 38, 0.3);
+      }
+
+      .stat-number {
+        color: #EF4444;
+      }
+
+      .stat-label {
+        color: #9CA3AF;
+      }
+
+      .alert-box {
+        background-color: rgba(245, 158, 11, 0.15);
+        border-left-color: #F59E0B;
+      }
+
+      .alert-title {
+        color: #FCD34D;
+      }
+
+      .alert-content {
+        color: #E5E7EB;
+      }
+
+      .description {
+        color: #9CA3AF;
+      }
+
+      .cta-button {
+        background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+        box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+      }
+
+      .cta-button:hover {
+        box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4);
+      }
+
+      .divider {
+        background: linear-gradient(to right, transparent, #374151 50%, transparent);
+      }
+
+      .footer {
+        background-color: #111827;
+        color: #9CA3AF;
+        border-top-color: #374151;
+      }
+
+      .footer-brand {
+        color: #EF4444;
+      }
+
+      a {
+        color: #EF4444;
+      }
+    }
+
+    @media only screen and (max-width: 600px) {
+      .header h1 {
+        font-size: 20px;
+      }
+
+      .stats-container {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .stat-box {
+        width: 100%;
+      }
+
+      .stat-number {
+        font-size: 32px;
+      }
+
+      .cta-button {
+        display: block;
+        text-align: center;
+        padding: 12px 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" class="container">
+
+          <tr>
+            <td class="header">
+              <h1>
+                Resumen Administrativo
+                <span class="admin-badge">Admin</span>
+              </h1>
+              <p>Bolsa Estudiantil UCN</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="body-content">
+
+              <p class="greeting">Hola Administrador,</p>
+
+              <p style="margin:0 0 24px 0;">
+                Hay nuevas actividades administrativas que requieren tu revision. Aqui esta tu resumen diario:
+              </p>
+
+              <div style="text-align:center; margin:28px 0;">
+                <span class="summary-badge">{{TOTAL_COUNT}} tareas pendientes</span>
+              </div>
+
+              <div class="stats-container">
+                <div class="stat-box">
+                  <p class="stat-number">{{NEW_PUBLICATIONS}}</p>
+                  <p class="stat-label">Publicaciones</p>
+                </div>
+                <div class="stat-box">
+                  <p class="stat-number">{{LOW_RATING_REVIEWS}}</p>
+                  <p class="stat-label">Resenas Criticas</p>
+                </div>
+                <div class="stat-box">
+                  <p class="stat-number">{{REPORTED_ITEMS}}</p>
+                  <p class="stat-label">Reportes</p>
+                </div>
+              </div>
+
+              <div class="alert-box">
+                <p class="alert-title">
+                  <span class="alert-icon">⚠️</span>
+                  Accion Requerida
+                </p>
+                <p class="alert-content">
+                  Estas notificaciones requieren atencion prioritaria para mantener la calidad y seguridad de la plataforma. Por favor revisa los detalles en el panel administrativo.
+                </p>
+              </div>
+
+              <p class="description">
+                Accede al panel administrativo para revisar cada item en detalle y tomar las acciones correspondientes.
+              </p>
+
+              <div style="text-align:center;">
+                <a href="https://domain.com/landing/admin" class="cta-button">Ir al Panel de Administración</a>
+              </div>
+
+              <div class="divider"></div>
+
+              <p style="margin:0; font-size:14px; color:#64748B;">
+                Este resumen administrativo es enviado automaticamente para mantener un seguimiento efectivo de las actividades de la plataforma.
+              </p>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td class="footer">
+              <p class="footer-brand">Bolsa Estudiantil UCN - Panel Administrativo</p>
+              <p style="opacity:0.85;">Universidad Catolica del Norte</p>
+              <p style="margin:12px 0 0 0;">
+                Si tienes preguntas tecnicas, contactanos en
+                <a href="mailto:soporte@ucn.cl">soporte@ucn.cl</a>
+              </p>
+              <p style="margin:16px 0 0 0; font-size:11px; opacity:0.75;">
+                Este correo contiene informacion administrativa confidencial.<br>
+                Correo automatico, por favor no responder.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>
