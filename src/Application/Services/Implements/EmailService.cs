@@ -609,7 +609,7 @@ namespace backend.src.Application.Services.Implements
             try
             {
                 Log.Information("Enviando resumen diario a: {Email}", email);
-                var htmlBody = await LoadTemplateAsync("DailyUserDigest", templateData);
+                var htmlBody = await LoadTemplateAsync("DailyUserDigestEmail", templateData);
                 var message = new EmailMessage
                 {
                     To = email,
@@ -635,17 +635,18 @@ namespace backend.src.Application.Services.Implements
         }
 
         public async Task<bool> SendDailyAdminDigestAsync(
-            string email,
+            User admin,
             Dictionary<string, string> templateData
         )
         {
             try
             {
-                Log.Information("Enviando resumen diario administrativo a: {Email}", email);
-                var htmlBody = await LoadTemplateAsync("DailyAdminDigest", templateData);
+                templateData["USER_NAME"] = admin.FullName ?? "Administrador";
+                Log.Information("Enviando resumen diario administrativo a: {Email}", admin.Email!);
+                var htmlBody = await LoadTemplateAsync("DailyAdminDigestEmail", templateData);
                 var message = new EmailMessage
                 {
-                    To = email,
+                    To = admin.Email!,
                     From = _configuration["EmailConfiguration:From"]!,
                     Subject = "Resumen diario de notificaciones administrativas",
                     HtmlBody = htmlBody,
@@ -655,14 +656,21 @@ namespace backend.src.Application.Services.Implements
 
                 if (!result.Success)
                 {
-                    Log.Error("Error al enviar resumen diario administrativo a: {Email}", email);
+                    Log.Error(
+                        "Error al enviar resumen diario administrativo a: {Email}",
+                        admin.Email!
+                    );
                     return false;
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error al enviar resumen diario administrativo a: {Email}", email);
+                Log.Error(
+                    ex,
+                    "Error al enviar resumen diario administrativo a: {Email}",
+                    admin.Email!
+                );
                 return false;
             }
         }

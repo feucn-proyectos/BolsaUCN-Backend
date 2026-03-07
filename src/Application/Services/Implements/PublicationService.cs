@@ -1341,7 +1341,12 @@ namespace backend.src.Application.Services.Implements
             // Validar oferta
             Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 offerId,
-                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+                new PublicationQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeUser = true,
+                    IncludeApplications = true,
+                }
             );
             if (offer == null)
             {
@@ -1444,7 +1449,12 @@ namespace backend.src.Application.Services.Implements
             // Validar oferta
             Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 offerId,
-                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+                new PublicationQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeUser = true,
+                    IncludeApplications = true,
+                }
             );
             if (offer == null)
             {

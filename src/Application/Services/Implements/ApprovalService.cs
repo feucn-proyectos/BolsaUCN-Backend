@@ -62,7 +62,7 @@ namespace backend.src.Application.Services.Implements
             Publication? publication =
                 await _publicationRepository.GetPublicationByIdAsync<Publication>(
                     publicationId,
-                    new PublicationQueryOptions { TrackChanges = true }
+                    new PublicationQueryOptions { TrackChanges = true, IncludeUser = true }
                 ) ?? throw new KeyNotFoundException("Publicación no encontrada.");
 
             if (publication.ApprovalStatus != ApprovalStatus.Pendiente)

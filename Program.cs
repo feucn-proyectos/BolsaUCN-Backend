@@ -151,29 +151,21 @@ try
     // =========================
     // 6) Hangfire (background jobs)
     // =========================
-    if (builder.Environment.IsDevelopment())
-    {
-        Log.Information(
-            "Configurando Hangfire con almacenamiento en memoria (MemoryStorage) para desarrollo"
-        );
-        builder.Services.AddHangfire(configuration => configuration.UseMemoryStorage());
-    }
-    else
-    {
-        Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
-        builder.Services.AddHangfire(configuration =>
-            configuration
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(options =>
-                {
-                    options.UseNpgsqlConnection(
-                        builder.Configuration.GetConnectionString("DefaultConnection")
-                    );
-                })
-        );
-    }
+
+    Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
+    builder.Services.AddHangfire(configuration =>
+        configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
+            {
+                options.UseNpgsqlConnection(
+                    builder.Configuration.GetConnectionString("DefaultConnection")
+                );
+            })
+    );
+
     builder.Services.AddHangfireServer();
 
     #endregion
@@ -222,6 +214,7 @@ try
     builder.Services.AddScoped<IUserJobs, UserJobs>();
     builder.Services.AddScoped<IOfferJobs, OfferJobs>();
     builder.Services.AddScoped<IWhitelistedTokenJobs, WhitelistedTokenJobs>();
+    builder.Services.AddScoped<INotificationJobs, NotificationJobs>();
 
     // === Eventos y handlers ===
     builder.Services.AddScoped<

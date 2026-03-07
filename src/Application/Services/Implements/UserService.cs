@@ -101,10 +101,12 @@ namespace backend.src.Application.Services.Implements
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
 
+            var roles = new string[] { RoleNames.Applicant, RoleNames.Offeror };
+
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerStudentDTO.Password,
-                RoleNames.Applicant
+                roles
             );
             if (result == false)
             {
@@ -199,10 +201,11 @@ namespace backend.src.Application.Services.Implements
             await _fileRepository.CreateUserImageAsync(profile);
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
+            var roles = new string[] { RoleNames.Offeror };
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerIndividualDTO.Password,
-                RoleNames.Offeror
+                roles
             );
             if (!result)
             {
@@ -297,7 +300,7 @@ namespace backend.src.Application.Services.Implements
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerCompanyDTO.Password,
-                RoleNames.Offeror
+                new string[] { RoleNames.Offeror }
             );
             if (!result)
             {
@@ -425,12 +428,10 @@ namespace backend.src.Application.Services.Implements
             user.ProfilePhoto = profile;
             user.ProfilePhotoId = profile.Id;
 
-            string role = RoleNames.Admin;
-
             var result = await _userRepository.CreateUserAsync(
                 user,
                 registerAdminDTO.Password,
-                role
+                new string[] { RoleNames.Admin }
             );
             if (!result)
             {
@@ -470,7 +471,7 @@ namespace backend.src.Application.Services.Implements
                     "Admin registrado exitosamente con ID: {UserId}, Email: {Email}, Rol: {Role}",
                     user.Id,
                     user.Email,
-                    role
+                    RoleNames.Admin
                 );
 
                 // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se registren muchos usuarios en poco tiempo.

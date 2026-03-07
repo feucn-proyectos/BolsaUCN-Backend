@@ -58,7 +58,7 @@ namespace backend.src.Application.Services.Implements
                         );
                         continue;
                     }
-                    await _emailService.SendDailyAdminDigestAsync(admin.Email!, templateData);
+                    await _emailService.SendDailyAdminDigestAsync(admin, templateData);
                     Log.Information(
                         "Resumen administrativo enviado a {AdminEmail} con {NotificationCount} notificaciones",
                         admin.Email,
@@ -143,7 +143,7 @@ namespace backend.src.Application.Services.Implements
             }
 
             // Obtiene el numero total de notificaciones pendientes para rellenar el template
-            var templateData = GetDataForTemplateByUserId(notifications);
+            var templateData = GetDataForTemplateByUserId(user, notifications);
             await _emailService.SendDailyDigestAsync(user.Email!, templateData);
 
             // Marca las notificaciones como enviadas para evitar reenvíos en futuros resúmenes
@@ -161,6 +161,7 @@ namespace backend.src.Application.Services.Implements
         }
 
         private static Dictionary<string, string> GetDataForTemplateByUserId(
+            User user,
             List<UserNotification> notifications
         )
         {
@@ -171,6 +172,7 @@ namespace backend.src.Application.Services.Implements
             return new Dictionary<string, string>
             {
                 ["NEW_APPLICATIONS"] = newApplicationsCount.ToString(),
+                ["USER_NAME"] = user.FullName ?? "Usuario",
             };
         }
 

@@ -26,7 +26,7 @@ namespace backend.src.Infrastructure.Repositories.Interfaces
         Task<bool> ExistsByIdAsync(int id);
         Task<bool> ExistsByEmailAsync(string email);
         Task<bool> ExistsByRutAsync(string rut);
-        Task<bool> CreateUserAsync(User user, string password, string role);
+        Task<bool> CreateUserAsync(User user, string password, string[] roles);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> UpdateAsync(User user);
         Task<bool> UpdatePasswordAsync(User user, string newPassword);

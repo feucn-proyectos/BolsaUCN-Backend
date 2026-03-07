@@ -126,6 +126,6 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="email">Correo electrónico del administrador.</param>
         /// <param name="templateData">Datos para rellenar la plantilla del correo.</param>
         /// <returns></returns>
-        Task<bool> SendDailyAdminDigestAsync(string email, Dictionary<string, string> templateData);
+        Task<bool> SendDailyAdminDigestAsync(User admin, Dictionary<string, string> templateData);
     }
 }

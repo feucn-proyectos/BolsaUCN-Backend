@@ -72,12 +72,12 @@ namespace backend.src.Infrastructure.Repositories.Implements
             return await _userManager.Users.AnyAsync(e => e.Rut == rut);
         }
 
-        public async Task<bool> CreateUserAsync(User user, string password, string role)
+        public async Task<bool> CreateUserAsync(User user, string password, string[] roles)
         {
             Log.Information(
-                "Creando usuario en la base de datos: {Email}, Rol: {Role}",
+                "Creando usuario en la base de datos: {Email}, Roles: {Roles}",
                 user.Email,
-                role
+                string.Join(", ", roles)
             );
             var result = await _userManager.CreateAsync(user, password);
             if (result.Succeeded)
@@ -87,25 +87,25 @@ namespace backend.src.Infrastructure.Repositories.Implements
                     user.Email,
                     user.Id
                 );
-                var userRole = await _userManager.AddToRoleAsync(user, role);
-                if (userRole.Succeeded)
+                var userRoles = await _userManager.AddToRolesAsync(user, roles);
+                if (userRoles.Succeeded)
                 {
                     Log.Information(
-                        "Rol {Role} asignado exitosamente a usuario ID: {UserId}",
-                        role,
+                        "Roles {Roles} asignados exitosamente a usuario ID: {UserId}",
+                        string.Join(", ", roles),
                         user.Id
                     );
                 }
                 else
                 {
                     Log.Error(
-                        "Error al asignar rol {Role} a usuario ID: {UserId}. Errores: {Errors}",
-                        role,
+                        "Error al asignar roles {Roles} a usuario ID: {UserId}. Errores: {Errors}",
+                        string.Join(", ", roles),
                         user.Id,
-                        string.Join(", ", userRole.Errors.Select(e => e.Description))
+                        string.Join(", ", userRoles.Errors.Select(e => e.Description))
                     );
                 }
-                return userRole.Succeeded;
+                return userRoles.Succeeded;
             }
             Log.Error(
                 "Error al crear usuario {Email}. Errores: {Errors}",
