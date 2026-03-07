@@ -24,10 +24,10 @@ namespace backend.src.Infrastructure.Data
         public DbSet<Publication> Publications { get; set; }
         public DbSet<Offer> Offers { get; set; }
         public DbSet<BuySell> BuySells { get; set; }
-        public DbSet<NotificationDTO> Notifications { get; set; }
         public DbSet<JobApplication> JobApplications { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<AdminNotification> AdminNotifications { get; set; }
+        public DbSet<UserNotification> UserNotifications { get; set; }
 
         /// <summary>
         /// Configura las relaciones entre entidades y otras configuraciones de EF Core

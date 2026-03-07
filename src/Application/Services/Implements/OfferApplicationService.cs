@@ -5,6 +5,8 @@ using backend.src.Application.DTOs.PublicationDTO.ApplicationsForOfferorDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.ApplicantsForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs.ApplicationsForOfferorDTOs;
 using backend.src.Application.Events;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
 using backend.src.Domain.Models;
@@ -22,6 +24,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IOfferApplicationRepository _applicationRepository;
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IEventDispatcher _eventDispatcher;
         private readonly INotificationService _notificationService;
         private readonly IReviewService _reviewService;
         private readonly IFileService _fileService;
@@ -33,6 +36,7 @@ namespace backend.src.Application.Services.Implements
             IOfferApplicationRepository applicationRepository,
             IPublicationRepository publicationRepository,
             IUserRepository userRepository,
+            IEventDispatcher eventDispatcher,
             INotificationService notificationService,
             IReviewService reviewService,
             IFileService fileService,
@@ -43,6 +47,7 @@ namespace backend.src.Application.Services.Implements
             _userRepository = userRepository;
             _publicationRepository = publicationRepository;
             _notificationService = notificationService;
+            _eventDispatcher = eventDispatcher;
             _reviewService = reviewService;
             _fileService = fileService;
             _configuration = configuration;
@@ -196,6 +201,12 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("No se pudo crear la postulación");
             }
+
+            // Guardar la notification para el oferente para encolarla
+            await _notificationService.CreateUserNotificationAsync(
+                offer.UserId,
+                UserNotificationType.NuevaPostulacion
+            );
 
             return "Tu postulación ha sido creada exitosamente.";
         }
@@ -732,13 +743,30 @@ namespace backend.src.Application.Services.Implements
             if (parsedStatus == ApplicationStatus.Aceptada)
                 offer.AvailableSlots -= 1; // Reducir espacios disponibles si se acepta la postulación
 
-            // Enviar notificación al postulante
-            //TODO: Personalizar el mensaje de la notificación según el nuevo estado
+            // Evento para notificar al estudiante sobre el cambio de estado de su postulación
+            await _eventDispatcher.DispatchAsync(
+                new ApplicationStatusChangedEvent
+                {
+                    ApplicationId = application.Id,
+                    NewStatus = application.Status,
+                    OfferName = offer.Title,
+                    OfferorName = offer.User.FullName,
+                    ApplicantName = application.Student!.FullName,
+                    ApplicantEmail = application.Student.Email!,
+                }
+            );
 
+            // Evento para cerrar las postulaciones si se acaban los cupos para que estas no queden huerfanas
             if (offer.AvailableSlots <= 0)
-            {
-                BackgroundJob.Reschedule(offer.CloseApplicationsJobId!.ToString(), DateTime.UtcNow);
-            }
+                await _eventDispatcher.DispatchAsync(
+                    new OfferSlotsFilledEvent
+                    {
+                        OfferId = offer.Id,
+                        OfferTitle = offer.Title,
+                        OfferorId = offer.UserId,
+                        CloseApplicationsJobId = offer.CloseApplicationsJobId!,
+                    }
+                );
             // Un solo SaveChangesAsync para actualizar ambos la postulación y la oferta (en caso de aceptar la postulación)
             bool updateResult = await _applicationRepository.SaveChangesAsync();
             if (!updateResult)
@@ -749,6 +777,12 @@ namespace backend.src.Application.Services.Implements
                 );
                 throw new Exception("No se pudo actualizar el estado de la postulación");
             }
+            Log.Information(
+                "Estado de postulación ID: {ApplicationId} actualizado a {NewStatus} por oferente ID: {OfferorId}",
+                applicationId,
+                parsedStatus,
+                offerorId
+            );
             return "El estado de la postulación ha sido actualizado con éxito.";
         }
 

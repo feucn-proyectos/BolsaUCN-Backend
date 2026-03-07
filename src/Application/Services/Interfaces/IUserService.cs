@@ -183,6 +183,13 @@ namespace backend.src.Application.Services.Interfaces
         /// <param name="userId">ID del usuario</param>
         /// <returns>Indica si la eliminación fue exitosa</returns>
         Task<string> DeleteCVByIdAsync(int userId);
+
+        /// <summary>
+        /// Alterna la configuración de permitir o no notificaciones para un usuario por su ID.
+        /// </summary>
+        /// <param name="userId">ID del usuario</param>
+        /// <returns>Mensaje de resultado de la operación</returns>
+        Task<string> ToggleAllowNotificationsByIdAsync(int userId);
         #endregion
 
         #region Background Jobs

@@ -230,8 +230,6 @@ namespace backend.src.Application.Services.Implements
 
         public async Task<UserProfileForAdminDTO> GetUserProfileByIdAsync(int adminId, int userId)
         {
-            //TODO Revisar si hay que hacer algo especial con el administrador.
-
             var user =
                 await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");

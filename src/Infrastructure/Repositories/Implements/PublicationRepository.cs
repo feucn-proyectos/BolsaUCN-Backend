@@ -72,7 +72,11 @@ public class PublicationRepository : IPublicationRepository
             query = (IQueryable<T>)((IQueryable<BuySell>)query).Include(o => o.Images);
 
         if (typeof(T) == typeof(Offer) && options?.IncludeApplications == true)
-            query = (IQueryable<T>)((IQueryable<Offer>)query).Include(o => o.Applications);
+            query =
+                (IQueryable<T>)
+                    ((IQueryable<Offer>)query)
+                        .Include(o => o.Applications)
+                        .ThenInclude(s => s.Student);
         if (options?.IncludeUser == true)
             query = query.Include(p => p.User);
 

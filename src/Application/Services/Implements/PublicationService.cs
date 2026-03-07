@@ -7,6 +7,9 @@ using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ForAdminDTOs.SpecificUserPublicationsDTO;
 using backend.src.Application.DTOs.PublicationDTO.MyPublicationsDTOs;
 using backend.src.Application.DTOs.PublicationDTO.ValidationDTOs;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Implements.Handlers;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Jobs.Interfaces;
 using backend.src.Application.Services.Interfaces;
 using backend.src.Domain.Constants;
@@ -31,7 +34,9 @@ namespace backend.src.Application.Services.Implements
         private readonly IPublicationRepository _publicationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IReviewService _reviewService;
+        private readonly INotificationService _notificationService;
         private readonly IFileService _fileService;
+        private readonly IEventDispatcher _eventDispatcher;
         private readonly IReviewRepository _reviewRepository;
         private readonly int _daysUntilReviewAutoClose;
         private readonly int _maxPendingReviewsAllowed;
@@ -40,6 +45,8 @@ namespace backend.src.Application.Services.Implements
             IPublicationRepository publicationRepository,
             IReviewService reviewService,
             IFileService fileService,
+            INotificationService notificationService,
+            IEventDispatcher eventDispatcher,
             IReviewRepository reviewRepository,
             IUserRepository userRepository,
             IConfiguration configuration
@@ -48,6 +55,8 @@ namespace backend.src.Application.Services.Implements
             _publicationRepository = publicationRepository;
             _reviewService = reviewService;
             _fileService = fileService;
+            _notificationService = notificationService;
+            _eventDispatcher = eventDispatcher;
             _reviewRepository = reviewRepository;
             _userRepository = userRepository;
             _configuration = configuration;
@@ -160,6 +169,11 @@ namespace backend.src.Application.Services.Implements
             createdOffer.FinalizeAndCloseReviewsJobId = closeReviewsId;
             await _publicationRepository.UpdateAsync(createdOffer);
 
+            // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se creen muchas ofertas en poco tiempo.
+            await _notificationService.CreateAdminNotificationAsync(
+                AdminNotificationType.NuevaPublicacion,
+                $"Nueva oferta creada: {createdOffer.Title}. Requiere revisión."
+            );
             return $"Oferta creada exitosamente. Oferta ID: {createdOffer.Id}";
         }
 
@@ -273,6 +287,12 @@ namespace backend.src.Application.Services.Implements
                 createdBuySell.Id,
                 newBuySell.Title,
                 currentUser.Id
+            );
+
+            // Encolar notificacion para no abrumar la bandeja de notificaciones del admin en caso de que se creen muchas publicaciones en poco tiempo.
+            await _notificationService.CreateAdminNotificationAsync(
+                AdminNotificationType.NuevaPublicacion,
+                $"Nueva publicación de compra/venta creada: {createdBuySell.Title}. Requiere revisión."
             );
 
             return $"Publicación de compra/venta creada exitosamente. Publicación ID: {createdBuySell.Id}";
@@ -847,7 +867,11 @@ namespace backend.src.Application.Services.Implements
                     ? "La apelación de la publicación de compra/venta ha sido enviada exitosamente."
                     : "No se pudo enviar la apelación de la publicación de compra/venta. Inténtalo de nuevo.";
             }
-            //TODO: Enviar notification al admin para revisar la apelación
+            // Se encola una notificación para el admin para revisar la apelación, en caso de que se creen muchas apelaciones en poco tiempo.
+            await _notificationService.CreateAdminNotificationAsync(
+                AdminNotificationType.NuevaPublicacion,
+                $"Nueva apelación de publicación: {(isOffer ? "Oferta" : "Compra/Venta")} con ID {publicationId}. Requiere revisión."
+            );
             return result;
         }
 
@@ -888,6 +912,17 @@ namespace backend.src.Application.Services.Implements
             // Validacion de tipo de publication
             if (publication is Offer offer)
             {
+                if (offer.IsAcceptingApplications == false)
+                {
+                    Log.Error(
+                        "La oferta con ID {PublicationId} no está en un estado válido para ser cancelada. Estado actual: {Status}",
+                        publicationId,
+                        offer.CurrentStatus
+                    );
+                    throw new InvalidOperationException(
+                        "La oferta no está en un estado válido para ser cancelada."
+                    );
+                }
                 bool cancelResult = await CancelOfferAsync(offer, isAdmin, requestDTO);
                 if (!cancelResult)
                 {
@@ -927,6 +962,21 @@ namespace backend.src.Application.Services.Implements
                 return cancelResult
                     ? "Publicación de compra/venta cancelada exitosamente."
                     : "No se pudo cancelar la publicación de compra/venta. Inténtalo de nuevo.";
+            }
+            // Si un administrador tuvo que realizar la accion, se le envia una notificacion al oferente
+            if (publication.UserId != requestingUserId && isAdmin)
+            {
+                await _eventDispatcher.DispatchAsync(
+                    new PublicationClosedByAdminEvent
+                    {
+                        PublicationId = publication.Id,
+                        PublicationTitle = publication.Title,
+                        OfferorEmail = publication.User.Email!,
+                        ClosedByAdminReason =
+                            requestDTO?.ClosedByAdminReason
+                            ?? "No se proporcionó una razón de cierre.",
+                    }
+                );
             }
             return "Tipo de publicación no reconocido. No se pudo cancelar la publicación.";
         }
@@ -1003,8 +1053,6 @@ namespace backend.src.Application.Services.Implements
                 );
             }
 
-            //TODO: Enviar notificaciones a los postulantes informando del cambio de estado de la oferta.
-
             return $"Publicación avanzada exitosamente. Nuevo estado: {(publication.IsWorkInProgress ? "Realizando Trabajo" : "Calificaciones en Proceso")}.";
         }
 
@@ -1023,8 +1071,22 @@ namespace backend.src.Application.Services.Implements
             )
                 offer.ClosedByAdminReason = requestDTO.ClosedByAdminReason;
 
-            //TODO: Enviar notificaciones a los postulantes informando de la cancelacion de la oferta.
-            //TODO: Enviar notificacion al oferente si la accion fue realizada por un administrador.
+            var applications = offer.Applications.ToList();
+            foreach (var application in applications)
+            {
+                application.Status = ApplicationStatus.Rechazada;
+                await _eventDispatcher.DispatchAsync(
+                    new OfferCancelledEvent
+                    {
+                        ApplicantEmail = application.Student!.Email!,
+                        OfferTitle = offer.Title,
+                        CancelledByAdmin = isAdmin,
+                        CancelReason =
+                            requestDTO?.ClosedByAdminReason
+                            ?? "No se proporcionó una razón de cancelación.",
+                    }
+                );
+            }
             // Cancelar el trabajo programado para crear las calificaciones iniciales ya que el trabajo ya no se realizara
             BackgroundJob.Delete(offer.FinishWorkAndInitializeReviewsJobId!);
             BackgroundJob.Delete(offer.FinalizeAndCloseReviewsJobId!);
@@ -1279,7 +1341,12 @@ namespace backend.src.Application.Services.Implements
             // Validar oferta
             Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 offerId,
-                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+                new PublicationQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeUser = true,
+                    IncludeApplications = true,
+                }
             );
             if (offer == null)
             {
@@ -1343,13 +1410,23 @@ namespace backend.src.Application.Services.Implements
             {
                 offer.StartWork();
                 // Rechazar automáticamente a los postulantes que no fueron aceptados para liberarles cupo y enviarles notificación de rechazo.
-                var rejectedApplications = offer
+                var pendingApplications = offer
                     .Applications.Where(a => a.Status == ApplicationStatus.Pendiente)
                     .ToList();
-                foreach (var application in rejectedApplications)
+                foreach (var application in pendingApplications)
                 {
                     application.Status = ApplicationStatus.Rechazada;
-                    //TODO: Enviar correo de notificación a los postulantes rechazados informando que no fueron aceptados y que la oferta ya se encuentra en proceso de realización.
+                    await _eventDispatcher.DispatchAsync(
+                        new ApplicationStatusChangedEvent
+                        {
+                            ApplicationId = application.Id,
+                            NewStatus = ApplicationStatus.Rechazada,
+                            OfferName = offer.Title,
+                            OfferorName = offer.User.FullName,
+                            ApplicantName = application.Student!.FullName,
+                            ApplicantEmail = application.Student.Email!,
+                        }
+                    );
                 }
             }
             bool updateResult = await _publicationRepository.UpdateAsync(offer);
@@ -1372,7 +1449,12 @@ namespace backend.src.Application.Services.Implements
             // Validar oferta
             Offer? offer = await _publicationRepository.GetPublicationByIdAsync<Offer>(
                 offerId,
-                new PublicationQueryOptions { TrackChanges = true, IncludeApplications = true }
+                new PublicationQueryOptions
+                {
+                    TrackChanges = true,
+                    IncludeUser = true,
+                    IncludeApplications = true,
+                }
             );
             if (offer == null)
             {
@@ -1417,6 +1499,22 @@ namespace backend.src.Application.Services.Implements
                 offerId,
                 reviewsCreated
             );
+
+            // Llama evento para notificar a los usuarios involucrados que el trabajo ha finalizado y las reseñas han sido creadas, para que puedan realizar sus calificaciones correspondientes
+            await _eventDispatcher.DispatchAsync(
+                new InitialReviewsCreatedEvent
+                {
+                    OfferId = offer.Id,
+                    OfferName = offer.Title,
+                    OfferorEmail = offer.User.Email!,
+                    ApplicantEmails = offer
+                        .Applications.Where(a => a.Status == ApplicationStatus.Aceptada)
+                        .Select(a => a.Student!.Email!)
+                        .ToList(),
+                    ReviewsCreatedCount = reviewsCreated,
+                    DaysUntilReviewAutoClose = _daysUntilReviewAutoClose,
+                }
+            );
         }
 
         public async Task FinalizeAndCloseReviewsAsync(int offerId)
@@ -1455,7 +1553,7 @@ namespace backend.src.Application.Services.Implements
                 "Finalizando y cerrando reseñas de la oferta con ID {OfferId} automáticamente.",
                 offerId
             );
-            // Validar que las reseñas existan y estén en estado completado
+            // Validar que las reseñas existan
             var reviews = await _reviewRepository.GetReviewsByOfferIdAsync(offer.Id);
             if (reviews.Count == 0)
             {
@@ -1467,6 +1565,7 @@ namespace backend.src.Application.Services.Implements
                     "No se pueden finalizar y cerrar las reseñas porque no existen reseñas asociadas a esta oferta."
                 );
             }
+            /* Movido al final de cada review individual
             // Obtener todos los usuarios involucrados
             var usersInvolved = new HashSet<User> { offer.User };
             foreach (var review in reviews)
@@ -1480,7 +1579,7 @@ namespace backend.src.Application.Services.Implements
             foreach (User user in usersInvolved)
             {
                 await _reviewRepository.CalculateUserRating(user);
-            }
+            } */
 
             // Finalizar el ciclo de vida de la oferta
 
@@ -1497,6 +1596,12 @@ namespace backend.src.Application.Services.Implements
             Log.Information(
                 "Oferta con ID {OfferId} finalizada y reseñas cerradas automáticamente.",
                 offerId
+            );
+
+            // Encolar notificacion para no abrumar la bandeja de notificaciones del admin
+            await _notificationService.CreateAdminNotificationAsync(
+                AdminNotificationType.OfertaTerminada,
+                $"La oferta '{offer.Title}' ha finalizado y las reseñas han sido cerradas automáticamente."
             );
         }
         #endregion

@@ -186,5 +186,16 @@ namespace backend.src.API.Controllers
             var result = await _userService.DeleteCVByIdAsync(userId);
             return Ok(new GenericResponse<string>("CV eliminado", result));
         }
+
+        [HttpPatch("profile/toggle-notifications")]
+        [Authorize]
+        public async Task<IActionResult> ToggleAllowNotifications()
+        {
+            int parsedUserId = GetUserIdFromToken();
+            var result = await _userService.ToggleAllowNotificationsByIdAsync(parsedUserId);
+            return Ok(
+                new GenericResponse<string>("Preferencia de notificaciones actualizada", result)
+            );
+        }
     }
 }

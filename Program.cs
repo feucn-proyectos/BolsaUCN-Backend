@@ -1,4 +1,6 @@
-using backend.src.Application.Infrastructure.Data;
+using backend.src.Application.Events.Implements;
+using backend.src.Application.Events.Implements.Handlers;
+using backend.src.Application.Events.Interfaces;
 using backend.src.Application.Jobs.Implements;
 using backend.src.Application.Jobs.Interfaces;
 using backend.src.Application.Mappers;
@@ -149,29 +151,21 @@ try
     // =========================
     // 6) Hangfire (background jobs)
     // =========================
-    if (builder.Environment.IsDevelopment())
-    {
-        Log.Information(
-            "Configurando Hangfire con almacenamiento en memoria (MemoryStorage) para desarrollo"
-        );
-        builder.Services.AddHangfire(configuration => configuration.UseMemoryStorage());
-    }
-    else
-    {
-        Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
-        builder.Services.AddHangfire(configuration =>
-            configuration
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(options =>
-                {
-                    options.UseNpgsqlConnection(
-                        builder.Configuration.GetConnectionString("DefaultConnection")
-                    );
-                })
-        );
-    }
+
+    Log.Information("Configurando Hangfire con almacenamiento en PostgreSQL para producción");
+    builder.Services.AddHangfire(configuration =>
+        configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
+            {
+                options.UseNpgsqlConnection(
+                    builder.Configuration.GetConnectionString("DefaultConnection")
+                );
+            })
+    );
+
     builder.Services.AddHangfireServer();
 
     #endregion
@@ -179,8 +173,9 @@ try
 
     #region DI
     // =========================
-    // 7) DI (repos/services/mappers/jobs)
+    // 7) DI (repos/services/mappers/jobs/events)
     // =========================
+    // === Mappers ===
     builder.Services.AddScoped<UserMapper>();
     builder.Services.AddScoped<PublicationMapper>();
     builder.Services.AddScoped<OfferMapper>();
@@ -189,19 +184,22 @@ try
     builder.Services.AddScoped<ProfileMapper>();
     builder.Services.AddScoped<ReviewMapper>();
 
+    // === Repositorios ===
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
     builder.Services.AddScoped<IOfferApplicationRepository, OfferApplicationRepository>();
-    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+    builder.Services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
     builder.Services.AddScoped<IAdminNotificationRepository, AdminNotificationRepository>();
     builder.Services.AddScoped<IFileRepository, FileRepository>();
     builder.Services.AddScoped<IPublicationRepository, PublicationRepository>();
     builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
     builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+    builder.Services.AddScoped<IEventDispatcher, EventDispatcher>();
 
+    // === Servicios ===
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
-    builder.Services.AddScoped<IEmailService, EmailService>();
+    builder.Services.AddScoped<IEmailDigestService, EmailDigestService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
     builder.Services.AddScoped<IPublicationService, PublicationService>();
@@ -210,10 +208,42 @@ try
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
+    builder.Services.AddScoped<EmailService>();
+    builder.Services.AddScoped<IEmailService>(sp => new EmailRateLimitedService(
+        sp.GetRequiredService<EmailService>()
+    ));
 
+    // === Jobs ===
     builder.Services.AddScoped<IUserJobs, UserJobs>();
     builder.Services.AddScoped<IOfferJobs, OfferJobs>();
     builder.Services.AddScoped<IWhitelistedTokenJobs, WhitelistedTokenJobs>();
+    builder.Services.AddScoped<INotificationJobs, NotificationJobs>();
+
+    // === Eventos y handlers ===
+    builder.Services.AddScoped<
+        IEventHandler<ApplicationStatusChangedEvent>,
+        SendEmailOnApplicationStatusChangedHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<OfferCancelledEvent>,
+        SendEmailOnOfferCancelledHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<InitialReviewsCreatedEvent>,
+        SendEmailOnInitialReviewCreationHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<PublicationStatusChangedEvent>,
+        SendEmailOnPublicationStatusChangedHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<PublicationClosedByAdminEvent>,
+        SendEmailOnPublicationClosedByAdminHandler
+    >();
+    builder.Services.AddScoped<
+        IEventHandler<OfferSlotsFilledEvent>,
+        CloseOfferOnSlotsFilledHandler
+    >();
 
     builder.Services.AddMapster();
 
@@ -243,7 +273,7 @@ try
     RecurringJob.AddOrUpdate<IUserJobs>(
         nameof(IUserJobs.DeleteUnconfirmedUserAccountsAsync),
         job => job.DeleteUnconfirmedUserAccountsAsync(),
-        Cron.Weekly(DayOfWeek.Monday),
+        Cron.Weekly(DayOfWeek.Monday), // Todos los lunes a las 2 AM
         new RecurringJobOptions
         {
             TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
@@ -253,13 +283,34 @@ try
     RecurringJob.AddOrUpdate<IWhitelistedTokenJobs>(
         nameof(IWhitelistedTokenJobs.DeleteExpiredTokensAsync),
         job => job.DeleteExpiredTokensAsync(),
-        Cron.Daily(),
+        Cron.Daily(), // Todos los días a medianoche
         new RecurringJobOptions
         {
             TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
         }
     );
-    Log.Information("Trabajos recurrentes de Hangfire (User y Whitelist) configurados");
+    // Notification Jobs
+    RecurringJob.AddOrUpdate<INotificationJobs>(
+        nameof(INotificationJobs.SendUserDailyNotificationsAsync),
+        job => job.SendUserDailyNotificationsAsync(),
+        Cron.Daily(8), // Todos los dias a las 8 AM
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    RecurringJob.AddOrUpdate<INotificationJobs>(
+        nameof(INotificationJobs.SendAdminDailyNotificationsAsync),
+        job => job.SendAdminDailyNotificationsAsync(),
+        Cron.Daily(9), // Todos los dias a las 9 AM
+        new RecurringJobOptions
+        {
+            TimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago"),
+        }
+    );
+    Log.Information(
+        "Trabajos recurrentes de Hangfire (User, Whitelist, Notification) configurados"
+    );
 
     #endregion
     #region Middleware

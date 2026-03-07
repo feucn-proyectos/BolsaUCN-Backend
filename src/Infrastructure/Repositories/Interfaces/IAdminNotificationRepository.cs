@@ -1,7 +1,11 @@
-public interface IAdminNotificationRepository
+using backend.src.Domain.Models;
+
+namespace backend.src.Infrastructure.Repositories.Interfaces
 {
-    Task AddAsync(AdminNotification notification);
-    Task<IEnumerable<AdminNotification>> GetAllAsync();
-    Task<AdminNotification?> GetByIdAsync(int id);
-    Task UpdateAsync(AdminNotification notification);
+    public interface IAdminNotificationRepository
+    {
+        Task AddAsync(AdminNotification notification);
+        Task<List<AdminNotification>> GetAllUnsentAsync();
+        Task UpdateRangeAsync(List<AdminNotification> notifications);
+    }
 }

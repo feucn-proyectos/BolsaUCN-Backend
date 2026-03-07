@@ -24,6 +24,7 @@ namespace backend.src.Application.Services.Implements
         private readonly IReviewRepository _reviewRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPublicationRepository _publicationRepository;
+        private readonly INotificationService _notificationService;
         private readonly IConfiguration _configuration;
         private readonly int _daysUntilReviewAutoClose;
         private readonly int _defaultPageSize;
@@ -37,12 +38,14 @@ namespace backend.src.Application.Services.Implements
             IReviewRepository repository,
             IUserRepository userRepository,
             IPublicationRepository publicationRepository,
+            INotificationService notificationService,
             IConfiguration configuration
         )
         {
             _reviewRepository = repository;
             _userRepository = userRepository;
             _publicationRepository = publicationRepository;
+            _notificationService = notificationService;
             _configuration = configuration;
             _daysUntilReviewAutoClose = _configuration.GetValue<int>(
                 "JobsConfiguration:DaysUntilReviewAutoClose"
@@ -212,9 +215,20 @@ namespace backend.src.Application.Services.Implements
                 applicantId,
                 review.OfferorId
             );
-            // Verifica si la oferta a la que esta asociada la reseña tiene reseñas pendientes fuera de esta
+            // Si ambas partes completaron sus reseñas se revisan los siguientes efectos secundarios
             if (review.IsCompleted)
             {
+                // Se calcula el nuevo puntaje del oferente y postulante con base en la nueva review creada, y se actualizan sus puntajes promedio en la base de datos.
+                await _reviewRepository.CalculateUserRating(review.Applicant!);
+                await _reviewRepository.CalculateUserRating(review.Offeror!);
+
+                // Se encola una notificacion para el admin informando que una review ha sido completada, para que pueda revisar la review y ocultar información si es necesario.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.CalificacionCompletada,
+                    $"La review con ID {review.Id} ha sido completada. Requiere revisión."
+                );
+
+                // Se verifica si la oferta a la que esta asociada la reseña tiene reseñas pendientes fuera de esta, si no tiene reseñas pendientes, se procede a finalizar la oferta.
                 int offerId = review.Application!.JobOfferId;
                 int pendingReviewsCount =
                     await _reviewRepository.GetPendingReviewsCountByOfferIdAsync(offerId);
@@ -323,6 +337,16 @@ namespace backend.src.Application.Services.Implements
             // Verifica si la oferta a la que esta asociada la reseña tiene reseñas pendientes fuera de esta
             if (review.IsCompleted)
             {
+                // Se calcula el nuevo puntaje del oferente y postulante con base en la nueva review creada, y se actualizan sus puntajes promedio en la base de datos.
+                await _reviewRepository.CalculateUserRating(review.Applicant!);
+                await _reviewRepository.CalculateUserRating(review.Offeror!);
+
+                // Se encola una notificacion para el admin informando que una review ha sido completada, para que pueda revisar la review y ocultar información si es necesario.
+                await _notificationService.CreateAdminNotificationAsync(
+                    AdminNotificationType.CalificacionCompletada,
+                    $"La review con ID {review.Id} ha sido completada. Requiere revisión."
+                );
+
                 int offerId = review.Application!.JobOfferId;
                 int pendingReviewsCount =
                     await _reviewRepository.GetPendingReviewsCountByOfferIdAsync(offerId);
@@ -620,6 +644,7 @@ namespace backend.src.Application.Services.Implements
                     "No se pudo actualizar la review para ocultar información de la review"
                 );
             }
+
             return "Información de la review ocultada exitosamente.";
         }
 
