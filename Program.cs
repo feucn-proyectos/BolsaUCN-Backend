@@ -199,7 +199,6 @@ try
     // === Servicios ===
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
-    builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IEmailDigestService, EmailDigestService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IOfferApplicationService, OfferApplicationService>();
@@ -209,6 +208,10 @@ try
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IApprovalService, ApprovalService>();
+    builder.Services.AddScoped<EmailService>();
+    builder.Services.AddScoped<IEmailService>(sp => new EmailRateLimitedService(
+        sp.GetRequiredService<EmailService>()
+    ));
 
     // === Jobs ===
     builder.Services.AddScoped<IUserJobs, UserJobs>();

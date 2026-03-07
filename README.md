@@ -199,12 +199,15 @@ docker-compose down
 
 Al iniciar por primera vez, el sistema ejecuta `DataSeeder` y crea los siguientes usuarios (contrasena `Test123!`):
 
-| Rol | Email | Descripcion |
-|---|---|---|
-| Estudiante (Applicant) | `estudiante@alumnos.ucn.cl` | Puede postular a ofertas, gestionar CV y resenas |
-| Empresa (Offeror) | `empresa@techcorp.cl` | Puede crear publicaciones y gestionar postulaciones |
-| Particular (Offeror) | `particular@ucn.cl` | Puede crear publicaciones y gestionar postulaciones |
-| Administrador | `admin@ucn.cl` | Panel de administracion completo |
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 CREDENCIALES DE PRUEBA:
+👨‍🎓 ESTUDIANTE: estudiante@alumnos.ucn.cl / Test123!
+🏢 EMPRESA: empresa@techcorp.cl / Test123!
+👤 PARTICULAR: particular@ucn.cl / Test123!
+👑 ADMIN: admin@ucn.cl / Test123!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 ---
 
@@ -237,8 +240,8 @@ El sistema maneja dos tipos de publicaciones que extienden de un modelo base (`P
 
 **Ofertas laborales (`Offer`)**
 
-- Creacion de ofertas con titulo, descripcion, remuneracion, fechas, requisitos, informacion de contacto y cupos disponibles. Restringido a usuarios con rol `Offeror`.
-- Flujo de validacion por administrador antes de ser publicada (`StatusValidation`: `InProcess`, `Published`, `Rejected`).
+- Creacion de ofertas con titulo, descripcion, remuneracion, fechas, informacion de contacto y cupos disponibles. Restringido a usuarios con rol `Offeror`.
+- Flujo de validacion por administrador antes de ser publicada (`ApprovalStatus`: `Pendiente`, `Approbada`, `Rechazada`).
 - Avance manual del estado de la oferta por el oferente.
 - Cierre manual de la oferta por el oferente o el administrador.
 - Exploracion publica de ofertas con filtros y paginacion.
@@ -267,25 +270,25 @@ El sistema maneja dos tipos de publicaciones que extienden de un modelo base (`P
 - Detalle de una postulacion especifica.
 - Actualizacion de la carta de presentacion de una postulacion.
 - Listado de postulantes a una oferta del oferente con filtros y paginacion.
-- Cambio del estado de una postulacion por el oferente (`Pending`, `Accepted`, `Rejected`, etc.).
+- Cambio del estado de una postulacion por el oferente (`Pendiente`, `Aceptada`, `Rechazada`, etc.).
 - Descarga del CV del postulante por el oferente.
 
-> Un estudiante no puede postular si tiene mas de 3 resenas pendientes de completar.
+> Un estudiante no puede postular si tiene mas de 3 reseñas pendientes de completar.
 
 ---
 
-### Sistema de resenas (`/api/reviews`)
+### Sistema de reseñas (`/api/reviews`)
 
-El sistema de resenas es **bidireccional**: al finalizar una oferta, tanto el oferente como el estudiante deben calificarse mutuamente dentro de una ventana de 14 dias.
+El sistema de reseñas es **bidireccional**: al finalizar una oferta, tanto el oferente como el estudiante deben calificarse mutuamente dentro de una ventana de 14 dias.
 
-- Registro de resena del estudiante hacia el oferente (`PATCH /reviews/{id}/applicant`).
-- Registro de resena del oferente hacia el estudiante (`PATCH /reviews/{id}/offeror`).
-- Cada resena incluye calificacion numerica, comentario y (para el oferente) un checklist de puntos de evaluacion (`AtTime`, `GoodPresentation`, `StudentHasRespectOfferor`).
-- Las resenas no completadas en el plazo se cierran automaticamente mediante un job de Hangfire (cada hora).
-- Listado de resenas propias con filtros y paginacion.
-- Detalle de una resena especifica.
-- Generacion de reporte PDF con todas las resenas del usuario (`GET /reviews/pdf`).
-- La calificacion promedio (`Rating`) del usuario se calcula automaticamente a partir de sus resenas.
+- Registro de reseña del estudiante hacia el oferente (`PATCH /reviews/{id}/applicant`).
+- Registro de reseña del oferente hacia el estudiante (`PATCH /reviews/{id}/offeror`).
+- Cada reseña incluye calificacion numerica, comentario y (para el oferente) un checklist de puntos de evaluacion (`IsOnTime`, `IsPresentable`, `IsRespectful`).
+- Las reseñas no completadas en el plazo se cierran automaticamente mediante un job de Hangfire (programado cuando se creo la oferta y actualizado durante su vida util).
+- Listado de reseñas propias con filtros y paginacion.
+- Detalle de una reseña especifica.
+- Generacion de reporte PDF con todas las reseñas del usuario (`GET /reviews/pdf`).
+- La calificacion promedio (`Rating`) del usuario se calcula automaticamente a partir de sus reseñas.
 
 ---
 
@@ -314,11 +317,11 @@ El sistema de resenas es **bidireccional**: al finalizar una oferta, tanto el of
 - Aprobar o rechazar una publicacion (`PATCH /pending/{id}/validate`).
 - Soporte para apelaciones por parte del oferente (maximo 3 apelaciones, respuesta en 48 horas).
 
-**Gestion de resenas**
+**Gestion de reseñas**
 
-- Listado de todas las resenas del sistema con filtros.
-- Detalle de cualquier resena.
-- Ocultamiento de informacion de una resena (comentarios inapropiados).
+- Listado de todas las reseñas del sistema con filtros.
+- Detalle de cualquier reseña.
+- Ocultamiento de informacion de una reseña (comentarios inapropiados).
 - Generacion de reporte PDF del sistema o de un usuario especifico.
 
 ---
@@ -329,6 +332,16 @@ El sistema de resenas es **bidireccional**: al finalizar una oferta, tanto el of
 - Notificaciones internas al sistema (modelo `UserNotification`) para eventos relevantes como cambios de estado en postulaciones o resenas.
 - Resumen periodico de notificaciones por correo (`IEmailDigestService`).
 - Configuracion de notificaciones por usuario (activas/desactivadas).
+
+ **Puntos de mejoras**
+ - El sistema de notificaciones actual usa el patron Domain Events para generar eventos de dominio (ejemplo: `ApplicationStatusChangedEvent`) que son manejados por handlers (`ApplicationStatusChangedHandler`) para crear registros de notificacion en la base de datos (`UserNotification`) y enviar correos electronicos via Resend. Sin embargo, este enfoque tiene algunas limitaciones:
+   - Acoplamiento entre la logica de negocio y el sistema de notificaciones.
+   - Dificultad para manejar escenarios complejos como reintentos, fallos en el envio de correos o personalizacion de mensajes.
+   - El uso de Hangfire para enviar resumenes periodicos es una solucion temporal que no escala bien a medida que crece el numero de usuarios y eventos.
+- Una mejor solucion, dado los suficientes recursos disponibles, seria implementar un sistema de notificaciones mas robusto y desacoplado utilizando una arquitectura basada en eventos con una cola de mensajes (ejemplo: RabbitMQ o Azure Service Bus). 
+- Una gran inconvenecia actual es la unica forma de comunicar notificaciones al usuario es a traves de correos electronicos, lo cual no es ideal para algunos eventos, ni para todos los usuarios. Implementar un sistema de notificaciones en tiempo real dentro de la aplicacion (ejemplo: usando SignalR) mejoraria significativamente la experiencia del usuario y permitiria una comunicacion mas fluida y efectiva. Ademas, esto permitiria reducir la cantidad de correos enviados, evitando saturar a los usuarios con mensajes transaccionales que pueden ser mejor recibidos como notificaciones dentro de la plataforma.
+- El sistema utiliza un servicio de correo con limitacion de tasa (`EmailRateLimitedService`) para evitar exceder los limites de envio de Resend, pero no esta probado extensamente, solo lo necesario para comprobar que no se violen los limites en escenarios de prueba. Seria necesario realizar pruebas de carga mas exhaustivas para asegurar que el sistema se comporta correctamente bajo condiciones de alto volumen de notificaciones.
+
 
 ---
 
@@ -433,7 +446,8 @@ backend-PIS/
 ## 📦 Modelo de base de datos
 
 El modelo de base de datos (en formato Visual Paradigm .vpp) se encuentra en:  
-`/database model/PIS.vpp`
+`/database_diagram/PIS.vpp`
+Cabe destacar que este modelo esta desactualizado, y sirve mas que nada como referencia historica. El modelo actual se refleja en las entidades de la capa de dominio (`Domain/Models`).
 
 ## 🔒 Seguridad
 
@@ -459,4 +473,4 @@ Facultad de Ingeniería y Ciencias Geológicas
 
 ## 📄 Licencia
 
-Este proyecto es de uso académico.
+Este proyecto no es de uso comercial, fue desarrollado exclusivamente para uso por la Federacion de Estudiantes de la Universidad Católica del Norte (FEUCN) y no debe ser utilizado por terceros sin autorización expresa.
