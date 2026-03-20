@@ -16,29 +16,33 @@
 
     .container {
       background-color: #FFFFFF;
-      border-radius: 12px;
+      border-radius: 24px;
       overflow: hidden;
       max-width: 600px;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid #E5E7EB;
     }
 
     .header {
-      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+      background: linear-gradient(135deg, #DC2626 0%, #ef4444 100%);
       color: #ffffff;
-      padding: 32px 24px;
+      padding: 40px 32px;
+      text-align: center;
     }
 
     .header h1 {
-      font-size: 24px;
-      font-weight: 700;
+      font-size: 28px;
+      font-weight: 800;
       margin: 0 0 8px 0;
       letter-spacing: -0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .header p {
       margin: 0;
-      font-size: 15px;
-      opacity: 0.95;
+      font-size: 16px;
+      opacity: 0.9;
+      font-weight: 500;
     }
 
     .admin-badge {
@@ -55,7 +59,7 @@
     }
 
     .body-content {
-      padding: 32px 24px;
+      padding: 40px 32px;
       font-size: 16px;
       line-height: 1.6;
       color: #1F2937;
@@ -155,7 +159,7 @@
       background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
       color: #ffffff;
       padding: 14px 32px;
-      border-radius: 8px;
+      border-radius: 16px;
       text-decoration: none;
       font-weight: 600;
       font-size: 16px;
@@ -326,18 +330,18 @@
 </head>
 
 <body>
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px; background-color: #F9FAFB;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" class="container">
 
           <tr>
             <td class="header">
-              <h1>
+              <h1 style="color: #ffffff;">
                 Resumen Administrativo
                 <span class="admin-badge">Admin</span>
               </h1>
-              <p>Bolsa Estudiantil UCN</p>
+              <p style="color: #ffffff;">Bolsa Estudiantil UCN</p>
             </td>
           </tr>
 
@@ -351,7 +355,7 @@
               </p>
 
               <div style="text-align:center; margin:28px 0;">
-                <span class="summary-badge">{{TOTAL_COUNT}} tareas pendientes</span>
+                <span class="summary-badge" style="color: #ffffff;">{{TOTAL_COUNT}} tareas pendientes</span>
               </div>
 
               <div class="stats-container">
@@ -384,7 +388,7 @@
               </p>
 
               <div style="text-align:center;">
-                <a href="https://domain.com/landing/admin" class="cta-button">Ir al Panel de Administración</a>
+                <a href="https://www.bolsadetrabajo-feucn.cl/landing/admin" class="cta-button" style="color: #ffffff;">Ir al Panel de Administración</a>
               </div>
 
               <div class="divider"></div>
@@ -398,11 +402,11 @@
 
           <tr>
             <td class="footer">
-              <p class="footer-brand">Bolsa Estudiantil UCN - Panel Administrativo</p>
+              <p class="footer-brand">Bolsa de Trabajo de la FeUCN - Panel Administrativo</p>
               <p style="opacity:0.85;">Universidad Catolica del Norte</p>
               <p style="margin:12px 0 0 0;">
                 Si tienes preguntas tecnicas, contactanos en
-                <a href="mailto:soporte@ucn.cl">soporte@ucn.cl</a>
+                <a href="mailto:feucn@ucn.cl">feucn@ucn.cl</a>
               </p>
               <p style="margin:16px 0 0 0; font-size:11px; opacity:0.75;">
                 Este correo contiene informacion administrativa confidencial.<br>

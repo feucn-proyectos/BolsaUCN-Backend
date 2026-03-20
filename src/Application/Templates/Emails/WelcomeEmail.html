@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Bienvenido a Bolsa FEUCN</title>
   <style>
     /* Default (light mode) */
@@ -17,21 +19,24 @@
 
     .container {
       background-color: #FFFFFF;
-      border-radius: 12px;
+      border-radius: 24px;
       overflow: hidden;
       max-width: 600px;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid #E5E7EB;
     }
 
     .header {
-      background: linear-gradient(135deg, #6D5EF7 0%, #8B7EFF 100%);
+      background-color: #6D5EF7;
+      background-image: linear-gradient(135deg, #6D5EF7 0%, rgba(109, 94, 247, 0.8) 100%);
       color: #ffffff;
       padding: 32px 24px;
     }
 
     .header h1 {
-      font-size: 24px;
-      font-weight: 700;
+      font-size: 28px;
+      font-weight: 800;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       margin: 0 0 8px 0;
       letter-spacing: -0.5px;
     }
@@ -94,44 +99,50 @@
     /* Dark mode support */
     @media (prefers-color-scheme: dark) {
       body {
-        background-color: #111827;
-        color: #E5E7EB;
+        background-color: #111827 !important;
+        color: #E5E7EB !important;
       }
 
       .container {
-        background-color: #1F2937;
-        border: 1px solid #374151;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        background-color: #1F2937 !important;
+        border-color: #374151 !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
       }
 
       .header {
-        background: linear-gradient(135deg, #7C6EFF 0%, #9B8FFF 100%);
+        background-color: #6D5EF7 !important;
+        background-image: linear-gradient(135deg, #5849C4 0%, #6D5EF7 100%) !important;
+        color: #fffffe !important;
       }
 
       .body-content {
-        color: #E5E7EB;
+        color: #E5E7EB !important;
+      }
+
+      .body-content p {
+        color: #E5E7EB !important;
       }
 
       .highlight {
-        background-color: rgba(109, 94, 247, 0.15);
-        border-left-color: #8B7EFF;
+        background-color: rgba(109, 94, 247, 0.15) !important;
+        border-left-color: #8B7EFF !important;
       }
 
       .footer {
-        background-color: #111827;
-        color: #9CA3AF;
-        border-top-color: #374151;
+        background-color: #111827 !important;
+        color: #9CA3AF !important;
+        border-top-color: #374151 !important;
       }
 
       a {
-        color: #8B7EFF;
+        color: #8B7EFF !important;
       }
     }
   </style>
 </head>
 
 <body>
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px; background-color: #F9FAFB;">
     <tr>
       <td align="center">
         <!-- Main container -->
@@ -140,15 +151,15 @@
           <!-- Header -->
           <tr>
             <td align="center" class="header">
-              <h1>Bolsa Estudiantil UCN</h1>
-              <p>Universidad Católica del Norte</p>
+              <h1 style="color: #fffffe;">Bolsa de Trabajo de la FeUCN</h1>
+              <p style="color: #fffffe;">Universidad Católica del Norte</p>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
             <td class="body-content">
-              <p style="font-size:18px; font-weight:600; color:#1F2937; margin-bottom:16px;">¡Felicidades, has
+              <p style="font-size:18px; font-weight:600; margin-bottom:16px;">¡Felicidades, has
                 verificado tu cuenta!</p>
               <p>Nos alegra tenerte en la Bolsa de Trabajo para estudiantes UCN.</p>
               <p>Ahora puedes acceder a todas las funcionalidades de la plataforma:</p>
@@ -166,7 +177,7 @@
           <tr>
             <td class="footer">
               <p style="font-weight:600; color:#64748B;">Universidad Católica del Norte</p>
-              <p style="opacity:0.85;">Bolsa Estudiantil FEUCN - Plataforma de Empleo y Servicios</p>
+              <p style="opacity:0.85;">Bolsa de Trabajo de la FeUCN - Plataforma de Empleo y Servicios</p>
               <p style="margin-top:12px; font-size:12px; opacity:0.75;">Si no solicitaste esta verificación, puedes
                 ignorar este correo de forma segura.</p>
             </td>
